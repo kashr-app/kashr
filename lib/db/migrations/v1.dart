@@ -25,25 +25,4 @@ Future<void> v1(Database db) async {
         FOREIGN KEY(accountId) REFERENCES account(id)
       );
     ''');
-
-    await db.execute('''
-      CREATE TABLE tag(
-        id TEXT PRIMARY KEY,
-        color TEXT,
-        name TEXT
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE tag_turnover(
-        id TEXT PRIMARY KEY,
-        turnoverId TEXT NOT NULL,
-        tagId TEXT NOT NULL,
-        amountValue INTEGER NOT NULL,
-        amountUnit TEXT NOT NULL,
-        note TEXT,
-        FOREIGN KEY(turnoverId) REFERENCES turnover(id),
-        FOREIGN KEY(tagId) REFERENCES tag(id)
-      );
-    ''');
 }
