@@ -14,6 +14,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 const bool isDevelopment = bool.fromEnvironment('dart.vm.product') == false;
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 

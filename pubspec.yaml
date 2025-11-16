@@ -43,6 +43,7 @@ dependencies:
   provider: ^6.1.5+1
   flutter_secure_storage: ^9.2.4
   jiffy: ^6.4.3
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:

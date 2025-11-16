@@ -1,5 +1,5 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/db_helper.dart';
+import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/model/tag_turnover.dart';
 import 'package:uuid/uuid.dart';
 
@@ -31,6 +31,30 @@ class TagTurnoverRepository {
     );
 
     return maps.map((e) => TagTurnover.fromJson(e)).toList();
+  }
+
+  Future<List<TagTurnover>> getUnfinalizedTagTurnovers() async {
+    final db = await DatabaseHelper().database;
+    final maps = await db.query(
+      'tag_turnover',
+      where: 'turnoverId IS NULL',
+      orderBy: 'createdAt DESC',
+    );
+    return maps.map((e) => TagTurnover.fromJson(e)).toList();
+  }
+
+  Future<int> finalizeTagTurnover(
+    UuidValue turnoverId,
+    UuidValue tagTurnoverId,
+  ) async {
+    final db = await DatabaseHelper().database;
+
+    return await db.update(
+      'tag_turnover',
+      {'turnoverId': turnoverId.uuid},
+      where: 'id = ?',
+      whereArgs: [tagTurnoverId.uuid],
+    );
   }
 
   Future<int> updateTagTurnover(TagTurnover tagTurnover) async {

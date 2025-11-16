@@ -1,4 +1,4 @@
-import 'package:finanalyzer/db_helper.dart';
+import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/model/tag.dart';
 import 'package:uuid/uuid.dart';
 
