@@ -1,6 +1,6 @@
 import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/model/turnover.dart';
-import 'package:finanalyzer/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';

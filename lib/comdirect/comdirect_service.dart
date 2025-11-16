@@ -1,8 +1,8 @@
-import 'package:finanalyzer/model/account.dart';
-import 'package:finanalyzer/model/turnover.dart';
+import 'package:finanalyzer/account/model/account.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
-import 'package:finanalyzer/model/account_cubit.dart';
+import 'package:finanalyzer/account/model/account_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:uuid/uuid.dart';
 import 'comdirect_api.dart';

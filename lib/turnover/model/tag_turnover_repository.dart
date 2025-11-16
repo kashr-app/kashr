@@ -1,6 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:uuid/uuid.dart';
 
 class TagTurnoverRepository {
@@ -81,6 +81,20 @@ class TagTurnoverRepository {
       'tag_turnover',
       where: 'turnoverId = ?',
       whereArgs: [turnoverId.uuid],
+    );
+  }
+
+  Future<int> updateAmount(
+    UuidValue id,
+    Decimal amountValue,
+  ) async {
+    final db = await DatabaseHelper().database;
+
+    return await db.update(
+      'tag_turnover',
+      {'amountValue': amountValue.toString()},
+      where: 'id = ?',
+      whereArgs: [id.uuid],
     );
   }
 

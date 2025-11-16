@@ -2,8 +2,8 @@ import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
 import 'package:finanalyzer/comdirect/turnover_screen.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
-import 'package:finanalyzer/turnover_tag_page.dart';
-import 'package:finanalyzer/turnovers_page.dart';
+import 'package:finanalyzer/turnover/turnover_tag_page.dart';
+import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

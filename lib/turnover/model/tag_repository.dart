@@ -1,5 +1,5 @@
 import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:uuid/uuid.dart';
 
 class TagRepository {

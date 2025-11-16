@@ -2,8 +2,8 @@ import 'package:finanalyzer/core/uuid_json_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 
-part '../_gen/model/account.freezed.dart';
-part '../_gen/model/account.g.dart';
+part '../../_gen/account/model/account.freezed.dart';
+part '../../_gen/account/model/account.g.dart';
 
 @freezed
 abstract class Account with _$Account {

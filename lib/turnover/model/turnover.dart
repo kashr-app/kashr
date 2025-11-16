@@ -6,8 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:decimal/decimal.dart';
 
-part '../_gen/model/turnover.freezed.dart';
-part '../_gen/model/turnover.g.dart';
+part '../../_gen/turnover/model/turnover.freezed.dart';
+part '../../_gen/turnover/model/turnover.g.dart';
 
 final dateFormat = DateFormat("dd.MM.yyyy");
 

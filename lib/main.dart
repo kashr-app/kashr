@@ -1,9 +1,9 @@
 import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
 import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
-import 'package:finanalyzer/model/account_cubit.dart';
-import 'package:finanalyzer/model/account_repository.dart';
+import 'package:finanalyzer/account/model/account_cubit.dart';
+import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
-import 'package:finanalyzer/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/router.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/settings/settings_state.dart';

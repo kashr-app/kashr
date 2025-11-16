@@ -1,5 +1,5 @@
 import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/model/turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/turnover/cubit/turnover_state.freezed.dart';

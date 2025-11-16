@@ -1,5 +1,5 @@
-import 'package:finanalyzer/model/account.dart';
-import 'package:finanalyzer/model/account_repository.dart';
+import 'package:finanalyzer/account/model/account.dart';
+import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:uuid/uuid_value.dart';
 
 class AccountService {
