@@ -6,19 +6,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
-class TurnoverTagRoute extends GoRouteData with $TurnoverTagRoute {
+class TurnoverTagsRoute extends GoRouteData with $TurnoverTagRoute {
   final String turnoverId;
-  const TurnoverTagRoute({required this.turnoverId});
+  const TurnoverTagsRoute({required this.turnoverId});
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return TurnoverTagPage(turnoverId: turnoverId);
+    return TurnoverTagsPage(turnoverId: turnoverId);
   }
 }
 
-class TurnoverTagPage extends StatelessWidget {
+class TurnoverTagsPage extends StatelessWidget {
   final String turnoverId;
-  const TurnoverTagPage({required this.turnoverId, super.key});
+  const TurnoverTagsPage({required this.turnoverId, super.key});
 
   @override
   Widget build(BuildContext context) {
