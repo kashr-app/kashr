@@ -278,7 +278,7 @@ linter:
   run the build command:
 
   ```shell
-  fvm flutter run build_runner build --delete-conflicting-outputs
+  fvm dart run build_runner build --delete-conflicting-outputs
   ```
 
 ## Testing
