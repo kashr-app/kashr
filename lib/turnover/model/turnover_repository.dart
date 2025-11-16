@@ -1,4 +1,8 @@
 import 'package:finanalyzer/db/db_helper.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:decimal/decimal.dart';
 import 'turnover.dart';
 import 'package:uuid/uuid.dart';
 
@@ -70,5 +74,109 @@ class TurnoverRepository {
     }
     await batch.commit();
     return turnovers;
+  }
+
+  /// Fetches a paginated list of turnovers with their associated tags.
+  /// This method efficiently loads all data in a single query to avoid N+1 problems.
+  Future<List<TurnoverWithTags>> getTurnoversWithTagsPaginated({
+    required int limit,
+    required int offset,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    // First, get the paginated turnovers
+    final turnoverMaps = await db.query(
+      'turnover',
+      orderBy: 'bookingDate DESC NULLS FIRST, createdAt DESC',
+      limit: limit,
+      offset: offset,
+    );
+
+    if (turnoverMaps.isEmpty) {
+      return [];
+    }
+
+    final turnovers =
+        turnoverMaps.map((map) => Turnover.fromJson(map)).toList();
+    final turnoverIds =
+        turnovers.where((t) => t.id != null).map((t) => t.id!.uuid).toList();
+
+    if (turnoverIds.isEmpty) {
+      // Return turnovers without tags if no valid IDs
+      return turnovers
+          .map((t) => TurnoverWithTags(turnover: t, tagTurnovers: []))
+          .toList();
+    }
+
+    // Fetch all tag_turnovers for these turnovers with their tags in one query
+    final placeholders = List.generate(turnoverIds.length, (_) => '?').join(',');
+    final tagTurnoverMaps = await db.rawQuery(
+      '''
+      SELECT
+        tt.id as tt_id,
+        tt.turnoverId as tt_turnoverId,
+        tt.tagId as tt_tagId,
+        tt.amountValue as tt_amountValue,
+        tt.amountUnit as tt_amountUnit,
+        tt.note as tt_note,
+        t.id as t_id,
+        t.name as t_name,
+        t.color as t_color
+      FROM tag_turnover tt
+      LEFT JOIN tag t ON tt.tagId = t.id
+      WHERE tt.turnoverId IN ($placeholders)
+      ORDER BY tt.amountValue DESC
+      ''',
+      turnoverIds,
+    );
+
+    // Group tag turnovers by turnover ID
+    final tagTurnoversByTurnoverId = <String, List<TagTurnoverWithTag>>{};
+    for (final map in tagTurnoverMaps) {
+      final turnoverId = map['tt_turnoverId'] as String?;
+      if (turnoverId == null) continue;
+
+      final tagTurnover = TagTurnover(
+        id: map['tt_id'] != null
+            ? UuidValue.fromString(map['tt_id'] as String)
+            : null,
+        turnoverId: UuidValue.fromString(turnoverId),
+        tagId: UuidValue.fromString(map['tt_tagId'] as String),
+        amountValue: (Decimal.fromInt(map['tt_amountValue'] as int) /
+                Decimal.fromInt(scaleFactor))
+            .toDecimal(),
+        amountUnit: map['tt_amountUnit'] as String,
+        note: map['tt_note'] as String?,
+      );
+
+      final tag = Tag(
+        id: map['t_id'] != null
+            ? UuidValue.fromString(map['t_id'] as String)
+            : null,
+        name: map['t_name'] as String? ?? 'Unknown',
+        color: map['t_color'] as String?,
+      );
+
+      final tagTurnoverWithTag = TagTurnoverWithTag(
+        tagTurnover: tagTurnover,
+        tag: tag,
+      );
+
+      tagTurnoversByTurnoverId
+          .putIfAbsent(turnoverId, () => [])
+          .add(tagTurnoverWithTag);
+    }
+
+    // Combine turnovers with their tag turnovers
+    return turnovers.map((turnover) {
+      final turnoverId = turnover.id?.uuid;
+      final tagTurnovers = turnoverId != null
+          ? (tagTurnoversByTurnoverId[turnoverId] ?? <TagTurnoverWithTag>[])
+          : <TagTurnoverWithTag>[];
+      return TurnoverWithTags(
+        turnover: turnover,
+        tagTurnovers: tagTurnovers,
+      );
+    }).toList();
   }
 }

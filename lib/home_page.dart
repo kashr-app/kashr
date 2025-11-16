@@ -2,6 +2,7 @@ import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
 import 'package:finanalyzer/comdirect/turnover_screen.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
+import 'package:finanalyzer/turnover/tags_page.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ part '_gen/home_page.g.dart';
   path: '/app',
   routes: <TypedGoRoute<GoRouteData>>[
     TypedGoRoute<SettingsRoute>(path: 'settings'),
+    TypedGoRoute<TagsRoute>(path: 'tags'),
     TypedGoRoute<TurnoversRoute>(
       path: 'turnovers',
       routes: [TypedGoRoute<TurnoverTagsRoute>(path: ':turnoverId/tags')],
@@ -64,6 +66,10 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             onPressed: () => const TurnoversRoute().go(context),
             icon: const Icon(Icons.list_alt),
+          ),
+          IconButton(
+            onPressed: () => const TagsRoute().go(context),
+            icon: const Icon(Icons.label),
           ),
           IconButton(
             onPressed: () => const SettingsRoute().go(context),
