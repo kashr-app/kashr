@@ -28,7 +28,7 @@ class Credentials {
   );
 
   static Future<Credentials?> load() async {
-    Future<bool> _authenticate() async {
+    Future<bool> authenticate() async {
       try {
         return await LocalAuthentication().authenticate(
           localizedReason: 'Access credentials',
@@ -41,7 +41,7 @@ class Credentials {
       }
     }
 
-    bool authenticated = await _authenticate();
+    bool authenticated = await authenticate();
     if (!authenticated) {
       return null;
     }
