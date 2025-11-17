@@ -1,7 +1,7 @@
 import 'package:finanalyzer/comdirect/comdirect_model.dart';
 import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:finanalyzer/comdirect/password_field_with_visibility_toggle.dart';
-import 'package:finanalyzer/home_page.dart';
+import 'package:finanalyzer/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';

@@ -1,7 +1,7 @@
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_service.dart';
 import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
-import 'package:finanalyzer/home_page.dart';
+import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/account/model/account_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:flutter/material.dart';

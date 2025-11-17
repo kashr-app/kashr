@@ -3,6 +3,7 @@ import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:decimal/decimal.dart';
+import 'package:jiffy/jiffy.dart';
 import 'turnover.dart';
 import 'package:uuid/uuid.dart';
 
@@ -44,6 +45,29 @@ class TurnoverRepository {
       whereArgs: apiIds.map((id) => id.uuid).toList(),
     );
     return result.map((e) => Turnover.fromJson(e)).toList();
+  }
+
+  /// Fetches turnovers for a specific month and year.
+  Future<List<Turnover>> getTurnoversForMonth({
+    required int year,
+    required int month,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final endDate = startDate.add(months: 1);
+
+    final maps = await db.query(
+      'turnover',
+      where: 'bookingDate >= ? AND bookingDate < ?',
+      whereArgs: [
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+      ],
+      orderBy: 'bookingDate DESC',
+    );
+
+    return maps.map((map) => Turnover.fromJson(map)).toList();
   }
 
   // Custom method to find accountId and apiId by a list of API IDs

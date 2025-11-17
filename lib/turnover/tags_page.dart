@@ -1,4 +1,4 @@
-import 'package:finanalyzer/home_page.dart';
+import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';

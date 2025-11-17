@@ -1,6 +1,9 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/db/db_helper.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:jiffy/jiffy.dart';
 import 'package:uuid/uuid.dart';
 
 class TagTurnoverRepository {
@@ -118,4 +121,153 @@ class TagTurnoverRepository {
       scaleOnInfinitePrecision: 2,
     );
   }
+
+  /// Fetches tag summaries for a specific month and year.
+  /// Returns a list of TagSummary objects containing tag info and total amount.
+  Future<List<TagSummary>> getTagSummariesForMonth({
+    required int year,
+    required int month,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final endDate = startDate.add(months: 1);
+
+    final result = await db.rawQuery(
+      '''
+      SELECT
+        t.id as tag_id,
+        t.name as tag_name,
+        t.color as tag_color,
+        SUM(tt.amountValue) as total_amount
+      FROM tag_turnover tt
+      INNER JOIN tag t ON tt.tagId = t.id
+      INNER JOIN turnover tv ON tt.turnoverId = tv.id
+      WHERE tv.bookingDate >= ? AND tv.bookingDate < ?
+      GROUP BY t.id, t.name, t.color
+      ORDER BY total_amount DESC
+      ''',
+      [
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+      ],
+    );
+
+    return result.map((map) {
+      final tag = Tag(
+        id: UuidValue.fromString(map['tag_id'] as String),
+        name: map['tag_name'] as String,
+        color: map['tag_color'] as String?,
+      );
+
+      final totalAmountInt = map['total_amount'] as int? ?? 0;
+      final totalAmount = (Decimal.fromInt(totalAmountInt) /
+              Decimal.fromInt(100))
+          .toDecimal(scaleOnInfinitePrecision: 2);
+
+      return TagSummary(tag: tag, totalAmount: totalAmount);
+    }).toList();
+  }
+
+  /// Fetches income tag summaries (positive turnovers only) for a month.
+  Future<List<TagSummary>> getIncomeTagSummariesForMonth({
+    required int year,
+    required int month,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final endDate = startDate.add(months: 1);
+
+    final result = await db.rawQuery(
+      '''
+      SELECT
+        t.id as tag_id,
+        t.name as tag_name,
+        t.color as tag_color,
+        SUM(tt.amountValue) as total_amount
+      FROM tag_turnover tt
+      INNER JOIN tag t ON tt.tagId = t.id
+      INNER JOIN turnover tv ON tt.turnoverId = tv.id
+      WHERE tv.bookingDate >= ? AND tv.bookingDate < ?
+        AND tv.amountValue > 0
+      GROUP BY t.id, t.name, t.color
+      ORDER BY total_amount DESC
+      ''',
+      [
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+      ],
+    );
+
+    return result.map((map) {
+      final tag = Tag(
+        id: UuidValue.fromString(map['tag_id'] as String),
+        name: map['tag_name'] as String,
+        color: map['tag_color'] as String?,
+      );
+
+      final totalAmountInt = map['total_amount'] as int? ?? 0;
+      final totalAmount = (Decimal.fromInt(totalAmountInt) /
+              Decimal.fromInt(100))
+          .toDecimal(scaleOnInfinitePrecision: 2);
+
+      return TagSummary(tag: tag, totalAmount: totalAmount);
+    }).toList();
+  }
+
+  /// Fetches expense tag summaries (negative turnovers only) for a month.
+  Future<List<TagSummary>> getExpenseTagSummariesForMonth({
+    required int year,
+    required int month,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final endDate = startDate.add(months: 1);
+
+    final result = await db.rawQuery(
+      '''
+      SELECT
+        t.id as tag_id,
+        t.name as tag_name,
+        t.color as tag_color,
+        SUM(tt.amountValue) as total_amount
+      FROM tag_turnover tt
+      INNER JOIN tag t ON tt.tagId = t.id
+      INNER JOIN turnover tv ON tt.turnoverId = tv.id
+      WHERE tv.bookingDate >= ? AND tv.bookingDate < ?
+        AND tv.amountValue < 0
+      GROUP BY t.id, t.name, t.color
+      ORDER BY total_amount ASC
+      ''',
+      [
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+      ],
+    );
+
+    return result.map((map) {
+      final tag = Tag(
+        id: UuidValue.fromString(map['tag_id'] as String),
+        name: map['tag_name'] as String,
+        color: map['tag_color'] as String?,
+      );
+
+      final totalAmountInt = map['total_amount'] as int? ?? 0;
+      final totalAmount = (Decimal.fromInt(totalAmountInt) /
+              Decimal.fromInt(100))
+          .toDecimal(scaleOnInfinitePrecision: 2);
+
+      return TagSummary(tag: tag, totalAmount: totalAmount);
+    }).toList();
+  }
+}
+
+/// A summary of spending for a specific tag.
+class TagSummary {
+  final Tag tag;
+  final Decimal totalAmount;
+
+  TagSummary({required this.tag, required this.totalAmount});
 }

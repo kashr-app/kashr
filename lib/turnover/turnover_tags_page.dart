@@ -1,5 +1,5 @@
 import 'package:finanalyzer/core/dialogs/discard_changes_dialog.dart';
-import 'package:finanalyzer/home_page.dart';
+import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';

@@ -1,4 +1,4 @@
-import 'package:finanalyzer/home_page.dart';
+import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_state.dart';
 import 'package:flutter/material.dart';

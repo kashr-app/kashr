@@ -1,5 +1,5 @@
 import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/home_page.dart';
+import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/settings/settings_state.dart';
 import 'package:flutter/material.dart';

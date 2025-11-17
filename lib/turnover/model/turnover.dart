@@ -10,6 +10,7 @@ part '../../_gen/turnover/model/turnover.freezed.dart';
 part '../../_gen/turnover/model/turnover.g.dart';
 
 final dateFormat = DateFormat("dd.MM.yyyy");
+const String isoDateFormat = 'yyyy-MM-dd';
 
 @freezed
 abstract class Turnover with _$Turnover {

@@ -1,4 +1,4 @@
-import 'package:finanalyzer/home_page.dart';
+import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
