@@ -23,6 +23,8 @@ class DashboardCubit extends Cubit<DashboardState> {
             totalExpenses: Decimal.zero,
             unallocatedIncome: Decimal.zero,
             unallocatedExpenses: Decimal.zero,
+            unallocatedTurnovers: const [],
+            unallocatedCount: 0,
           ),
         );
 
@@ -43,6 +45,19 @@ class DashboardCubit extends Cubit<DashboardState> {
 
       final expenseTagSummaries =
           await _tagTurnoverRepository.getExpenseTagSummariesForMonth(
+        year: state.selectedYear,
+        month: state.selectedMonth,
+      );
+
+      final unallocatedTurnovers =
+          await _turnoverRepository.getUnallocatedTurnoversForMonth(
+        year: state.selectedYear,
+        month: state.selectedMonth,
+        limit: 1,
+      );
+
+      final unallocatedCount =
+          await _turnoverRepository.countUnallocatedTurnoversForMonth(
         year: state.selectedYear,
         month: state.selectedMonth,
       );
@@ -88,6 +103,8 @@ class DashboardCubit extends Cubit<DashboardState> {
           unallocatedExpenses: unallocatedExpenses,
           incomeTagSummaries: incomeTagSummaries,
           expenseTagSummaries: expenseTagSummaries,
+          unallocatedTurnovers: unallocatedTurnovers,
+          unallocatedCount: unallocatedCount,
         ),
       );
     } catch (e, s) {

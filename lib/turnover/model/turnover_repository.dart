@@ -1,6 +1,8 @@
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover_filter.dart';
+import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:decimal/decimal.dart';
 import 'package:jiffy/jiffy.dart';
@@ -100,21 +102,254 @@ class TurnoverRepository {
     return turnovers;
   }
 
+  /// Counts unallocated turnovers for a specific month and year.
+  /// A turnover is considered unallocated if:
+  /// - It has no tag_turnover entries, OR
+  /// - The sum of tag_turnover amounts doesn't equal the turnover amount
+  Future<int> countUnallocatedTurnoversForMonth({
+    required int year,
+    required int month,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final endDate = startDate.add(months: 1);
+
+    final result = await db.rawQuery(
+      '''
+      SELECT COUNT(DISTINCT t.id) as count
+      FROM turnover t
+      LEFT JOIN tag_turnover tt ON t.id = tt.turnoverId
+      WHERE t.bookingDate >= ? AND t.bookingDate < ?
+      GROUP BY t.id
+      HAVING
+        COUNT(tt.id) = 0 OR
+        COALESCE(SUM(tt.amountValue), 0) != t.amountValue
+      ''',
+      [
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+      ],
+    );
+
+    return result.length; // Number of rows = number of unallocated turnovers
+  }
+
+  /// Fetches unallocated turnovers for a specific month and year.
+  /// A turnover is considered unallocated if:
+  /// - It has no tag_turnover entries, OR
+  /// - The sum of tag_turnover amounts doesn't equal the turnover amount
+  Future<List<TurnoverWithTags>> getUnallocatedTurnoversForMonth({
+    required int year,
+    required int month,
+    int limit = 5,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final endDate = startDate.add(months: 1);
+
+    // Query to find turnovers that are not fully allocated
+    // Orders by absolute amount DESC to prioritize high-value transactions
+    final turnoverMaps = await db.rawQuery(
+      '''
+      SELECT DISTINCT t.*
+      FROM turnover t
+      LEFT JOIN tag_turnover tt ON t.id = tt.turnoverId
+      WHERE t.bookingDate >= ? AND t.bookingDate < ?
+      GROUP BY t.id
+      HAVING
+        COUNT(tt.id) = 0 OR
+        COALESCE(SUM(tt.amountValue), 0) != t.amountValue
+      ORDER BY ABS(t.amountValue) DESC, t.bookingDate DESC NULLS FIRST
+      LIMIT ?
+      ''',
+      [
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+        limit,
+      ],
+    );
+
+    if (turnoverMaps.isEmpty) {
+      return [];
+    }
+
+    final turnovers =
+        turnoverMaps.map((map) => Turnover.fromJson(map)).toList();
+    final turnoverIds =
+        turnovers.where((t) => t.id != null).map((t) => t.id!.uuid).toList();
+
+    if (turnoverIds.isEmpty) {
+      return turnovers
+          .map((t) => TurnoverWithTags(turnover: t, tagTurnovers: []))
+          .toList();
+    }
+
+    // Fetch all tag_turnovers for these turnovers with their tags in one query
+    final placeholders = List.generate(turnoverIds.length, (_) => '?').join(',');
+    final tagTurnoverMaps = await db.rawQuery(
+      '''
+      SELECT
+        tt.id as tt_id,
+        tt.turnoverId as tt_turnoverId,
+        tt.tagId as tt_tagId,
+        tt.amountValue as tt_amountValue,
+        tt.amountUnit as tt_amountUnit,
+        tt.note as tt_note,
+        t.id as t_id,
+        t.name as t_name,
+        t.color as t_color
+      FROM tag_turnover tt
+      LEFT JOIN tag t ON tt.tagId = t.id
+      WHERE tt.turnoverId IN ($placeholders)
+      ORDER BY tt.amountValue DESC
+      ''',
+      turnoverIds,
+    );
+
+    // Group tag turnovers by turnover ID
+    final tagTurnoversByTurnoverId = <String, List<TagTurnoverWithTag>>{};
+    for (final map in tagTurnoverMaps) {
+      final turnoverId = map['tt_turnoverId'] as String?;
+      if (turnoverId == null) continue;
+
+      final tagTurnover = TagTurnover(
+        id: map['tt_id'] != null
+            ? UuidValue.fromString(map['tt_id'] as String)
+            : null,
+        turnoverId: UuidValue.fromString(turnoverId),
+        tagId: UuidValue.fromString(map['tt_tagId'] as String),
+        amountValue: (Decimal.fromInt(map['tt_amountValue'] as int) /
+                Decimal.fromInt(scaleFactor))
+            .toDecimal(),
+        amountUnit: map['tt_amountUnit'] as String,
+        note: map['tt_note'] as String?,
+      );
+
+      final tag = Tag(
+        id: map['t_id'] != null
+            ? UuidValue.fromString(map['t_id'] as String)
+            : null,
+        name: map['t_name'] as String? ?? 'Unknown',
+        color: map['t_color'] as String?,
+      );
+
+      final tagTurnoverWithTag = TagTurnoverWithTag(
+        tagTurnover: tagTurnover,
+        tag: tag,
+      );
+
+      tagTurnoversByTurnoverId
+          .putIfAbsent(turnoverId, () => [])
+          .add(tagTurnoverWithTag);
+    }
+
+    // Combine turnovers with their tag turnovers
+    return turnovers.map((turnover) {
+      final turnoverId = turnover.id?.uuid;
+      final tagTurnovers = turnoverId != null
+          ? (tagTurnoversByTurnoverId[turnoverId] ?? <TagTurnoverWithTag>[])
+          : <TagTurnoverWithTag>[];
+      return TurnoverWithTags(
+        turnover: turnover,
+        tagTurnovers: tagTurnovers,
+      );
+    }).toList();
+  }
+
   /// Fetches a paginated list of turnovers with their associated tags.
   /// This method efficiently loads all data in a single query to avoid N+1 problems.
   Future<List<TurnoverWithTags>> getTurnoversWithTagsPaginated({
     required int limit,
     required int offset,
+    TurnoverFilter filter = TurnoverFilter.empty,
+    TurnoverSort sort = TurnoverSort.defaultSort,
   }) async {
     final db = await DatabaseHelper().database;
 
-    // First, get the paginated turnovers
-    final turnoverMaps = await db.query(
-      'turnover',
-      orderBy: 'bookingDate DESC NULLS FIRST, createdAt DESC',
-      limit: limit,
-      offset: offset,
-    );
+    // Build WHERE clause and arguments based on filters
+    final whereClauses = <String>[];
+    final whereArgs = <Object>[];
+
+    // Month/year filter
+    if (filter.year != null && filter.month != null) {
+      final startDate = Jiffy.parseFromDateTime(DateTime(filter.year!, filter.month!));
+      final endDate = startDate.add(months: 1);
+      whereClauses.add('t.bookingDate >= ? AND t.bookingDate < ?');
+      whereArgs.add(startDate.format(pattern: isoDateFormat));
+      whereArgs.add(endDate.format(pattern: isoDateFormat));
+    }
+
+    // Sign filter - filter by income (positive) or expense (negative)
+    if (filter.sign != null) {
+      switch (filter.sign!) {
+        case TurnoverSign.income:
+          whereClauses.add('t.amountValue > 0');
+          break;
+        case TurnoverSign.expense:
+          whereClauses.add('t.amountValue < 0');
+          break;
+      }
+    }
+
+    // Tag filter - turnovers must have ALL specified tags
+    if (filter.tagIds != null && filter.tagIds!.isNotEmpty) {
+      // For each tag, ensure the turnover has a tag_turnover entry with that tagId
+      for (final tagId in filter.tagIds!) {
+        whereClauses.add('''
+          EXISTS (
+            SELECT 1 FROM tag_turnover tt_filter
+            WHERE tt_filter.turnoverId = t.id AND tt_filter.tagId = ?
+          )
+        ''');
+        whereArgs.add(tagId);
+      }
+    }
+
+    // Query based on filters
+    final List<Map<String, Object?>> turnoverMaps;
+
+    if (filter.unallocatedOnly == true) {
+      // Use the unallocated query logic
+      final whereClause = whereClauses.isNotEmpty ? 'WHERE ${whereClauses.join(' AND ')}' : '';
+
+      // For unallocated, use custom sort or default to amount DESC
+      final orderBy = sort.orderBy == SortField.bookingDate && sort.direction == SortDirection.desc
+          ? 'ABS(t.amountValue) DESC, t.bookingDate DESC NULLS FIRST'
+          : sort.toSqlOrderBy();
+
+      turnoverMaps = await db.rawQuery(
+        '''
+        SELECT DISTINCT t.*
+        FROM turnover t
+        LEFT JOIN tag_turnover tt ON t.id = tt.turnoverId
+        $whereClause
+        GROUP BY t.id
+        HAVING
+          COUNT(tt.id) = 0 OR
+          COALESCE(SUM(tt.amountValue), 0) != t.amountValue
+        ORDER BY $orderBy
+        LIMIT ? OFFSET ?
+        ''',
+        [...whereArgs, limit, offset],
+      );
+    } else {
+      // Regular query - need to use raw query to support tag filtering
+      final whereClause = whereClauses.isNotEmpty ? 'WHERE ${whereClauses.join(' AND ')}' : '';
+      final orderBy = sort.toSqlOrderBy();
+
+      turnoverMaps = await db.rawQuery(
+        '''
+        SELECT t.*
+        FROM turnover t
+        $whereClause
+        ORDER BY $orderBy
+        LIMIT ? OFFSET ?
+        ''',
+        [...whereArgs, limit, offset],
+      );
+    }
 
     if (turnoverMaps.isEmpty) {
       return [];

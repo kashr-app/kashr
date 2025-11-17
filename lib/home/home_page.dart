@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
 import 'package:finanalyzer/comdirect/turnover_screen.dart';
@@ -7,9 +9,12 @@ import 'package:finanalyzer/home/widgets/cashflow_card.dart';
 import 'package:finanalyzer/home/widgets/income_summary_card.dart';
 import 'package:finanalyzer/home/widgets/month_selector.dart';
 import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
+import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/tags_page.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
@@ -137,6 +142,14 @@ class HomePage extends StatelessWidget {
                   totalExpenses: state.totalExpenses,
                   unallocatedExpenses: state.unallocatedExpenses,
                   tagSummaries: state.expenseTagSummaries,
+                ),
+                const SizedBox(height: 16),
+                UnallocatedTurnoversSection(
+                  unallocatedTurnovers: state.unallocatedTurnovers,
+                  unallocatedCount: state.unallocatedCount,
+                  onRefresh: () => context.read<DashboardCubit>().loadMonthData(),
+                  selectedYear: state.selectedYear,
+                  selectedMonth: state.selectedMonth,
                 ),
               ],
             ),

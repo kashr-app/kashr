@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/home/cubit/dashboard_state.freezed.dart';
@@ -22,6 +23,10 @@ abstract class DashboardState with _$DashboardState {
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TagSummary> expenseTagSummaries,
+    @JsonKey(includeFromJson: false, includeToJson: false)
+    @Default([])
+    List<TurnoverWithTags> unallocatedTurnovers,
+    @Default(0) int unallocatedCount,
     String? errorMessage,
   }) = _DashboardState;
 
