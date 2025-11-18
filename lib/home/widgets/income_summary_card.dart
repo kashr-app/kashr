@@ -6,7 +6,6 @@ import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 /// A card widget that displays income summary with total and per-tag breakdown.
 class IncomeSummaryCard extends StatelessWidget {
