@@ -19,7 +19,7 @@ class ComdirectLoginPage extends StatefulWidget {
   const ComdirectLoginPage({super.key});
 
   @override
-  State<ComdirectLoginPage>  createState() => _ComdirectLoginPageState();
+  State<ComdirectLoginPage> createState() => _ComdirectLoginPageState();
 }
 
 class _ComdirectLoginPageState extends State<ComdirectLoginPage> {
@@ -111,7 +111,25 @@ class _ComdirectLoginPageState extends State<ComdirectLoginPage> {
               );
             case WaitingForTANConfirmation():
               return const Center(
-                child: Text("Please confirm the login in the Photo Tan App"),
+                child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 24),
+                      Text(
+                        "Please confirm the login in the Photo Tan App",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 16),
+                    ],
+                  ),
+                ),
               );
             case AuthError():
             case AuthInitial():

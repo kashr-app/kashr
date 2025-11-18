@@ -140,14 +140,17 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
     String authId,
     ComdirectAuthAPI comdirectAuthAPI,
   ) async {
-    try {
-      final startWaitingAt = DateTime.now().millisecondsSinceEpoch;
-      const timeoutMillis =
-          599000; // 599s because the expiration of the access token is 599s
+    final startWaitingAt = DateTime.now().millisecondsSinceEpoch;
+    const timeoutMillis =
+        599000; // 599s because the expiration of the access token is 599s
+    int consecutiveErrors = 0;
+    const maxConsecutiveErrors = 5;
 
-      while (DateTime.now().millisecondsSinceEpoch <
-          startWaitingAt + timeoutMillis) {
+    while (DateTime.now().millisecondsSinceEpoch <
+        startWaitingAt + timeoutMillis) {
+      try {
         final authStatus = await comdirectAuthAPI.getAuthStatus(authId);
+        consecutiveErrors = 0; // Reset error counter on successful request
 
         switch (authStatus.status) {
           case 'AUTHENTICATED':
@@ -161,13 +164,25 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
           default:
             return 'Invalid authentication status: ${authStatus.status}';
         }
+      } catch (e) {
+        consecutiveErrors++;
+        log.w(
+          'Error polling TAN status (attempt $consecutiveErrors/$maxConsecutiveErrors): $e',
+        );
+
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          final msg =
+              'Failed to poll TAN status after $maxConsecutiveErrors attempts: $e';
+          log.e(msg, error: e);
+          return msg;
+        }
+
+        // Wait before retrying (exponential backoff)
+        final retryDelay = Duration(milliseconds: 1000 * consecutiveErrors);
+        await Future.delayed(retryDelay);
       }
-      log.w("TAN confirmation timed out");
-      return 'TAN confirmation timed out';
-    } catch (e) {
-      final msg = 'Error during TAN confirmation: $e';
-      log.e(msg, error: e);
-      return msg;
     }
+    log.w("TAN confirmation timed out");
+    return 'TAN confirmation timed out';
   }
 }
