@@ -52,95 +52,100 @@ class TurnoverTagsPage extends StatelessWidget {
           Navigator.of(context).pop();
         }
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Turnover Tags'),
-        ),
-        body: BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
-        builder: (context, state) {
-          final turnover = state.turnover;
-          if (turnover == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      child: SafeArea(
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Turnover Tags')),
+          body: BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
+            builder: (context, state) {
+              final turnover = state.turnover;
+              if (turnover == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          return Column(
-            children: [
-              TurnoverInfoCard(turnover: turnover),
+              return Column(
+                children: [
+                  TurnoverInfoCard(turnover: turnover),
 
-              // Tag turnovers list
-              Expanded(
-                child: state.tagTurnovers.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                  // Tag turnovers list
+                  Expanded(
+                    child: state.tagTurnovers.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('No tags assigned yet'),
+                                const SizedBox(height: 16),
+                                FilledButton.icon(
+                                  onPressed: () => _showAddTagDialog(context),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Add Tag'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: state.tagTurnovers.length,
+                            itemBuilder: (context, index) {
+                              final tagTurnover = state.tagTurnovers[index];
+                              return TagTurnoverItem(
+                                tagTurnoverWithTag: tagTurnover,
+                                maxAmountScaled:
+                                    (turnover.amountValue.toDouble() * 100)
+                                        .toInt(),
+                                currencyUnit: turnover.amountUnit,
+                              );
+                            },
+                          ),
+                  ),
+
+                  // Status message and save button
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: StatusMessage(
+                            state: state,
+                            turnover: turnover,
+                          ),
+                        ),
+                        Row(
                           children: [
-                            const Text('No tags assigned yet'),
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: () => _showAddTagDialog(context),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add Tag'),
+                            Expanded(
+                              child: FilledButton.tonalIcon(
+                                onPressed: () => _showAddTagDialog(context),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Tag'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed:
+                                    (state.isAmountExceeded || !state.isDirty)
+                                    ? null
+                                    : () async {
+                                        await context
+                                            .read<TurnoverTagsCubit>()
+                                            .saveAll();
+                                        if (context.mounted) {
+                                          Navigator.of(context).pop();
+                                        }
+                                      },
+                                child: const Text('Save'),
+                              ),
                             ),
                           ],
                         ),
-                      )
-                    : ListView.builder(
-                        itemCount: state.tagTurnovers.length,
-                        itemBuilder: (context, index) {
-                          final tagTurnover = state.tagTurnovers[index];
-                          return TagTurnoverItem(
-                            tagTurnoverWithTag: tagTurnover,
-                            maxAmountScaled:
-                                (turnover.amountValue.toDouble() * 100).toInt(),
-                            currencyUnit: turnover.amountUnit,
-                          );
-                        },
-                      ),
-              ),
-
-              // Status message and save button
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: StatusMessage(state: state, turnover: turnover),
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.tonalIcon(
-                            onPressed: () => _showAddTagDialog(context),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add Tag'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: (state.isAmountExceeded || !state.isDirty)
-                                ? null
-                                : () async {
-                                    await context
-                                        .read<TurnoverTagsCubit>()
-                                        .saveAll();
-                                    if (context.mounted) {
-                                      Navigator.of(context).pop();
-                                    }
-                                  },
-                            child: const Text('Save'),
-                          ),
-                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -148,9 +153,8 @@ class TurnoverTagsPage extends StatelessWidget {
   void _showAddTagDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AddTagDialog(
-        cubit: context.read<TurnoverTagsCubit>(),
-      ),
+      builder: (dialogContext) =>
+          AddTagDialog(cubit: context.read<TurnoverTagsCubit>()),
     );
   }
 }
