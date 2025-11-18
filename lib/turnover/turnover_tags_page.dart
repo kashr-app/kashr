@@ -1,3 +1,4 @@
+import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/dialogs/discard_changes_dialog.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
@@ -90,8 +91,7 @@ class TurnoverTagsPage extends StatelessWidget {
                               return TagTurnoverItem(
                                 tagTurnoverWithTag: tagTurnover,
                                 maxAmountScaled:
-                                    (turnover.amountValue.toDouble() * 100)
-                                        .toInt(),
+                                    decimalScale(turnover.amountValue) ?? 0,
                                 currencyUnit: turnover.amountUnit,
                               );
                             },
