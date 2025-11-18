@@ -1,11 +1,7 @@
 import 'dart:convert';
 
-import 'package:finanalyzer/account/model/account_cubit.dart';
-import 'package:finanalyzer/comdirect/comdirect_api.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
-import 'package:finanalyzer/comdirect/comdirect_service.dart';
-import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
 import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
@@ -15,12 +11,10 @@ import 'package:finanalyzer/home/widgets/load_bank_data_section.dart';
 import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
-import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/tags_page.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
