@@ -1,19 +1,26 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/currency.dart';
+import 'package:finanalyzer/home/widgets/tag_summary_row.dart';
+import 'package:finanalyzer/turnover/model/turnover_filter.dart';
+import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// A card widget that displays income summary with total and per-tag breakdown.
 class IncomeSummaryCard extends StatelessWidget {
   final Decimal totalIncome;
   final Decimal unallocatedIncome;
   final List<TagSummary> tagSummaries;
+  final YearMonth selectedPeriod;
   final String currencyCode;
 
   const IncomeSummaryCard({
     required this.totalIncome,
     required this.unallocatedIncome,
     required this.tagSummaries,
+    required this.selectedPeriod,
     this.currencyCode = 'EUR',
     super.key,
   });
@@ -110,68 +117,23 @@ class IncomeSummaryCard extends StatelessWidget {
     Currency currency,
     ThemeData theme,
   ) {
-    final tagColor = _parseColor(summary.tag.color);
-    final percentage = totalIncome != Decimal.zero
-        ? (summary.totalAmount.abs() / totalIncome).toDouble() * 100
-        : 0.0;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        children: [
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: tagColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      summary.tag.name,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    Text(
-                      currency.format(summary.totalAmount),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+    final tagId = summary.tag.id;
+    return TagSummaryRow(
+      tag: summary.tag,
+      amount: summary.totalAmount,
+      totalAmount: totalIncome,
+      currency: currency,
+      onTap: tagId != null
+          ? () {
+              TurnoversRoute(
+                filter: TurnoverFilter(
+                  tagIds: [tagId.uuid],
+                  sign: TurnoverSign.income,
+                  period: selectedPeriod,
                 ),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: percentage / 100,
-                  backgroundColor:
-                      theme.colorScheme.surfaceContainerHighest,
-                  color: tagColor,
-                  minHeight: 6,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 45,
-            child: Text(
-              '${percentage.toStringAsFixed(0)}%',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.end,
-            ),
-          ),
-        ],
-      ),
+              ).go(context);
+            }
+          : null,
     );
   }
 
@@ -180,82 +142,20 @@ class IncomeSummaryCard extends StatelessWidget {
     Currency currency,
     ThemeData theme,
   ) {
-    final percentage = totalIncome != Decimal.zero
-        ? (unallocatedIncome / totalIncome).toDouble() * 100
-        : 0.0;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        children: [
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade400,
-              shape: BoxShape.circle,
-            ),
+    return TagSummaryRow(
+      isUnallocated: true,
+      amount: unallocatedIncome,
+      totalAmount: totalIncome,
+      currency: currency,
+      onTap: () {
+        TurnoversRoute(
+          filter: TurnoverFilter(
+            unallocatedOnly: true,
+            sign: TurnoverSign.income,
+            period: selectedPeriod,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Unallocated',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    Text(
-                      currency.format(unallocatedIncome),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: percentage / 100,
-                  backgroundColor:
-                      theme.colorScheme.surfaceContainerHighest,
-                  color: Colors.grey.shade400,
-                  minHeight: 6,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 45,
-            child: Text(
-              '${percentage.toStringAsFixed(0)}%',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.end,
-            ),
-          ),
-        ],
-      ),
+        ).go(context);
+      },
     );
-  }
-
-  Color _parseColor(String? colorString) {
-    if (colorString == null || colorString.isEmpty) {
-      return Colors.grey.shade400;
-    }
-
-    try {
-      final hexColor = colorString.replaceAll('#', '');
-      return Color(int.parse('FF$hexColor', radix: 16));
-    } catch (e) {
-      return Colors.grey.shade400;
-    }
   }
 }

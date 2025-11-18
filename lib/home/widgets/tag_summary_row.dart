@@ -1,0 +1,138 @@
+import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/core/currency.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:flutter/material.dart';
+
+/// A reusable row widget that displays a summary item (tag or unallocated)
+/// with a color indicator, name, amount, percentage bar, and tap handler.
+class TagSummaryRow extends StatelessWidget {
+  final Tag? tag;
+  final bool isUnallocated;
+  final Decimal amount;
+  final Decimal totalAmount;
+  final Currency currency;
+  final VoidCallback? onTap;
+
+  const TagSummaryRow({
+    this.tag,
+    this.isUnallocated = false,
+    required this.amount,
+    required this.totalAmount,
+    required this.currency,
+    this.onTap,
+    super.key,
+  }) : assert(
+          tag != null || isUnallocated,
+          'Either tag must be provided or isUnallocated must be true',
+        );
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = _getColor();
+    final label = _getLabel();
+    final percentage = _calculatePercentage();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 4.0),
+          child: Row(
+            children: [
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          label,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontStyle: isUnallocated
+                                ? FontStyle.italic
+                                : FontStyle.normal,
+                          ),
+                        ),
+                        Text(
+                          currency.format(amount),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: percentage / 100,
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
+                      color: color,
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 45,
+                child: Text(
+                  '${percentage.toStringAsFixed(0)}%',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.end,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getColor() {
+    if (isUnallocated) {
+      return Colors.grey.shade400;
+    }
+
+    final colorString = tag?.color;
+    if (colorString == null || colorString.isEmpty) {
+      return Colors.grey.shade400;
+    }
+
+    try {
+      final hexColor = colorString.replaceAll('#', '');
+      return Color(int.parse('FF$hexColor', radix: 16));
+    } catch (e) {
+      return Colors.grey.shade400;
+    }
+  }
+
+  String _getLabel() {
+    if (isUnallocated) {
+      return 'Unallocated';
+    }
+    return tag?.name ?? 'Unknown';
+  }
+
+  double _calculatePercentage() {
+    if (totalAmount == Decimal.zero) {
+      return 0.0;
+    }
+    return (amount.abs() / totalAmount).toDouble() * 100;
+  }
+}

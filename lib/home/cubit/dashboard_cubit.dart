@@ -3,6 +3,7 @@ import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 
@@ -17,8 +18,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     this._tagTurnoverRepository,
   ) : super(
           DashboardState(
-            selectedYear: DateTime.now().year,
-            selectedMonth: DateTime.now().month,
+            selectedPeriod: YearMonth.now(),
             totalIncome: Decimal.zero,
             totalExpenses: Decimal.zero,
             unallocatedIncome: Decimal.zero,
@@ -33,33 +33,33 @@ class DashboardCubit extends Cubit<DashboardState> {
     emit(state.copyWith(status: Status.loading));
     try {
       final turnovers = await _turnoverRepository.getTurnoversForMonth(
-        year: state.selectedYear,
-        month: state.selectedMonth,
+        year: state.selectedPeriod.year,
+        month: state.selectedPeriod.month,
       );
 
       final incomeTagSummaries =
           await _tagTurnoverRepository.getIncomeTagSummariesForMonth(
-        year: state.selectedYear,
-        month: state.selectedMonth,
+        year: state.selectedPeriod.year,
+        month: state.selectedPeriod.month,
       );
 
       final expenseTagSummaries =
           await _tagTurnoverRepository.getExpenseTagSummariesForMonth(
-        year: state.selectedYear,
-        month: state.selectedMonth,
+        year: state.selectedPeriod.year,
+        month: state.selectedPeriod.month,
       );
 
       final unallocatedTurnovers =
           await _turnoverRepository.getUnallocatedTurnoversForMonth(
-        year: state.selectedYear,
-        month: state.selectedMonth,
+        year: state.selectedPeriod.year,
+        month: state.selectedPeriod.month,
         limit: 1,
       );
 
       final unallocatedCount =
           await _turnoverRepository.countUnallocatedTurnoversForMonth(
-        year: state.selectedYear,
-        month: state.selectedMonth,
+        year: state.selectedPeriod.year,
+        month: state.selectedPeriod.month,
       );
 
       // Separate income (positive) from expenses (negative)
@@ -120,39 +120,47 @@ class DashboardCubit extends Cubit<DashboardState> {
 
   /// Navigates to the previous month.
   Future<void> previousMonth() async {
-    final newMonth = state.selectedMonth - 1;
-    if (newMonth < 1) {
-      emit(
-        state.copyWith(
-          selectedYear: state.selectedYear - 1,
-          selectedMonth: 12,
+    final currentDate = state.selectedPeriod.toDateTime();
+    final previousDate = DateTime(
+      currentDate.year,
+      currentDate.month - 1,
+    );
+    emit(
+      state.copyWith(
+        selectedPeriod: YearMonth(
+          year: previousDate.year,
+          month: previousDate.month,
         ),
-      );
-    } else {
-      emit(state.copyWith(selectedMonth: newMonth));
-    }
+      ),
+    );
     await loadMonthData();
   }
 
   /// Navigates to the next month.
   Future<void> nextMonth() async {
-    final newMonth = state.selectedMonth + 1;
-    if (newMonth > 12) {
-      emit(
-        state.copyWith(
-          selectedYear: state.selectedYear + 1,
-          selectedMonth: 1,
+    final currentDate = state.selectedPeriod.toDateTime();
+    final nextDate = DateTime(
+      currentDate.year,
+      currentDate.month + 1,
+    );
+    emit(
+      state.copyWith(
+        selectedPeriod: YearMonth(
+          year: nextDate.year,
+          month: nextDate.month,
         ),
-      );
-    } else {
-      emit(state.copyWith(selectedMonth: newMonth));
-    }
+      ),
+    );
     await loadMonthData();
   }
 
   /// Sets a specific month and year.
   Future<void> selectMonth(int year, int month) async {
-    emit(state.copyWith(selectedYear: year, selectedMonth: month));
+    emit(
+      state.copyWith(
+        selectedPeriod: YearMonth(year: year, month: month),
+      ),
+    );
     await loadMonthData();
   }
 }

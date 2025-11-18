@@ -1,3 +1,4 @@
+import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/turnover/model/turnover_filter.freezed.dart';
@@ -20,11 +21,9 @@ abstract class TurnoverFilter with _$TurnoverFilter {
     /// or where tag amounts don't sum to turnover amount)
     bool? unallocatedOnly,
 
-    /// Filter by specific year
-    int? year,
-
-    /// Filter by specific month (1-12)
-    int? month,
+    /// Filter by specific period (year and month)
+    /// Both year and month must be provided together to ensure a valid filter
+    YearMonth? period,
 
     /// Filter by specific tag IDs (UUIDs as strings)
     /// If provided, only turnovers with ALL these tags are shown
@@ -40,8 +39,7 @@ abstract class TurnoverFilter with _$TurnoverFilter {
   /// Returns true if any filters are active
   bool get hasFilters =>
       unallocatedOnly == true ||
-      year != null ||
-      month != null ||
+      period != null ||
       (tagIds != null && tagIds!.isNotEmpty) ||
       sign != null;
 

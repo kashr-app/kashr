@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
 import 'package:finanalyzer/comdirect/turnover_screen.dart';
+import 'package:finanalyzer/core/widgets/period_selector.dart';
 import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
 import 'package:finanalyzer/home/widgets/cashflow_card.dart';
 import 'package:finanalyzer/home/widgets/income_summary_card.dart';
-import 'package:finanalyzer/home/widgets/month_selector.dart';
 import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
@@ -118,9 +118,8 @@ class HomePage extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                MonthSelector(
-                  selectedYear: state.selectedYear,
-                  selectedMonth: state.selectedMonth,
+                PeriodSelector(
+                  selectedPeriod: state.selectedPeriod,
                   onPreviousMonth: () =>
                       context.read<DashboardCubit>().previousMonth(),
                   onNextMonth: () =>
@@ -136,20 +135,21 @@ class HomePage extends StatelessWidget {
                   totalIncome: state.totalIncome,
                   unallocatedIncome: state.unallocatedIncome,
                   tagSummaries: state.incomeTagSummaries,
+                  selectedPeriod: state.selectedPeriod,
                 ),
                 const SizedBox(height: 16),
                 SpendingSummaryCard(
                   totalExpenses: state.totalExpenses,
                   unallocatedExpenses: state.unallocatedExpenses,
                   tagSummaries: state.expenseTagSummaries,
+                  selectedPeriod: state.selectedPeriod,
                 ),
                 const SizedBox(height: 16),
                 UnallocatedTurnoversSection(
                   unallocatedTurnovers: state.unallocatedTurnovers,
                   unallocatedCount: state.unallocatedCount,
                   onRefresh: () => context.read<DashboardCubit>().loadMonthData(),
-                  selectedYear: state.selectedYear,
-                  selectedMonth: state.selectedMonth,
+                  selectedPeriod: state.selectedPeriod,
                 ),
               ],
             ),

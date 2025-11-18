@@ -1,6 +1,7 @@
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_card.dart';
@@ -11,15 +12,13 @@ class UnallocatedTurnoversSection extends StatelessWidget {
   final List<TurnoverWithTags> unallocatedTurnovers;
   final int unallocatedCount;
   final VoidCallback onRefresh;
-  final int selectedYear;
-  final int selectedMonth;
+  final YearMonth selectedPeriod;
 
   const UnallocatedTurnoversSection({
     required this.unallocatedTurnovers,
     required this.unallocatedCount,
     required this.onRefresh,
-    required this.selectedYear,
-    required this.selectedMonth,
+    required this.selectedPeriod,
     super.key,
   });
 
@@ -61,8 +60,7 @@ class UnallocatedTurnoversSection extends StatelessWidget {
                 onPressed: () => TurnoversRoute(
                   filter: TurnoverFilter(
                     unallocatedOnly: true,
-                    year: selectedYear,
-                    month: selectedMonth,
+                    period: selectedPeriod,
                   ),
                   sort: const TurnoverSort(
                     orderBy: SortField.amount,

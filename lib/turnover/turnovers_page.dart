@@ -1,12 +1,15 @@
+import 'package:finanalyzer/core/widgets/period_selector.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_card.dart';
-import 'package:finanalyzer/turnover/widgets/turnover_filter_editor_dialog.dart';
+import 'package:finanalyzer/turnover/widgets/turnover_filter_dialog.dart';
+import 'package:finanalyzer/turnover/widgets/turnover_sort_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -14,10 +17,7 @@ import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
 class TurnoversRoute extends GoRouteData with $TurnoversRoute {
-  const TurnoversRoute({
-    this.filter,
-    this.sort,
-  });
+  const TurnoversRoute({this.filter, this.sort});
 
   final TurnoverFilter? filter;
   final TurnoverSort? sort;
@@ -138,22 +138,72 @@ class _TurnoversPageState extends State<TurnoversPage> {
     super.dispose();
   }
 
-  Future<void> _openFilterEditor() async {
-    final result = await showDialog<Map<String, dynamic>>(
+  Future<void> _openFilterDialog() async {
+    final result = await showDialog<TurnoverFilter>(
       context: context,
-      builder: (context) => TurnoverFilterEditorDialog(
-        initialFilter: _filter,
-        initialSort: _sort,
-      ),
+      builder: (context) => TurnoverFilterDialog(initialFilter: _filter),
     );
 
     if (result != null) {
       setState(() {
-        _filter = result['filter'] as TurnoverFilter;
-        _sort = result['sort'] as TurnoverSort;
+        _filter = result;
       });
       await _refresh();
     }
+  }
+
+  Future<void> _openSortDialog() async {
+    final result = await showDialog<TurnoverSort>(
+      context: context,
+      builder: (context) => TurnoverSortDialog(initialSort: _sort),
+    );
+
+    if (result != null) {
+      setState(() {
+        _sort = result;
+      });
+      await _refresh();
+    }
+  }
+
+  void _toggleSortDirection() {
+    setState(() {
+      _sort = TurnoverSort(
+        orderBy: _sort.orderBy,
+        direction: _sort.direction == SortDirection.asc
+            ? SortDirection.desc
+            : SortDirection.asc,
+      );
+    });
+    _refresh();
+  }
+
+  void _previousPeriod() {
+    if (_filter.period == null) return;
+
+    final currentPeriod = _filter.period!;
+    final newPeriod = currentPeriod.month == 1
+        ? YearMonth(year: currentPeriod.year - 1, month: 12)
+        : YearMonth(year: currentPeriod.year, month: currentPeriod.month - 1);
+
+    setState(() {
+      _filter = _filter.copyWith(period: newPeriod);
+    });
+    _refresh();
+  }
+
+  void _nextPeriod() {
+    if (_filter.period == null) return;
+
+    final currentPeriod = _filter.period!;
+    final newPeriod = currentPeriod.month == 12
+        ? YearMonth(year: currentPeriod.year + 1, month: 1)
+        : YearMonth(year: currentPeriod.year, month: currentPeriod.month + 1);
+
+    setState(() {
+      _filter = _filter.copyWith(period: newPeriod);
+    });
+    _refresh();
   }
 
   @override
@@ -165,9 +215,14 @@ class _TurnoversPageState extends State<TurnoversPage> {
           elevation: 0,
           actions: [
             IconButton(
+              icon: const Icon(Icons.sort),
+              onPressed: _openSortDialog,
+              tooltip: 'Sort',
+            ),
+            IconButton(
               icon: const Icon(Icons.filter_list),
-              onPressed: _openFilterEditor,
-              tooltip: 'Filter & Sort',
+              onPressed: _openFilterDialog,
+              tooltip: 'Filter',
             ),
           ],
         ),
@@ -176,10 +231,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
             if (_filter.hasFilters || _sort != TurnoverSort.defaultSort)
               _buildFilterChips(),
             Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refresh,
-                child: _buildBody(),
-              ),
+              child: RefreshIndicator(onRefresh: _refresh, child: _buildBody()),
             ),
           ],
         ),
@@ -190,72 +242,95 @@ class _TurnoversPageState extends State<TurnoversPage> {
   Widget _buildFilterChips() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Sort indicator chip (not deletable, shows current sort)
-          if (_sort != TurnoverSort.defaultSort)
-            Chip(
-              avatar: Icon(
-                _sort.direction == SortDirection.asc
-                    ? Icons.arrow_upward
-                    : Icons.arrow_downward,
-                size: 18,
-              ),
-              label: Text(_getSortFieldName(_sort.orderBy)),
-            ),
-
-          // Unallocated filter chip
-          if (_filter.unallocatedOnly == true)
-            Chip(
-              label: const Text('Unallocated'),
-              onDeleted: () {
+          // Period selector (if period filter is set)
+          if (_filter.period != null) ...[
+            PeriodSelector(
+              selectedPeriod: _filter.period!,
+              onPreviousMonth: _previousPeriod,
+              onNextMonth: _nextPeriod,
+              onDelete: () {
                 setState(() {
-                  _filter = _filter.copyWith(unallocatedOnly: null);
+                  _filter = _filter.copyWith(period: null);
                 });
                 _refresh();
               },
             ),
+            const SizedBox(height: 8),
+          ],
 
-          // Month/Year filter chip
-          if (_filter.year != null && _filter.month != null)
-            Chip(
-              label: Text('${_getMonthName(_filter.month!)} ${_filter.year}'),
-              onDeleted: () {
-                setState(() {
-                  _filter = _filter.copyWith(year: null, month: null);
-                });
-                _refresh();
-              },
-            ),
+          // Other filter chips
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              // Sort indicator chip (tappable to toggle direction)
+              if (_sort != TurnoverSort.defaultSort)
+                ActionChip(
+                  avatar: Icon(
+                    _sort.direction == SortDirection.asc
+                        ? Icons.arrow_upward
+                        : Icons.arrow_downward,
+                    size: 18,
+                  ),
+                  label: Text(_getSortFieldName(_sort.orderBy)),
+                  onPressed: _toggleSortDirection,
+                ),
 
-          // Tag filter chips (one per tag)
-          if (_filter.tagIds != null)
-            ..._filter.tagIds!.map((tagId) {
-              return FutureBuilder(
-                future: context.read<TagRepository>().getTagById(
+              // Unallocated filter chip
+              if (_filter.unallocatedOnly == true)
+                Chip(
+                  label: const Text('Unallocated'),
+                  onDeleted: () {
+                    setState(() {
+                      _filter = _filter.copyWith(unallocatedOnly: null);
+                    });
+                    _refresh();
+                  },
+                ),
+
+              // Tag filter chips (one per tag)
+              if (_filter.tagIds != null)
+                ..._filter.tagIds!.map((tagId) {
+                  return FutureBuilder(
+                    future: context.read<TagRepository>().getTagById(
                       UuidValue.fromString(tagId),
                     ),
-                builder: (context, snapshot) {
-                  final tagName = snapshot.data?.name ?? tagId.substring(0, 8);
-                  return Chip(
-                    label: Text(tagName),
-                    onDeleted: () {
-                      setState(() {
-                        final updatedTagIds = List<String>.from(
-                          _filter.tagIds ?? [],
-                        )..remove(tagId);
-                        _filter = _filter.copyWith(
-                          tagIds: updatedTagIds.isEmpty ? null : updatedTagIds,
-                        );
-                      });
-                      _refresh();
+                    builder: (context, snapshot) {
+                      final tag = snapshot.data;
+                      final tagName = tag?.name ?? tagId.substring(0, 8);
+                      final tagColor = tag?.color != null
+                          ? Color(
+                              int.parse(tag!.color!.replaceFirst('#', '0xff')),
+                            )
+                          : null;
+
+                      return Chip(
+                        label: Text(tagName),
+                        backgroundColor: tagColor?.withValues(alpha: 0.2),
+                        side: tagColor != null
+                            ? BorderSide(color: tagColor, width: 1.5)
+                            : null,
+                        onDeleted: () {
+                          setState(() {
+                            final updatedTagIds = List<String>.from(
+                              _filter.tagIds ?? [],
+                            )..remove(tagId);
+                            _filter = _filter.copyWith(
+                              tagIds:
+                                  updatedTagIds.isEmpty ? null : updatedTagIds,
+                            );
+                          });
+                          _refresh();
+                        },
+                      );
                     },
                   );
-                },
-              );
-            }),
+                }),
+            ],
+          ),
         ],
       ),
     );
@@ -269,24 +344,6 @@ class _TurnoversPageState extends State<TurnoversPage> {
     };
   }
 
-  String _getMonthName(int month) {
-    const monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return monthNames[month - 1];
-  }
-
   Widget _buildBody() {
     // Show error on first page
     if (_items.isEmpty && _error != null) {
@@ -294,11 +351,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
-            ),
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
               'Error loading turnovers',
@@ -336,15 +389,15 @@ class _TurnoversPageState extends State<TurnoversPage> {
             Text(
               'No turnovers found',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Your turnovers will appear here',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -372,9 +425,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
           }
           return const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
+            child: Center(child: CircularProgressIndicator()),
           );
         }
 

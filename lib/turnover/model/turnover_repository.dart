@@ -272,9 +272,9 @@ class TurnoverRepository {
     final whereClauses = <String>[];
     final whereArgs = <Object>[];
 
-    // Month/year filter
-    if (filter.year != null && filter.month != null) {
-      final startDate = Jiffy.parseFromDateTime(DateTime(filter.year!, filter.month!));
+    // Period filter (year and month)
+    if (filter.period != null) {
+      final startDate = Jiffy.parseFromDateTime(filter.period!.toDateTime());
       final endDate = startDate.add(months: 1);
       whereClauses.add('t.bookingDate >= ? AND t.bookingDate < ?');
       whereArgs.add(startDate.format(pattern: isoDateFormat));
