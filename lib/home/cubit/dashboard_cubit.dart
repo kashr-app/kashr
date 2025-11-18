@@ -1,10 +1,13 @@
 import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/comdirect/comdirect_service.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jiffy/jiffy.dart';
 import 'package:logger/logger.dart';
 
 /// Cubit for managing the dashboard state.
@@ -13,20 +16,59 @@ class DashboardCubit extends Cubit<DashboardState> {
   final TagTurnoverRepository _tagTurnoverRepository;
   final _log = Logger();
 
-  DashboardCubit(
-    this._turnoverRepository,
-    this._tagTurnoverRepository,
-  ) : super(
-          DashboardState(
-            selectedPeriod: YearMonth.now(),
-            totalIncome: Decimal.zero,
-            totalExpenses: Decimal.zero,
-            unallocatedIncome: Decimal.zero,
-            unallocatedExpenses: Decimal.zero,
-            unallocatedTurnovers: const [],
-            unallocatedCount: 0,
+  DashboardCubit(this._turnoverRepository, this._tagTurnoverRepository)
+    : super(
+        DashboardState(
+          selectedPeriod: YearMonth.now(),
+          totalIncome: Decimal.zero,
+          totalExpenses: Decimal.zero,
+          unallocatedIncome: Decimal.zero,
+          unallocatedExpenses: Decimal.zero,
+          unallocatedTurnovers: const [],
+          unallocatedCount: 0,
+        ),
+      );
+
+  Future<void> downloadBankData(
+    ComdirectService service,
+    ScaffoldMessengerState messenger,
+  ) async {
+    void setBankDownloadStatus(Status status) {
+      emit(state.copyWith(bankDownloadStatus: status));
+    }
+
+    setBankDownloadStatus(Status.loading);
+
+    final start = state.selectedPeriod.toDateTime();
+    final end = Jiffy.parseFromDateTime(start).endOf(Unit.month).dateTime;
+
+    final result = await service.fetchAccountsAndTurnovers(
+      minBookingDate: start,
+      maxBookingDate: end,
+    );
+    switch (result.status) {
+      case ResultStatus.success:
+        messenger.showSnackBar(
+          SnackBar(content: Text('Data was loaded successfully.')),
+        );
+        setBankDownloadStatus(Status.success);
+        loadMonthData();
+      case ResultStatus.unauthed:
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Not authorized. Please try to login at the bank again.',
+            ),
           ),
         );
+        setBankDownloadStatus(Status.initial);
+      case ResultStatus.otherError:
+        messenger.showSnackBar(
+          SnackBar(content: Text('There was an error: ${result.errorMessage}')),
+        );
+        setBankDownloadStatus(Status.error);
+    }
+  }
 
   /// Loads spending data for the currently selected month.
   Future<void> loadMonthData() async {
@@ -37,30 +79,30 @@ class DashboardCubit extends Cubit<DashboardState> {
         month: state.selectedPeriod.month,
       );
 
-      final incomeTagSummaries =
-          await _tagTurnoverRepository.getIncomeTagSummariesForMonth(
-        year: state.selectedPeriod.year,
-        month: state.selectedPeriod.month,
-      );
+      final incomeTagSummaries = await _tagTurnoverRepository
+          .getIncomeTagSummariesForMonth(
+            year: state.selectedPeriod.year,
+            month: state.selectedPeriod.month,
+          );
 
-      final expenseTagSummaries =
-          await _tagTurnoverRepository.getExpenseTagSummariesForMonth(
-        year: state.selectedPeriod.year,
-        month: state.selectedPeriod.month,
-      );
+      final expenseTagSummaries = await _tagTurnoverRepository
+          .getExpenseTagSummariesForMonth(
+            year: state.selectedPeriod.year,
+            month: state.selectedPeriod.month,
+          );
 
-      final unallocatedTurnovers =
-          await _turnoverRepository.getUnallocatedTurnoversForMonth(
-        year: state.selectedPeriod.year,
-        month: state.selectedPeriod.month,
-        limit: 1,
-      );
+      final unallocatedTurnovers = await _turnoverRepository
+          .getUnallocatedTurnoversForMonth(
+            year: state.selectedPeriod.year,
+            month: state.selectedPeriod.month,
+            limit: 1,
+          );
 
-      final unallocatedCount =
-          await _turnoverRepository.countUnallocatedTurnoversForMonth(
-        year: state.selectedPeriod.year,
-        month: state.selectedPeriod.month,
-      );
+      final unallocatedCount = await _turnoverRepository
+          .countUnallocatedTurnoversForMonth(
+            year: state.selectedPeriod.year,
+            month: state.selectedPeriod.month,
+          );
 
       // Separate income (positive) from expenses (negative)
       final totalIncome = turnovers
@@ -121,10 +163,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   /// Navigates to the previous month.
   Future<void> previousMonth() async {
     final currentDate = state.selectedPeriod.toDateTime();
-    final previousDate = DateTime(
-      currentDate.year,
-      currentDate.month - 1,
-    );
+    final previousDate = DateTime(currentDate.year, currentDate.month - 1);
     emit(
       state.copyWith(
         selectedPeriod: YearMonth(
@@ -139,16 +178,10 @@ class DashboardCubit extends Cubit<DashboardState> {
   /// Navigates to the next month.
   Future<void> nextMonth() async {
     final currentDate = state.selectedPeriod.toDateTime();
-    final nextDate = DateTime(
-      currentDate.year,
-      currentDate.month + 1,
-    );
+    final nextDate = DateTime(currentDate.year, currentDate.month + 1);
     emit(
       state.copyWith(
-        selectedPeriod: YearMonth(
-          year: nextDate.year,
-          month: nextDate.month,
-        ),
+        selectedPeriod: YearMonth(year: nextDate.year, month: nextDate.month),
       ),
     );
     await loadMonthData();

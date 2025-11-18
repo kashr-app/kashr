@@ -2,37 +2,42 @@ import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+class OnAction {
+  final String tooltip;
+  final VoidCallback? onAction;
+  final Widget icon;
+
+  OnAction({required this.tooltip, required this.onAction, required this.icon});
+}
+
 /// A widget for selecting and navigating between periods (months).
 ///
 /// Displays a card with the current period and navigation controls to move
-/// between periods. Optionally supports a delete button to clear the period
-/// filter.
+/// between periods. Optionally supports an action button.
 class PeriodSelector extends StatelessWidget {
   /// Creates a period selector.
   ///
   /// [selectedPeriod] is the currently selected period to display.
   /// [onPreviousMonth] is called when the user taps the previous month button.
   /// [onNextMonth] is called when the user taps the next month button.
-  /// [onDelete] is optionally called when the user taps the delete button.
-  /// If [onDelete] is null, the delete button will not be shown.
+  /// [onAction] is optionally called when the user taps the delete button.
+  /// If [onAction] is null, the delete button will not be shown.
   const PeriodSelector({
     required this.selectedPeriod,
     required this.onPreviousMonth,
     required this.onNextMonth,
-    this.onDelete,
+    this.onAction,
     super.key,
   });
 
   final YearMonth selectedPeriod;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
-  final VoidCallback? onDelete;
+  final OnAction? onAction;
 
   @override
   Widget build(BuildContext context) {
-    final monthName = DateFormat.yMMMM().format(
-      selectedPeriod.toDateTime(),
-    );
+    final monthName = DateFormat.yMMMM().format(selectedPeriod.toDateTime());
 
     return Card(
       child: Padding(
@@ -57,11 +62,11 @@ class PeriodSelector extends StatelessWidget {
               onPressed: onNextMonth,
               tooltip: 'Next month',
             ),
-            if (onDelete != null)
+            if (onAction != null)
               IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: onDelete,
-                tooltip: 'Clear period filter',
+                icon: onAction!.icon,
+                onPressed: onAction!.onAction,
+                tooltip: onAction!.tooltip,
               ),
           ],
         ),

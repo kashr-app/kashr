@@ -26,49 +26,68 @@ class ComdirectPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(title: const Text("Comdirect")),
-        body: BlocBuilder<ComdirectAuthCubit, ComdirectAuthState>(
-          builder: (context, state) => Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text("auth status: ${state.runtimeType}"),
-              Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      const ComdirectLoginRoute().go(context);
-                    },
-                    child: (state is AuthSuccess)
-                        ? Text("Manage Session")
-                        : const Text("Login"),
-                  ),
-                  if (state is AuthSuccess) ...[
-                    Spacer(),
-                    ElevatedButton(
-                      onPressed: () {
-                        final service = ComdirectService(
-                          comdirectAPI: state.api,
-                          accountCubit: context.read<AccountCubit>(),
-                          turnoverCubit: context.read<TurnoverCubit>(),
-                        );
-                        final now = Jiffy.now();
-                        final start = now.startOf(Unit.month);
-                        service.fetchAccountsAndTurnovers(
-                          minBookingDate: start.dateTime,
-                          maxBookingDate: now.dateTime,
-                        );
-                      },
-                      child: const Text("Load Data"),
+      child: BlocBuilder<ComdirectAuthCubit, ComdirectAuthState>(
+        builder: (context, state) {
+          final isAuthed = state is AuthSuccess;
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text("Comdirect"),
+              actions: [
+                IconButton(
+                  onPressed: () => const ComdirectLoginRoute().go(context),
+                  icon: Icon(isAuthed ? Icons.account_circle : Icons.login),
+                ),
+              ],
+            ),
+            body: !isAuthed
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("Please login to sync your Comdirect data"),
+                        SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            const ComdirectLoginRoute().go(context);
+                          },
+                          child: const Text("Login"),
+                        ),
+                      ],
                     ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text("You are logged in."),
+                      Spacer(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (isAuthed) ...[
+                            Spacer(),
+                            ElevatedButton(
+                              onPressed: () {
+                                final service = ComdirectService(
+                                  comdirectAPI: state.api,
+                                  accountCubit: context.read<AccountCubit>(),
+                                  turnoverCubit: context.read<TurnoverCubit>(),
+                                );
+                                final now = Jiffy.now();
+                                final start = now.startOf(Unit.month);
+                                service.fetchAccountsAndTurnovers(
+                                  minBookingDate: start.dateTime,
+                                  maxBookingDate: now.dateTime,
+                                );
+                              },
+                              child: const Text("Load Data"),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+          );
+        },
       ),
     );
   }

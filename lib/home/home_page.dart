@@ -1,20 +1,26 @@
 import 'dart:convert';
 
+import 'package:finanalyzer/account/model/account_cubit.dart';
+import 'package:finanalyzer/comdirect/comdirect_api.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
-import 'package:finanalyzer/comdirect/turnover_screen.dart';
+import 'package:finanalyzer/comdirect/comdirect_service.dart';
+import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
 import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
 import 'package:finanalyzer/home/widgets/cashflow_card.dart';
 import 'package:finanalyzer/home/widgets/income_summary_card.dart';
+import 'package:finanalyzer/home/widgets/load_bank_data_section.dart';
 import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
+import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
+import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/tags_page.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
@@ -35,10 +41,7 @@ part '../_gen/home/home_page.g.dart';
     ),
     TypedGoRoute<ComdirectRoute>(
       path: 'comdirect',
-      routes: [
-        TypedGoRoute<ComdirectLoginRoute>(path: 'login'),
-        TypedGoRoute<ComdirectSyncRoute>(path: 'sync'),
-      ],
+      routes: [TypedGoRoute<ComdirectLoginRoute>(path: 'login')],
     ),
   ],
 )
@@ -122,10 +125,11 @@ class HomePage extends StatelessWidget {
                   selectedPeriod: state.selectedPeriod,
                   onPreviousMonth: () =>
                       context.read<DashboardCubit>().previousMonth(),
-                  onNextMonth: () =>
-                      context.read<DashboardCubit>().nextMonth(),
+                  onNextMonth: () => context.read<DashboardCubit>().nextMonth(),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                const LoadBankDataSection(),
+                const SizedBox(height: 8),
                 CashflowCard(
                   totalIncome: state.totalIncome,
                   totalExpenses: state.totalExpenses,
@@ -148,7 +152,8 @@ class HomePage extends StatelessWidget {
                 UnallocatedTurnoversSection(
                   unallocatedTurnovers: state.unallocatedTurnovers,
                   unallocatedCount: state.unallocatedCount,
-                  onRefresh: () => context.read<DashboardCubit>().loadMonthData(),
+                  onRefresh: () =>
+                      context.read<DashboardCubit>().loadMonthData(),
                   selectedPeriod: state.selectedPeriod,
                 ),
               ],

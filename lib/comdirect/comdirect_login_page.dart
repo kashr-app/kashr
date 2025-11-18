@@ -19,7 +19,7 @@ class ComdirectLoginPage extends StatefulWidget {
   const ComdirectLoginPage({super.key});
 
   @override
-  _ComdirectLoginPageState createState() => _ComdirectLoginPageState();
+  State<ComdirectLoginPage>  createState() => _ComdirectLoginPageState();
 }
 
 class _ComdirectLoginPageState extends State<ComdirectLoginPage> {

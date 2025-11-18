@@ -33,44 +33,41 @@ class UnallocatedTurnoversSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Heading on background (no Card wrapper)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.local_offer_outlined,
-                    color: theme.colorScheme.primary,
-                    size: 20,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.local_offer_outlined,
+                  color: theme.colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Quick Tag ($unallocatedCount)',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Quick Tag ($unallocatedCount)',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: () => TurnoversRoute(
-                  filter: TurnoverFilter(
-                    unallocatedOnly: true,
-                    period: selectedPeriod,
-                  ),
-                  sort: const TurnoverSort(
-                    orderBy: SortField.amount,
-                    direction: SortDirection.desc,
-                  ),
-                ).go(context),
-                child: const Text('View All'),
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+            TextButton(
+              onPressed: () => TurnoversRoute(
+                filter: TurnoverFilter(
+                  unallocatedOnly: true,
+                  period: selectedPeriod,
+                ),
+                sort: const TurnoverSort(
+                  orderBy: SortField.amount,
+                  direction: SortDirection.desc,
+                ),
+              ).go(context),
+              child: const Text('View All'),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         // Display only ONE TurnoverCard (the first item, which is highest amount)
@@ -79,7 +76,9 @@ class UnallocatedTurnoversSection extends StatelessWidget {
           onTap: () async {
             final turnoverId = unallocatedTurnovers.first.turnover.id;
             if (turnoverId != null) {
-              await TurnoverTagsRoute(turnoverId: turnoverId.uuid).push(context);
+              await TurnoverTagsRoute(
+                turnoverId: turnoverId.uuid,
+              ).push(context);
               onRefresh();
             }
           },

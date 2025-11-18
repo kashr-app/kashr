@@ -12,6 +12,7 @@ part '../../_gen/home/cubit/dashboard_state.g.dart';
 abstract class DashboardState with _$DashboardState {
   const factory DashboardState({
     @Default(Status.initial) Status status,
+    @Default(Status.initial) Status bankDownloadStatus,
     required YearMonth selectedPeriod,
     required Decimal totalIncome,
     required Decimal totalExpenses,

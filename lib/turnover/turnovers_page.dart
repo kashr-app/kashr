@@ -251,16 +251,19 @@ class _TurnoversPageState extends State<TurnoversPage> {
               selectedPeriod: _filter.period!,
               onPreviousMonth: _previousPeriod,
               onNextMonth: _nextPeriod,
-              onDelete: () {
-                setState(() {
-                  _filter = _filter.copyWith(period: null);
-                });
-                _refresh();
-              },
+              onAction: OnAction(
+                tooltip: 'Clear period filter',
+                onAction: () {
+                  setState(() {
+                    _filter = _filter.copyWith(period: null);
+                  });
+                  _refresh();
+                },
+                icon: Icon(Icons.delete),
+              ),
             ),
             const SizedBox(height: 8),
           ],
-
           // Other filter chips
           Wrap(
             spacing: 8,
@@ -319,8 +322,9 @@ class _TurnoversPageState extends State<TurnoversPage> {
                               _filter.tagIds ?? [],
                             )..remove(tagId);
                             _filter = _filter.copyWith(
-                              tagIds:
-                                  updatedTagIds.isEmpty ? null : updatedTagIds,
+                              tagIds: updatedTagIds.isEmpty
+                                  ? null
+                                  : updatedTagIds,
                             );
                           });
                           _refresh();

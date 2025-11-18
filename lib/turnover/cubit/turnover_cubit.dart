@@ -67,7 +67,7 @@ class TurnoverCubit extends Cubit<TurnoverState> {
     }).toList();
 
     if (existingAccountApiIdPairs.isNotEmpty) {
-      log.w(
+      log.d(
         'Will not store ${existingAccountApiIdPairs.length} turnovers out of ${turnovers.length} total, '
         'because their apiId was already used in the same account.',
       );

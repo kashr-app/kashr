@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,14 @@ import 'comdirect_api.dart';
 
 const uuid = Uuid();
 final apiDateFormat = DateFormat("yyyy-MM-dd");
+
+enum ResultStatus { success, unauthed, otherError }
+
+class FetchComdirectDataResult {
+  ResultStatus status;
+  String? errorMessage;
+  FetchComdirectDataResult({required this.status, this.errorMessage});
+}
 
 class ComdirectService {
   final ComdirectAPI comdirectAPI;
@@ -23,7 +32,7 @@ class ComdirectService {
   });
 
   /// Fetches accounts and turnovers from the Comdirect API.
-  Future<void> fetchAccountsAndTurnovers({
+  Future<FetchComdirectDataResult> fetchAccountsAndTurnovers({
     required DateTime minBookingDate,
     required DateTime maxBookingDate,
   }) async {
@@ -106,9 +115,18 @@ class ComdirectService {
 
       await turnoverCubit.storeNonExisting(turnovers);
       log.i('Turnovers fetched and stored successfully');
+      return FetchComdirectDataResult(status: ResultStatus.success);
     } catch (e) {
+      if (e is DioException) {
+        if (e.response?.statusCode == 401) {
+          return FetchComdirectDataResult(status: ResultStatus.unauthed);
+        }
+      }
       log.e('Error fetching turnovers: $e', error: e);
-      throw Exception('Failed to fetch turnovers');
+      return FetchComdirectDataResult(
+        status: ResultStatus.otherError,
+        errorMessage: 'unknown error',
+      );
     }
   }
 }
