@@ -1,14 +1,10 @@
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
-import 'package:finanalyzer/comdirect/comdirect_service.dart';
 import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:finanalyzer/home/home_page.dart';
-import 'package:finanalyzer/account/model/account_cubit.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:jiffy/jiffy.dart';
 
 final dateFormat = DateFormat("dd.MM.yyyy");
 
@@ -44,7 +40,7 @@ class ComdirectPage extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text("Please login to sync your Comdirect data"),
+                        Text("Please login to load your Comdirect data"),
                         SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
@@ -55,37 +51,7 @@ class ComdirectPage extends StatelessWidget {
                       ],
                     ),
                   )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text("You are logged in."),
-                      Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (isAuthed) ...[
-                            Spacer(),
-                            ElevatedButton(
-                              onPressed: () {
-                                final service = ComdirectService(
-                                  comdirectAPI: state.api,
-                                  accountCubit: context.read<AccountCubit>(),
-                                  turnoverCubit: context.read<TurnoverCubit>(),
-                                );
-                                final now = Jiffy.now();
-                                final start = now.startOf(Unit.month);
-                                service.fetchAccountsAndTurnovers(
-                                  minBookingDate: start.dateTime,
-                                  maxBookingDate: now.dateTime,
-                                );
-                              },
-                              child: const Text("Load Data"),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
+                : Center(child: Text("You are logged in.")),
           );
         },
       ),
