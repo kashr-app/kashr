@@ -208,25 +208,25 @@ class _TurnoversPageState extends State<TurnoversPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Turnovers'),
-          elevation: 0,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.sort),
-              onPressed: _openSortDialog,
-              tooltip: 'Sort',
-            ),
-            IconButton(
-              icon: const Icon(Icons.filter_list),
-              onPressed: _openFilterDialog,
-              tooltip: 'Filter',
-            ),
-          ],
-        ),
-        body: Column(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Turnovers'),
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sort),
+            onPressed: _openSortDialog,
+            tooltip: 'Sort',
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: _openFilterDialog,
+            tooltip: 'Filter',
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
           children: [
             if (_filter.hasFilters || _sort != TurnoverSort.defaultSort)
               _buildFilterChips(),

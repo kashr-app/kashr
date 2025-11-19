@@ -53,10 +53,10 @@ class TurnoverTagsPage extends StatelessWidget {
           Navigator.of(context).pop();
         }
       },
-      child: SafeArea(
-        child: Scaffold(
-          appBar: AppBar(title: const Text('Turnover Tags')),
-          body: BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Turnover Tags')),
+        body: SafeArea(
+          child: BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
             builder: (context, state) {
               final turnover = state.turnover;
               if (turnover == null) {

@@ -82,78 +82,85 @@ class HomePage extends StatelessWidget {
         ],
         title: const Text('Finanalyze'),
       ),
-      body: BlocBuilder<DashboardCubit, DashboardState>(
-        builder: (context, state) {
-          if (state.status.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: SafeArea(
+        child: BlocBuilder<DashboardCubit, DashboardState>(
+          builder: (context, state) {
+            if (state.status.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (state.status.isError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            if (state.status.isError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      state.errorMessage ?? 'An error occurred',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () =>
+                          context.read<DashboardCubit>().loadMonthData(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: () => context.read<DashboardCubit>().loadMonthData(),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.errorMessage ?? 'An error occurred',
-                    textAlign: TextAlign.center,
+                  PeriodSelector(
+                    selectedPeriod: state.selectedPeriod,
+                    onPreviousMonth: () =>
+                        context.read<DashboardCubit>().previousMonth(),
+                    onNextMonth: () =>
+                        context.read<DashboardCubit>().nextMonth(),
+                  ),
+                  const SizedBox(height: 8),
+                  const LoadBankDataSection(),
+                  const SizedBox(height: 8),
+                  CashflowCard(
+                    totalIncome: state.totalIncome,
+                    totalExpenses: state.totalExpenses,
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () =>
+                  IncomeSummaryCard(
+                    totalIncome: state.totalIncome,
+                    unallocatedIncome: state.unallocatedIncome,
+                    tagSummaries: state.incomeTagSummaries,
+                    selectedPeriod: state.selectedPeriod,
+                  ),
+                  const SizedBox(height: 16),
+                  SpendingSummaryCard(
+                    totalExpenses: state.totalExpenses,
+                    unallocatedExpenses: state.unallocatedExpenses,
+                    tagSummaries: state.expenseTagSummaries,
+                    selectedPeriod: state.selectedPeriod,
+                  ),
+                  const SizedBox(height: 16),
+                  UnallocatedTurnoversSection(
+                    unallocatedTurnovers: state.unallocatedTurnovers,
+                    unallocatedCount: state.unallocatedCount,
+                    onRefresh: () =>
                         context.read<DashboardCubit>().loadMonthData(),
-                    child: const Text('Retry'),
+                    selectedPeriod: state.selectedPeriod,
                   ),
                 ],
               ),
             );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => context.read<DashboardCubit>().loadMonthData(),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                PeriodSelector(
-                  selectedPeriod: state.selectedPeriod,
-                  onPreviousMonth: () =>
-                      context.read<DashboardCubit>().previousMonth(),
-                  onNextMonth: () => context.read<DashboardCubit>().nextMonth(),
-                ),
-                const SizedBox(height: 8),
-                const LoadBankDataSection(),
-                const SizedBox(height: 8),
-                CashflowCard(
-                  totalIncome: state.totalIncome,
-                  totalExpenses: state.totalExpenses,
-                ),
-                const SizedBox(height: 16),
-                IncomeSummaryCard(
-                  totalIncome: state.totalIncome,
-                  unallocatedIncome: state.unallocatedIncome,
-                  tagSummaries: state.incomeTagSummaries,
-                  selectedPeriod: state.selectedPeriod,
-                ),
-                const SizedBox(height: 16),
-                SpendingSummaryCard(
-                  totalExpenses: state.totalExpenses,
-                  unallocatedExpenses: state.unallocatedExpenses,
-                  tagSummaries: state.expenseTagSummaries,
-                  selectedPeriod: state.selectedPeriod,
-                ),
-                const SizedBox(height: 16),
-                UnallocatedTurnoversSection(
-                  unallocatedTurnovers: state.unallocatedTurnovers,
-                  unallocatedCount: state.unallocatedCount,
-                  onRefresh: () =>
-                      context.read<DashboardCubit>().loadMonthData(),
-                  selectedPeriod: state.selectedPeriod,
-                ),
-              ],
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

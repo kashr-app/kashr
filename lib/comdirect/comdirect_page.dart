@@ -21,21 +21,21 @@ class ComdirectPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: BlocBuilder<ComdirectAuthCubit, ComdirectAuthState>(
-        builder: (context, state) {
-          final isAuthed = state is AuthSuccess;
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text("Comdirect"),
-              actions: [
-                IconButton(
-                  onPressed: () => const ComdirectLoginRoute().go(context),
-                  icon: Icon(isAuthed ? Icons.account_circle : Icons.login),
-                ),
-              ],
-            ),
-            body: !isAuthed
+    return BlocBuilder<ComdirectAuthCubit, ComdirectAuthState>(
+      builder: (context, state) {
+        final isAuthed = state is AuthSuccess;
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text("Comdirect"),
+            actions: [
+              IconButton(
+                onPressed: () => const ComdirectLoginRoute().go(context),
+                icon: Icon(isAuthed ? Icons.account_circle : Icons.login),
+              ),
+            ],
+          ),
+          body: SafeArea(
+            child: !isAuthed
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -52,9 +52,9 @@ class ComdirectPage extends StatelessWidget {
                     ),
                   )
                 : Center(child: Text("You are logged in.")),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

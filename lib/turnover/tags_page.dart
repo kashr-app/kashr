@@ -34,65 +34,65 @@ class _TagsPageState extends State<TagsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tags'),
-      ),
-      body: BlocBuilder<TagCubit, TagState>(
-        builder: (context, state) {
-          if (state.status.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      appBar: AppBar(title: const Text('Tags')),
+      body: SafeArea(
+        child: BlocBuilder<TagCubit, TagState>(
+          builder: (context, state) {
+            if (state.status.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (state.status.isError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    state.errorMessage ?? 'An error occurred',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+            if (state.status.isError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      state.errorMessage ?? 'An error occurred',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () => context.read<TagCubit>().loadTags(),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (state.tags.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('No tags yet'),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () => _showTagDialog(context),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Create Tag'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            itemCount: state.tags.length,
-            itemBuilder: (context, index) {
-              final tag = state.tags[index];
-              return _TagListItem(
-                tag: tag,
-                onTap: () => _showTagDialog(context, tag: tag),
-                onDelete: () => _confirmDelete(context, tag),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => context.read<TagCubit>().loadTags(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               );
-            },
-          );
-        },
+            }
+
+            if (state.tags.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('No tags yet'),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: () => _showTagDialog(context),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create Tag'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.builder(
+              itemCount: state.tags.length,
+              itemBuilder: (context, index) {
+                final tag = state.tags[index];
+                return _TagListItem(
+                  tag: tag,
+                  onTap: () => _showTagDialog(context, tag: tag),
+                  onDelete: () => _confirmDelete(context, tag),
+                );
+              },
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showTagDialog(context),
@@ -307,8 +307,9 @@ class _TagEditDialogState extends State<_TagEditDialog> {
               ? null
               : () {
                   final name = _nameController.text.trim();
-                  final colorString =
-                      _selectedColor != null ? _colorToString(_selectedColor!) : null;
+                  final colorString = _selectedColor != null
+                      ? _colorToString(_selectedColor!)
+                      : null;
 
                   final tag = Tag(
                     id: widget.tag?.id ?? const Uuid().v4obj(),

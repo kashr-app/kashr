@@ -48,10 +48,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(title: const Text("Settings")),
-        body: SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(title: const Text("Settings")),
+      body: SafeArea(
+        child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
