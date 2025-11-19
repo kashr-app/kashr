@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 /// A widget for displaying and editing a note.
 ///
 /// Shows a button to add a note when empty, displays the note text when
-/// present, and provides an inline editor when editing.
-class NoteField extends StatefulWidget {
+/// present, and opens a dialog for editing when tapped.
+class NoteField extends StatelessWidget {
   final String? note;
   final void Function(String?) onNoteChanged;
 
@@ -14,92 +14,86 @@ class NoteField extends StatefulWidget {
     super.key,
   });
 
-  @override
-  State<NoteField> createState() => _NoteFieldState();
-}
+  Future<void> _showNoteDialog(BuildContext context) async {
+    final controller = TextEditingController(text: note ?? '');
 
-class _NoteFieldState extends State<NoteField> {
-  bool _isEditing = false;
-  late TextEditingController _controller;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => _NoteDialog(controller: controller),
+    );
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.note ?? '');
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+    if (result != null) {
+      final trimmedNote = result.trim();
+      onNoteChanged(trimmedNote.isEmpty ? null : trimmedNote);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasNote = widget.note != null && widget.note!.isNotEmpty;
+    final hasNote = note != null && note!.isNotEmpty;
 
-    if (!_isEditing && !hasNote) {
+    if (!hasNote) {
       return TextButton.icon(
-        onPressed: () => setState(() => _isEditing = true),
+        onPressed: () => _showNoteDialog(context),
         icon: const Icon(Icons.note_add, size: 16),
         label: const Text('Add note'),
       );
     }
 
-    if (!_isEditing && hasNote) {
-      return InkWell(
-        onTap: () => setState(() => _isEditing = true),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.note, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.note!,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+    return InkWell(
+      onTap: () => _showNoteDialog(context),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.note, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                note!,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _controller,
-            decoration: const InputDecoration(
-              labelText: 'Note',
-              border: OutlineInputBorder(),
-              isDense: true,
             ),
-            maxLines: 2,
-            textCapitalization: TextCapitalization.sentences,
-          ),
+          ],
         ),
-        IconButton(
-          icon: const Icon(Icons.check),
-          onPressed: () {
-            final note = _controller.text.trim();
-            widget.onNoteChanged(note.isEmpty ? null : note);
-            setState(() => _isEditing = false);
-          },
+      ),
+    );
+  }
+}
+
+class _NoteDialog extends StatelessWidget {
+  final TextEditingController controller;
+
+  const _NoteDialog({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Note'),
+      content: TextField(
+        controller: controller,
+        decoration: const InputDecoration(
+          labelText: 'Note',
+          border: OutlineInputBorder(),
         ),
-        IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () {
-            _controller.text = widget.note ?? '';
-            setState(() => _isEditing = false);
-          },
+        maxLines: 5,
+        minLines: 3,
+        textCapitalization: TextCapitalization.sentences,
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(controller.text),
+          child: const Text('Save'),
         ),
       ],
     );
