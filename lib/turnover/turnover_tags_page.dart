@@ -8,6 +8,7 @@ import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/widgets/status_message.dart';
+import 'package:finanalyzer/turnover/widgets/tag_suggestions_row.dart';
 import 'package:finanalyzer/turnover/widgets/tag_turnover_item.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_info_card.dart';
 import 'package:flutter/material.dart';
@@ -66,6 +67,16 @@ class TurnoverTagsPage extends StatelessWidget {
               return Column(
                 children: [
                   TurnoverInfoCard(turnover: turnover),
+
+                  // Tag suggestions
+                  TagSuggestionsRow(
+                    suggestions: state.suggestions,
+                    onSuggestionTap: (suggestion) {
+                      context.read<TurnoverTagsCubit>().addTag(
+                            suggestion.tag,
+                          );
+                    },
+                  ),
 
                   // Tag turnovers list
                   Expanded(

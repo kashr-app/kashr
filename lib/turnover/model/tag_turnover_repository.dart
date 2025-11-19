@@ -70,6 +70,7 @@ class TagTurnoverRepository {
           amountValue: remainingAmount,
           amountUnit: turnover.amountUnit,
           note: null,
+          createdAt: DateTime.now(),
         );
 
         batch.insert('tag_turnover', tagTurnover.toJson());

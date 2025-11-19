@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag_suggestion.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -30,6 +31,7 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     @Default([]) List<TagTurnoverWithTag> tagTurnovers,
     @Default([]) List<TagTurnoverWithTag> initialTagTurnovers,
     @Default([]) List<Tag> availableTags,
+    @Default([]) List<TagSuggestion> suggestions,
     String? errorMessage,
   }) = _TurnoverTagsState;
 

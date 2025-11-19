@@ -19,6 +19,7 @@ abstract class TagTurnover with _$TagTurnover {
     @DecimalJsonConverter() required Decimal amountValue,
     required String amountUnit,
     required String? note,
+    required DateTime createdAt,
   }) = _TagTurnover;
 
   String format() => Currency.currencyFrom(amountUnit).format(amountValue);

@@ -5,7 +5,9 @@ import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/services/tag_suggestion_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
@@ -15,13 +17,17 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
   final TagTurnoverRepository _tagTurnoverRepository;
   final TagRepository _tagRepository;
   final TurnoverRepository _turnoverRepository;
+  final TagSuggestionService _suggestionService;
   final _log = Logger();
 
   TurnoverTagsCubit(
     this._tagTurnoverRepository,
     this._tagRepository,
-    this._turnoverRepository,
-  ) : super(const TurnoverTagsState());
+    this._turnoverRepository, {
+    TagSuggestionService? suggestionService,
+  })  : _suggestionService =
+            suggestionService ?? TagSuggestionService(),
+        super(const TurnoverTagsState());
 
   /// Loads the turnover and its associated tag turnovers.
   Future<void> loadTurnover(UuidValue turnoverId) async {
@@ -61,6 +67,9 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
           availableTags: allTags,
         ),
       );
+
+      // Load suggestions asynchronously (don't block the UI)
+      _loadSuggestions(turnover);
     } catch (e, s) {
       _log.e('Failed to load turnover', error: e, stackTrace: s);
       emit(
@@ -69,6 +78,38 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
           errorMessage: 'Failed to load turnover: $e',
         ),
       );
+    }
+  }
+
+  /// Loads tag suggestions for the turnover.
+  ///
+  /// Called after the turnover is loaded. Runs in the background to avoid
+  /// blocking the UI. Only shows suggestions if there's unallocated money.
+  Future<void> _loadSuggestions(Turnover turnover) async {
+    try {
+      // Only load suggestions if there's unallocated money
+      final remainingAmount = turnover.amountValue - state.totalTagAmount;
+      if (remainingAmount == Decimal.zero) {
+        emit(state.copyWith(suggestions: []));
+        return;
+      }
+
+      final suggestions = await _suggestionService.getSuggestionsForTurnover(
+        turnover,
+      );
+
+      // Filter out tags that are already added to this turnover
+      final existingTagIds =
+          state.tagTurnovers.map((tt) => tt.tag.id).toSet();
+      final filteredSuggestions = suggestions
+          .where((s) => !existingTagIds.contains(s.tag.id))
+          .toList();
+
+      emit(state.copyWith(suggestions: filteredSuggestions));
+    } catch (e, s) {
+      _log.e('Failed to load suggestions', error: e, stackTrace: s);
+      // Don't emit error state - suggestions are optional
+      emit(state.copyWith(suggestions: []));
     }
   }
 
@@ -87,6 +128,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       amountValue: remainingAmount,
       amountUnit: t.amountUnit,
       note: null,
+      createdAt: DateTime.now(),
     );
 
     final updatedTagTurnovers = [
@@ -94,7 +136,15 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       TagTurnoverWithTag(tagTurnover: newTagTurnover, tag: tag),
     ];
 
-    emit(state.copyWith(tagTurnovers: updatedTagTurnovers));
+    // Remove this tag from suggestions
+    final updatedSuggestions = state.suggestions
+        .where((s) => s.tag.id != tag.id)
+        .toList();
+
+    emit(state.copyWith(
+      tagTurnovers: updatedTagTurnovers,
+      suggestions: updatedSuggestions,
+    ));
   }
 
   /// Updates the amount of a tag turnover locally (not saved to DB yet).

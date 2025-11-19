@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:finanalyzer/db/migrations/v1.dart';
 import 'package:finanalyzer/db/migrations/v2.dart';
+import 'package:finanalyzer/db/migrations/v3.dart';
+import 'package:finanalyzer/db/migrations/v4.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart';
@@ -10,7 +12,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 const dbFileName = 'app_database.db';
 
-const dbVersion = 2;
+const dbVersion = 4;
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -58,6 +60,8 @@ class DatabaseHelper {
       // version => migration function
       1: v1,
       2: v2,
+      3: v3,
+      4: v4,
     };
     for (int i = oldVersion + 1; i <= newVersion; i++) {
       final m = migrations[i];

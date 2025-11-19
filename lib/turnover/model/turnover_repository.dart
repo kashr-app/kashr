@@ -197,6 +197,7 @@ class TurnoverRepository {
         tt.amountValue as tt_amountValue,
         tt.amountUnit as tt_amountUnit,
         tt.note as tt_note,
+        tt.createdAt as tt_createdAt,
         t.id as t_id,
         t.name as t_name,
         t.color as t_color
@@ -225,6 +226,7 @@ class TurnoverRepository {
             .toDecimal(),
         amountUnit: map['tt_amountUnit'] as String,
         note: map['tt_note'] as String?,
+        createdAt: DateTime.parse(map['tt_createdAt'] as String),
       );
 
       final tag = Tag(
@@ -378,6 +380,7 @@ class TurnoverRepository {
         tt.amountValue as tt_amountValue,
         tt.amountUnit as tt_amountUnit,
         tt.note as tt_note,
+        tt.createdAt as tt_createdAt,
         t.id as t_id,
         t.name as t_name,
         t.color as t_color
@@ -406,6 +409,7 @@ class TurnoverRepository {
             .toDecimal(),
         amountUnit: map['tt_amountUnit'] as String,
         note: map['tt_note'] as String?,
+        createdAt: DateTime.parse(map['tt_createdAt'] as String),
       );
 
       final tag = Tag(

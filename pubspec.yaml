@@ -44,6 +44,7 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   jiffy: ^6.4.3
   package_info_plus: ^9.0.0
+  string_similarity: ^2.1.1
 
 dev_dependencies:
   flutter_test:
