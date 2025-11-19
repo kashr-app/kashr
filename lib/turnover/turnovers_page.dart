@@ -1,6 +1,8 @@
 import 'package:finanalyzer/core/widgets/period_selector.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
@@ -60,12 +62,18 @@ class _TurnoversPageState extends State<TurnoversPage> {
   late TurnoverFilter _filter;
   late TurnoverSort _sort;
 
+  // Batch selection state
+  final Set<String> _selectedTurnoverIds = {};
+  bool get _isBatchMode => _selectedTurnoverIds.isNotEmpty;
+
   late final TurnoverRepository _repository;
+  late final TagTurnoverRepository _tagTurnoverRepository;
 
   @override
   void initState() {
     super.initState();
     _repository = context.read<TurnoverRepository>();
+    _tagTurnoverRepository = context.read<TagTurnoverRepository>();
 
     // Initialize filter and sort from widget parameters
     _filter = widget.initialFilter;
@@ -178,6 +186,166 @@ class _TurnoversPageState extends State<TurnoversPage> {
     _refresh();
   }
 
+  void _toggleTurnoverSelection(String turnoverId) {
+    setState(() {
+      if (_selectedTurnoverIds.contains(turnoverId)) {
+        _selectedTurnoverIds.remove(turnoverId);
+      } else {
+        _selectedTurnoverIds.add(turnoverId);
+      }
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedTurnoverIds.clear();
+    });
+  }
+
+  Future<void> _batchAddTag() async {
+    if (_selectedTurnoverIds.isEmpty) return;
+
+    final tagRepository = context.read<TagRepository>();
+    final allTags = await tagRepository.getAllTags();
+
+    if (!mounted) return;
+
+    final selectedTag = await showDialog<Tag>(
+      context: context,
+      builder: (context) => _BatchAddTagDialog(availableTags: allTags),
+    );
+
+    if (selectedTag == null || !mounted) return;
+
+    try {
+      // Get selected turnovers
+      final selectedTurnovers = _items
+          .where(
+            (item) =>
+                item.turnover.id != null &&
+                _selectedTurnoverIds.contains(item.turnover.id!.uuid),
+          )
+          .toList();
+
+      // Create tag turnovers for each selected turnover
+      await _tagTurnoverRepository.batchAddTagToTurnovers(
+        selectedTurnovers
+            .map((t) => t.turnover)
+            .toList(),
+        selectedTag,
+      );
+
+      _clearSelection();
+      await _refresh();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Added tag "${selectedTag.name}" to '
+              '${selectedTurnovers.length} turnovers',
+            ),
+          ),
+        );
+      }
+    } catch (error, stackTrace) {
+      log.e(
+        'Error batch adding tag',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding tag: $error'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _batchRemoveTag() async {
+    if (_selectedTurnoverIds.isEmpty) return;
+
+    // Get all tags that are associated with at least one of the
+    // selected turnovers
+    final selectedTurnovers = _items
+        .where(
+          (item) =>
+              item.turnover.id != null &&
+              _selectedTurnoverIds.contains(item.turnover.id!.uuid),
+        )
+        .toList();
+
+    // Collect all unique tags from the selected turnovers
+    final tagsMap = <String, Tag>{};
+    for (final turnoverWithTags in selectedTurnovers) {
+      for (final tagTurnover in turnoverWithTags.tagTurnovers) {
+        final tag = tagTurnover.tag;
+        if (tag.id != null) {
+          tagsMap[tag.id!.uuid] = tag;
+        }
+      }
+    }
+
+    if (tagsMap.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No tags found on selected turnovers'),
+        ),
+      );
+      return;
+    }
+
+    final availableTags = tagsMap.values.toList();
+
+    if (!mounted) return;
+
+    final selectedTag = await showDialog<Tag>(
+      context: context,
+      builder: (context) => _BatchRemoveTagDialog(availableTags: availableTags),
+    );
+
+    if (selectedTag == null || !mounted) return;
+
+    try {
+      // Remove the tag from all selected turnovers
+      await _tagTurnoverRepository.batchRemoveTagFromTurnovers(
+        selectedTurnovers.map((t) => t.turnover).toList(),
+        selectedTag,
+      );
+
+      _clearSelection();
+      await _refresh();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Removed tag "${selectedTag.name}" from '
+              '${selectedTurnovers.length} turnovers',
+            ),
+          ),
+        );
+      }
+    } catch (error, stackTrace) {
+      log.e(
+        'Error batch removing tag',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing tag: $error'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
   void _previousPeriod() {
     if (_filter.period == null) return;
 
@@ -209,22 +377,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Turnovers'),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sort),
-            onPressed: _openSortDialog,
-            tooltip: 'Sort',
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _openFilterDialog,
-            tooltip: 'Filter',
-          ),
-        ],
-      ),
+      appBar: _isBatchMode ? _buildBatchAppBar() : _buildNormalAppBar(),
       body: SafeArea(
         child: Column(
           children: [
@@ -236,6 +389,49 @@ class _TurnoversPageState extends State<TurnoversPage> {
           ],
         ),
       ),
+    );
+  }
+
+  AppBar _buildNormalAppBar() {
+    return AppBar(
+      title: const Text('Turnovers'),
+      elevation: 0,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.sort),
+          onPressed: _openSortDialog,
+          tooltip: 'Sort',
+        ),
+        IconButton(
+          icon: const Icon(Icons.filter_list),
+          onPressed: _openFilterDialog,
+          tooltip: 'Filter',
+        ),
+      ],
+    );
+  }
+
+  AppBar _buildBatchAppBar() {
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.close),
+        onPressed: _clearSelection,
+        tooltip: 'Cancel selection',
+      ),
+      title: Text('${_selectedTurnoverIds.length} selected'),
+      elevation: 0,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.label),
+          onPressed: _batchAddTag,
+          tooltip: 'Add tag',
+        ),
+        IconButton(
+          icon: const Icon(Icons.label_off),
+          onPressed: _batchRemoveTag,
+          tooltip: 'Remove tag',
+        ),
+      ],
     );
   }
 
@@ -434,19 +630,270 @@ class _TurnoversPageState extends State<TurnoversPage> {
         }
 
         final turnoverWithTags = _items[index];
+        final turnoverId = turnoverWithTags.turnover.id?.uuid;
+        final isSelected =
+            turnoverId != null && _selectedTurnoverIds.contains(turnoverId);
+
         return TurnoverCard(
           turnoverWithTags: turnoverWithTags,
+          isSelected: isSelected,
+          isBatchMode: _isBatchMode,
           onTap: () async {
             final id = turnoverWithTags.turnover.id;
             if (id == null) {
               log.e('Turnover has no id');
               return;
             }
-            await TurnoverTagsRoute(turnoverId: id.uuid).push(context);
-            _refresh();
+
+            if (_isBatchMode) {
+              _toggleTurnoverSelection(id.uuid);
+            } else {
+              await TurnoverTagsRoute(turnoverId: id.uuid).push(context);
+              _refresh();
+            }
+          },
+          onLongPress: () {
+            final id = turnoverWithTags.turnover.id;
+            if (id == null) {
+              log.e('Turnover has no id');
+              return;
+            }
+            _toggleTurnoverSelection(id.uuid);
           },
         );
       },
     );
+  }
+}
+
+/// Dialog for selecting a tag to add to multiple turnovers.
+class _BatchAddTagDialog extends StatefulWidget {
+  final List<Tag> availableTags;
+
+  const _BatchAddTagDialog({required this.availableTags});
+
+  @override
+  State<_BatchAddTagDialog> createState() => _BatchAddTagDialogState();
+}
+
+class _BatchAddTagDialogState extends State<_BatchAddTagDialog> {
+  late TextEditingController _searchController;
+  List<Tag> _filteredTags = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _filteredTags = widget.availableTags;
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      final query = _searchController.text.toLowerCase();
+      if (query.isEmpty) {
+        _filteredTags = widget.availableTags;
+      } else {
+        _filteredTags = widget.availableTags
+            .where((tag) => tag.name.toLowerCase().contains(query))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Select Tag to Add',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Search tags',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
+              ),
+              textCapitalization: TextCapitalization.words,
+              autofocus: true,
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            Flexible(
+              child: _filteredTags.isEmpty
+                  ? const Center(child: Text('No tags found'))
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _filteredTags.length,
+                      itemBuilder: (context, index) {
+                        final tag = _filteredTags[index];
+                        final tagColor = _parseColor(tag.color);
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: tagColor.withValues(alpha: 0.3),
+                            child: Icon(
+                              Icons.label,
+                              color: tagColor,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(tag.name),
+                          onTap: () {
+                            Navigator.of(context).pop(tag);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _parseColor(String? colorString) {
+    if (colorString == null || colorString.isEmpty) {
+      return Colors.grey.shade400;
+    }
+
+    try {
+      final hexColor = colorString.replaceAll('#', '');
+      return Color(int.parse('FF$hexColor', radix: 16));
+    } catch (e) {
+      return Colors.grey.shade400;
+    }
+  }
+}
+
+/// Dialog for selecting a tag to remove from multiple turnovers.
+class _BatchRemoveTagDialog extends StatefulWidget {
+  final List<Tag> availableTags;
+
+  const _BatchRemoveTagDialog({required this.availableTags});
+
+  @override
+  State<_BatchRemoveTagDialog> createState() => _BatchRemoveTagDialogState();
+}
+
+class _BatchRemoveTagDialogState extends State<_BatchRemoveTagDialog> {
+  late TextEditingController _searchController;
+  List<Tag> _filteredTags = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _filteredTags = widget.availableTags;
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      final query = _searchController.text.toLowerCase();
+      if (query.isEmpty) {
+        _filteredTags = widget.availableTags;
+      } else {
+        _filteredTags = widget.availableTags
+            .where((tag) => tag.name.toLowerCase().contains(query))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Select Tag to Remove',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Search tags',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
+              ),
+              textCapitalization: TextCapitalization.words,
+              autofocus: true,
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            Flexible(
+              child: _filteredTags.isEmpty
+                  ? const Center(child: Text('No tags found'))
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _filteredTags.length,
+                      itemBuilder: (context, index) {
+                        final tag = _filteredTags[index];
+                        final tagColor = _parseColor(tag.color);
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: tagColor.withValues(alpha: 0.3),
+                            child: Icon(
+                              Icons.label_off,
+                              color: tagColor,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(tag.name),
+                          onTap: () {
+                            Navigator.of(context).pop(tag);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _parseColor(String? colorString) {
+    if (colorString == null || colorString.isEmpty) {
+      return Colors.grey.shade400;
+    }
+
+    try {
+      final hexColor = colorString.replaceAll('#', '');
+      return Color(int.parse('FF$hexColor', radix: 16));
+    } catch (e) {
+      return Colors.grey.shade400;
+    }
   }
 }

@@ -7,10 +7,16 @@ import 'package:flutter/material.dart';
 class TurnoverCard extends StatelessWidget {
   final TurnoverWithTags turnoverWithTags;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool isSelected;
+  final bool isBatchMode;
 
   const TurnoverCard({
     required this.turnoverWithTags,
     required this.onTap,
+    this.onLongPress,
+    this.isSelected = false,
+    this.isBatchMode = false,
     super.key,
   });
 
@@ -27,18 +33,44 @@ class TurnoverCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
+      elevation: isSelected ? 8 : 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: isSelected
+            ? BorderSide(
+                color: colorScheme.primary,
+                width: 2,
+              )
+            : BorderSide.none,
       ),
+      color: isSelected
+          ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : null,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Show checkbox in batch mode
+              if (isBatchMode)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Icon(
+                      isSelected
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
               // Header: Counter party and amount
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

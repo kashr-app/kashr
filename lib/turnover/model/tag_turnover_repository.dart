@@ -12,6 +12,104 @@ class TagTurnoverRepository {
     return await db.insert('tag_turnover', tagTurnover.toJson());
   }
 
+  /// Batch adds a tag to multiple turnovers.
+  /// For each turnover, allocates the remaining unallocated amount to the tag.
+  /// This is done efficiently in a single database transaction to avoid N+1.
+  Future<void> batchAddTagToTurnovers(
+    List<Turnover> turnovers,
+    Tag tag,
+  ) async {
+    if (turnovers.isEmpty || tag.id == null) return;
+
+    final db = await DatabaseHelper().database;
+
+    // Get all turnover IDs
+    final turnoverIds =
+        turnovers.where((t) => t.id != null).map((t) => t.id!.uuid).toList();
+
+    if (turnoverIds.isEmpty) return;
+
+    // Fetch all existing tag turnovers for these turnovers in one query
+    final placeholders = List.generate(turnoverIds.length, (_) => '?').join(',');
+    final existingTagTurnovers = await db.rawQuery(
+      '''
+      SELECT turnoverId, SUM(amountValue) as total
+      FROM tag_turnover
+      WHERE turnoverId IN ($placeholders)
+      GROUP BY turnoverId
+      ''',
+      turnoverIds,
+    );
+
+    // Build a map of turnover ID to allocated amount
+    final allocatedByTurnover = <String, Decimal>{};
+    for (final row in existingTagTurnovers) {
+      final turnoverId = row['turnoverId'] as String;
+      final totalInt = row['total'] as int? ?? 0;
+      allocatedByTurnover[turnoverId] = (Decimal.fromInt(totalInt) /
+              Decimal.fromInt(100))
+          .toDecimal(scaleOnInfinitePrecision: 2);
+    }
+
+    // Create batch insert
+    final batch = db.batch();
+
+    for (final turnover in turnovers) {
+      if (turnover.id == null) continue;
+
+      final allocatedAmount =
+          allocatedByTurnover[turnover.id!.uuid] ?? Decimal.zero;
+      final remainingAmount = turnover.amountValue - allocatedAmount;
+
+      // Only create if there's remaining amount to allocate
+      if (remainingAmount != Decimal.zero) {
+        final tagTurnover = TagTurnover(
+          id: const Uuid().v4obj(),
+          turnoverId: turnover.id!,
+          tagId: tag.id!,
+          amountValue: remainingAmount,
+          amountUnit: turnover.amountUnit,
+          note: null,
+        );
+
+        batch.insert('tag_turnover', tagTurnover.toJson());
+      }
+    }
+
+    await batch.commit(noResult: true);
+  }
+
+  /// Batch removes a tag from multiple turnovers.
+  /// Deletes all tag_turnover entries for the specified tag across
+  /// the given turnovers. This is done efficiently in a single
+  /// database transaction.
+  Future<void> batchRemoveTagFromTurnovers(
+    List<Turnover> turnovers,
+    Tag tag,
+  ) async {
+    if (turnovers.isEmpty || tag.id == null) return;
+
+    final db = await DatabaseHelper().database;
+
+    // Get all turnover IDs
+    final turnoverIds =
+        turnovers.where((t) => t.id != null).map((t) => t.id!.uuid).toList();
+
+    if (turnoverIds.isEmpty) return;
+
+    // Build the SQL query with placeholders
+    final placeholders = List.generate(turnoverIds.length, (_) => '?').join(',');
+
+    // Delete all tag_turnover entries for this tag and these turnovers
+    await db.rawDelete(
+      '''
+      DELETE FROM tag_turnover
+      WHERE tagId = ? AND turnoverId IN ($placeholders)
+      ''',
+      [tag.id!.uuid, ...turnoverIds],
+    );
+  }
+
   Future<List<TagTurnover>> getByTurnover(UuidValue turnoverId) async {
     final db = await DatabaseHelper().database;
 
