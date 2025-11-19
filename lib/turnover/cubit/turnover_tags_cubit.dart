@@ -72,16 +72,19 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
     }
   }
 
-  /// Adds a tag to the turnover with a default amount (not saved to DB yet).
+  /// Adds a tag to the turnover with the remaining non-allocated amount.
   void addTag(Tag tag) {
     final t = state.turnover;
     if (t == null) return;
+
+    // Calculate the remaining non-allocated amount
+    final remainingAmount = t.amountValue - state.totalTagAmount;
 
     final newTagTurnover = TagTurnover(
       id: const Uuid().v4obj(),
       turnoverId: t.id,
       tagId: tag.id!,
-      amountValue: Decimal.zero,
+      amountValue: remainingAmount,
       amountUnit: t.amountUnit,
       note: null,
     );
