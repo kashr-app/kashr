@@ -100,7 +100,7 @@ class TurnoverCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   Text(
-                    turnover.format(),
+                    turnover.formatAmount(),
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: amountColor,
                       fontWeight: FontWeight.bold,

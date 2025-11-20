@@ -38,7 +38,7 @@ class TurnoverInfoCard extends StatelessWidget {
                   style: theme.textTheme.bodySmall,
                 ),
                 Text(
-                  turnover.format(),
+                  turnover.formatAmount(),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),

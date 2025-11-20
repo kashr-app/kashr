@@ -32,7 +32,7 @@ abstract class Turnover with _$Turnover {
   factory Turnover.fromJson(Map<String, dynamic> json) =>
       _$TurnoverFromJson(json);
 
-  String format() => Currency.currencyFrom(amountUnit).format(amountValue);
+  String formatAmount() => Currency.currencyFrom(amountUnit).format(amountValue);
   String? formatDate() {
     final bd = bookingDate;
     return bd != null ? dateFormat.format(bd) : null;
