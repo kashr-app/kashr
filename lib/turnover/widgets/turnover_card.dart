@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/core/color_utils.dart';
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:finanalyzer/turnover/widgets/tag_amount_bar.dart';
 import 'package:flutter/material.dart';
@@ -27,9 +28,7 @@ class TurnoverCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     final isNegative = turnover.amountValue < Decimal.zero;
-    final amountColor = isNegative
-        ? colorScheme.error
-        : colorScheme.primary;
+    final amountColor = isNegative ? colorScheme.error : colorScheme.primary;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -37,10 +36,7 @@ class TurnoverCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: isSelected
-            ? BorderSide(
-                color: colorScheme.primary,
-                width: 2,
-              )
+            ? BorderSide(color: colorScheme.primary, width: 2)
             : BorderSide.none,
       ),
       color: isSelected
@@ -109,13 +105,15 @@ class TurnoverCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              // Tag allocation bar
               if (turnoverWithTags.tagTurnovers.isNotEmpty) ...[
                 TagAmountBar(
                   totalAmount: turnover.amountValue,
                   tagTurnovers: turnoverWithTags.tagTurnovers,
                 ),
                 const SizedBox(height: 8),
+                ...turnoverWithTags.tagTurnovers
+                    .where((tt) => tt.tagTurnover.note?.isNotEmpty == true)
+                    .map((tt) => TagNoteDisplay(tagTurnover: tt)),
                 // Tag chips
                 Wrap(
                   spacing: 8,
@@ -128,8 +126,11 @@ class TurnoverCard extends StatelessWidget {
                       ),
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      backgroundColor: _parseColor(tagTurnover.tag.color)
-                          .withValues(alpha: 0.1),
+                      backgroundColor:
+                          ColorUtils.parseColor(
+                            tagTurnover.tag.color,
+                          )?.withValues(alpha: 0.1) ??
+                          Colors.grey.shade400,
                     );
                   }).toList(),
                 ),
@@ -137,7 +138,9 @@ class TurnoverCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    color: colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -165,17 +168,46 @@ class TurnoverCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Color _parseColor(String? colorString) {
-    if (colorString == null || colorString.isEmpty) {
-      return Colors.grey.shade400;
-    }
+class TagNoteDisplay extends StatelessWidget {
+  const TagNoteDisplay({super.key, required this.tagTurnover});
 
-    try {
-      final hexColor = colorString.replaceAll('#', '');
-      return Color(int.parse('FF$hexColor', radix: 16));
-    } catch (e) {
-      return Colors.grey.shade400;
-    }
+  final TagTurnoverWithTag tagTurnover;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.note,
+              size: 16,
+              color:
+                  ColorUtils.parseColor(tagTurnover.tag.color) ??
+                  colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${tagTurnover.tagTurnover.note}',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
+

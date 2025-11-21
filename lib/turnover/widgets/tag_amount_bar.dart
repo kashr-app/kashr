@@ -13,7 +13,7 @@ class TagAmountBar extends StatelessWidget {
   const TagAmountBar({
     required this.totalAmount,
     required this.tagTurnovers,
-    this.height = 24.0,
+    this.height = 8.0,
     super.key,
   });
 
@@ -41,18 +41,7 @@ class TagAmountBar extends StatelessWidget {
               flex: (segment.percentage * 1000).toInt(),
               child: Container(
                 color: segment.color,
-                child: segment.percentage > 0.05
-                    ? Center(
-                        child: Text(
-                          '${(segment.percentage * 100).toStringAsFixed(0)}%',
-                          style: TextStyle(
-                            color: _getContrastColor(segment.color),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      )
-                    : null,
+                child: null,
               ),
             );
           }).toList(),
@@ -124,12 +113,6 @@ class TagAmountBar extends StatelessWidget {
     } catch (e) {
       return Colors.grey.shade400;
     }
-  }
-
-  Color _getContrastColor(Color color) {
-    // Calculate luminance to determine if we should use light or dark text
-    final luminance = color.computeLuminance();
-    return luminance > 0.5 ? Colors.black87 : Colors.white;
   }
 }
 

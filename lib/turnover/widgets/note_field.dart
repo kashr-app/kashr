@@ -1,3 +1,4 @@
+import 'package:finanalyzer/turnover/widgets/note_display.dart';
 import 'package:flutter/material.dart';
 
 /// A widget for displaying and editing a note.
@@ -8,11 +9,7 @@ class NoteField extends StatelessWidget {
   final String? note;
   final void Function(String?) onNoteChanged;
 
-  const NoteField({
-    required this.note,
-    required this.onNoteChanged,
-    super.key,
-  });
+  const NoteField({required this.note, required this.onNoteChanged, super.key});
 
   Future<void> _showNoteDialog(BuildContext context) async {
     final controller = TextEditingController(text: note ?? '');
@@ -42,26 +39,7 @@ class NoteField extends StatelessWidget {
 
     return InkWell(
       onTap: () => _showNoteDialog(context),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.note, size: 16),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                note!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: NoteDisplay(note: note),
     );
   }
 }
