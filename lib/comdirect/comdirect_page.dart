@@ -28,10 +28,26 @@ class ComdirectPage extends StatelessWidget {
           appBar: AppBar(
             title: const Text("Comdirect"),
             actions: [
-              IconButton(
-                onPressed: () => const ComdirectLoginRoute().go(context),
-                icon: Icon(isAuthed ? Icons.account_circle : Icons.login),
-              ),
+              if (isAuthed)
+                IconButton(
+                  onPressed: () {
+                    context.read<ComdirectAuthCubit>().logout();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Logged out successfully'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Logout',
+                )
+              else
+                IconButton(
+                  onPressed: () => const ComdirectLoginRoute().go(context),
+                  icon: const Icon(Icons.login),
+                  tooltip: 'Login',
+                ),
             ],
           ),
           body: SafeArea(
@@ -40,8 +56,8 @@ class ComdirectPage extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text("Please login to load your Comdirect data"),
-                        SizedBox(height: 16),
+                        const Text("Please login to load your Comdirect data"),
+                        const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
                             const ComdirectLoginRoute().go(context);
@@ -51,7 +67,37 @@ class ComdirectPage extends StatelessWidget {
                       ],
                     ),
                   )
-                : Center(child: Text("You are logged in.")),
+                : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          size: 64,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "You are logged in.",
+                          style: TextStyle(fontSize: 18),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            context.read<ComdirectAuthCubit>().logout();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Logged out successfully'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.logout),
+                          label: const Text('Logout'),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         );
       },

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:finanalyzer/comdirect/auth_interceptor.dart';
 import 'package:finanalyzer/comdirect/comdirect_api.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
@@ -127,12 +128,22 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       dioApi.options.headers["Authorization"] =
           "Bearer ${apiToken.accessToken}";
       dioApi.options.headers["x-http-request-info"] = clientRequestInfoHeader;
+
+      dioApi.interceptors.add(AuthInterceptor(this));
+
       final api = ComdirectAPI(dioApi);
 
       emit(AuthSuccess(apiToken, api));
     } catch (e) {
       emit(AuthError('Failed to authenticate: $e'));
     }
+  }
+
+  /// Logs out the user by clearing the authentication state and invalidating
+  /// the access token. Stored credentials are preserved for future logins.
+  void logout() {
+    emit(AuthInitial());
+    log.i('Logged out - access token invalidated');
   }
 
   /// Returns null if the user successfully confirmed the tan or the error string (e.g. timeout);
