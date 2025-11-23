@@ -135,6 +135,14 @@ class HomePage extends StatelessWidget {
                     totalExpenses: state.totalExpenses,
                   ),
                   const SizedBox(height: 16),
+                  UnallocatedTurnoversSection(
+                    unallocatedTurnovers: state.unallocatedTurnovers,
+                    unallocatedCount: state.unallocatedCount,
+                    onRefresh: () =>
+                        context.read<DashboardCubit>().loadMonthData(),
+                    selectedPeriod: state.selectedPeriod,
+                  ),
+                  const SizedBox(height: 16),
                   IncomeSummaryCard(
                     totalIncome: state.totalIncome,
                     unallocatedIncome: state.unallocatedIncome,
@@ -146,14 +154,6 @@ class HomePage extends StatelessWidget {
                     totalExpenses: state.totalExpenses,
                     unallocatedExpenses: state.unallocatedExpenses,
                     tagSummaries: state.expenseTagSummaries,
-                    selectedPeriod: state.selectedPeriod,
-                  ),
-                  const SizedBox(height: 16),
-                  UnallocatedTurnoversSection(
-                    unallocatedTurnovers: state.unallocatedTurnovers,
-                    unallocatedCount: state.unallocatedCount,
-                    onRefresh: () =>
-                        context.read<DashboardCubit>().loadMonthData(),
                     selectedPeriod: state.selectedPeriod,
                   ),
                 ],
