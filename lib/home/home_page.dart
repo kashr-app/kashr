@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:finanalyzer/analytics/analytics_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
@@ -29,6 +30,7 @@ part '../_gen/home/home_page.g.dart';
   routes: <TypedGoRoute<GoRouteData>>[
     TypedGoRoute<SettingsRoute>(path: 'settings'),
     TypedGoRoute<TagsRoute>(path: 'tags'),
+    TypedGoRoute<AnalyticsRoute>(path: 'analytics'),
     TypedGoRoute<TurnoversRoute>(
       path: 'turnovers',
       routes: [TypedGoRoute<TurnoverTagsRoute>(path: ':turnoverId/tags')],
@@ -74,6 +76,10 @@ class HomePage extends StatelessWidget {
           IconButton(
             onPressed: () => const TagsRoute().go(context),
             icon: const Icon(Icons.label),
+          ),
+          IconButton(
+            onPressed: () => const AnalyticsRoute().go(context),
+            icon: const Icon(Icons.analytics),
           ),
           IconButton(
             onPressed: () => const SettingsRoute().go(context),

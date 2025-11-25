@@ -361,6 +361,70 @@ class TagTurnoverRepository {
       return TagSummary(tag: tag, totalAmount: totalAmount);
     }).toList();
   }
+
+  /// Fetches tag summaries across multiple months for analytics.
+  /// Returns a map where the key is "YYYY-MM" and the value is
+  /// a list of TagSummary for that month.
+  Future<Map<String, List<TagSummary>>> getTagSummariesForDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+    List<UuidValue>? tagIds,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    // Build tag filter if provided
+    final tagFilter = tagIds != null && tagIds.isNotEmpty
+        ? 'AND t.id IN (${List.filled(tagIds.length, '?').join(',')})'
+        : '';
+
+    final tagArgs =
+        tagIds?.map((id) => id.uuid).toList() ?? <String>[];
+
+    final result = await db.rawQuery(
+      '''
+      SELECT
+        strftime('%Y-%m', tv.bookingDate) as month,
+        t.id as tag_id,
+        t.name as tag_name,
+        t.color as tag_color,
+        SUM(tt.amountValue) as total_amount
+      FROM tag_turnover tt
+      INNER JOIN tag t ON tt.tagId = t.id
+      INNER JOIN turnover tv ON tt.turnoverId = tv.id
+      WHERE tv.bookingDate >= ? AND tv.bookingDate < ?
+      $tagFilter
+      GROUP BY month, t.id, t.name, t.color
+      ORDER BY month ASC, total_amount DESC
+      ''',
+      [
+        Jiffy.parseFromDateTime(startDate).format(pattern: isoDateFormat),
+        Jiffy.parseFromDateTime(endDate).format(pattern: isoDateFormat),
+        ...tagArgs,
+      ],
+    );
+
+    final summariesByMonth = <String, List<TagSummary>>{};
+
+    for (final map in result) {
+      final month = map['month'] as String;
+      final tag = Tag(
+        id: UuidValue.fromString(map['tag_id'] as String),
+        name: map['tag_name'] as String,
+        color: map['tag_color'] as String?,
+      );
+
+      final totalAmountInt = map['total_amount'] as int? ?? 0;
+      final totalAmount = (Decimal.fromInt(totalAmountInt) /
+              Decimal.fromInt(100))
+          .toDecimal(scaleOnInfinitePrecision: 2);
+
+      final summary = TagSummary(tag: tag, totalAmount: totalAmount);
+
+      summariesByMonth.putIfAbsent(month, () => []).add(summary);
+    }
+
+    return summariesByMonth;
+  }
 }
 
 /// A summary of spending for a specific tag.
