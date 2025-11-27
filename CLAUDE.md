@@ -31,7 +31,9 @@ mobile platforms.
   `lib/main.dart` as the primary application entry point.
 * **Generated Files:** Files are always generated into the folder `lib/_gen`.
   The folders structure mirrors the projects source code structure to find
-  the generated files for `freezed`, etc.
+  the generated files for `freezed`, etc. Note that for `@freezed` classes
+  they need the modifier `abstract` (or `sealed`) (it was added as a
+  requirement in a recent version of the `freezed` package).
 
 ## Flutter style guide
 * **SOLID Principles:** Apply SOLID principles throughout the codebase.
