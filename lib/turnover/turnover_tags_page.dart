@@ -10,6 +10,7 @@ import 'package:finanalyzer/turnover/dialogs/edit_turnover_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/widgets/select_from_pending_tag_turnovers_hint.dart';
 import 'package:finanalyzer/turnover/widgets/status_message.dart';
 import 'package:finanalyzer/turnover/widgets/tag_suggestions_row.dart';
 import 'package:finanalyzer/turnover/widgets/tag_turnover_item.dart';
@@ -95,6 +96,9 @@ class TurnoverTagsPage extends StatelessWidget {
               return Column(
                 children: [
                   TurnoverInfoCard(turnover: turnover),
+
+                  // Hint for selecting from pending tag turnovers
+                  SelectFromPendingTagTurnoversHint(turnover: turnover),
 
                   // Tag suggestions
                   TagSuggestionsRow(

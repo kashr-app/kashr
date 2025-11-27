@@ -10,6 +10,7 @@ import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/services/tag_suggestion_service.dart';
+import 'package:finanalyzer/turnover/services/tag_turnover_scaling_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
@@ -212,19 +213,52 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       // Update the turnover itself
       await _turnoverRepository.updateTurnover(t);
 
-      // Delete all existing tag turnovers for this turnover
-      await _tagTurnoverRepository.deleteAllForTurnover(t.id!);
+      // Get IDs of current and initial tag turnovers
+      final currentIds = state.tagTurnovers
+          .map((tt) => tt.tagTurnover.id)
+          .whereType<UuidValue>()
+          .toSet();
 
-      // Create all current tag turnovers
+      final initialIds = state.initialTagTurnovers
+          .map((tt) => tt.tagTurnover.id)
+          .whereType<UuidValue>()
+          .toSet();
+
+      // Delete tag turnovers that were removed (in initial but not in current)
+      final removedIds = initialIds.difference(currentIds);
+      for (final id in removedIds) {
+        await _tagTurnoverRepository.deleteTagTurnover(id);
+      }
+
+      // Update or create current tag turnovers
       for (final tt in state.tagTurnovers) {
-        await _tagTurnoverRepository.createTagTurnover(tt.tagTurnover);
+        final id = tt.tagTurnover.id;
+        if (id == null) {
+          // Should never happen, but handle it
+          await _tagTurnoverRepository.createTagTurnover(tt.tagTurnover);
+          continue;
+        }
+
+        final idString = id.uuid;
+        final wasInitial = initialIds.contains(id);
+        final wasPending = state.associatedPendingIds.contains(idString);
+
+        if (wasInitial || wasPending) {
+          // Tag turnover existed in database - update it
+          await _tagTurnoverRepository.updateTagTurnover(tt.tagTurnover);
+        } else {
+          // Brand new tag turnover - create it
+          await _tagTurnoverRepository.createTagTurnover(tt.tagTurnover);
+        }
       }
 
       // Reset initial state to current state after successful save
+      // Clear associatedPendingIds since they're now part of initial state
       emit(state.copyWith(
         status: Status.success,
         initialTurnover: state.turnover,
         initialTagTurnovers: state.tagTurnovers,
+        associatedPendingIds: {},
       ));
       _log.i('Successfully saved turnover and tag turnovers');
     } catch (e, s) {
@@ -319,31 +353,109 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
 
     // Scale down tag turnovers if they would exceed the new amount
     if (totalTagAmount > newAbsAmount && updatedTagTurnovers.isNotEmpty) {
-      // Calculate scale factor to fit tag turnovers within new amount
-      final scaleFactor = (newAbsAmount / totalTagAmount).toDecimal(
-        scaleOnInfinitePrecision: 10,
+      updatedTagTurnovers = TagTurnoverScalingService.scaleWithTagsToFit(
+        tagTurnovers: updatedTagTurnovers,
+        targetAbsAmount: newAbsAmount,
+        targetIsNegative: newIsNegative,
       );
 
-      updatedTagTurnovers = updatedTagTurnovers.map((tt) {
-        // Scale the absolute value
-        final scaledAbsAmount = (tt.tagTurnover.amountValue.abs() * scaleFactor)
-            .floor(scale: 2);
-        // Apply the correct sign based on the new turnover
-        final signedAmount = newIsNegative ? -scaledAbsAmount : scaledAbsAmount;
-        return tt.copyWith(
-          tagTurnover: tt.tagTurnover.copyWith(amountValue: signedAmount),
-        );
-      }).toList();
-
-      _log.i(
-        'Scaled tag turnovers by factor $scaleFactor to fit new amount',
-      );
+      _log.i('Scaled tag turnovers to fit new amount');
     }
 
     emit(state.copyWith(
       turnover: updatedTurnover,
       tagTurnovers: updatedTagTurnovers,
     ));
+  }
+
+  /// Associates pending tag turnovers with the current turnover.
+  ///
+  /// This method links the provided tag turnovers to the current turnover,
+  /// updates their account IDs, and scales them down if necessary to fit
+  /// within the available amount.
+  ///
+  /// [pendingTagTurnovers] - The pending tag turnovers to associate
+  void associatePendingTagTurnovers(List<TagTurnover> pendingTagTurnovers) {
+    try {
+      final t = state.turnover;
+      if (t == null || t.id == null) return;
+
+      // Update account IDs and link to turnover
+      final updatedPendingTagTurnovers = pendingTagTurnovers.map((tt) {
+        return tt.copyWith(
+          // ensure they match the account (which has been confirmed by the user before if different)
+          accountId: t.accountId,
+          turnoverId: t.id,
+        );
+      }).toList();
+
+      // Get all tags for the updated tag turnovers
+      final allTags = state.availableTags;
+      final tagMap = {for (final tag in allTags) tag.id!: tag};
+
+      // Convert to TagTurnoverWithTag
+      var newTagTurnoversWithTags = updatedPendingTagTurnovers.map((tt) {
+        final tag = tagMap[tt.tagId];
+        return TagTurnoverWithTag(
+          tagTurnover: tt,
+          tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
+        );
+      }).toList();
+
+      // Check if scaling is needed using the state method
+      final check = state.checkIfWouldExceed(updatedPendingTagTurnovers);
+      if (check.wouldExceed) {
+        final existingTotal = state.totalTagAmount.abs();
+        final availableAmount = t.amountValue.abs() - existingTotal;
+        final targetIsNegative = t.amountValue < Decimal.zero;
+
+        newTagTurnoversWithTags = TagTurnoverScalingService.scaleWithTagsToFit(
+          tagTurnovers: newTagTurnoversWithTags,
+          targetAbsAmount: availableAmount,
+          targetIsNegative: targetIsNegative,
+        );
+
+        _log.i('Scaled pending tag turnovers to fit available amount');
+      }
+
+      // Combine with existing tag turnovers
+      final updatedTagTurnovers = [
+        ...state.tagTurnovers,
+        ...newTagTurnoversWithTags,
+      ];
+
+      // Track the IDs of pending tag turnovers we're associating
+      final pendingIds = updatedPendingTagTurnovers
+          .map((tt) => tt.id?.uuid)
+          .whereType<String>()
+          .toSet();
+
+      final updatedAssociatedPendingIds = {
+        ...state.associatedPendingIds,
+        ...pendingIds,
+      };
+
+      emit(state.copyWith(
+        tagTurnovers: updatedTagTurnovers,
+        associatedPendingIds: updatedAssociatedPendingIds,
+      ));
+
+      _log.i(
+        'Associated ${pendingTagTurnovers.length} pending tag turnovers',
+      );
+    } catch (e, s) {
+      _log.e(
+        'Failed to associate pending tag turnovers',
+        error: e,
+        stackTrace: s,
+      );
+      emit(
+        state.copyWith(
+          status: Status.error,
+          errorMessage: 'Failed to associate tag turnovers: $e',
+        ),
+      );
+    }
   }
 
   /// Deletes the turnover and handles associated tag turnovers.

@@ -35,6 +35,7 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     @Default([]) List<TagSuggestion> suggestions,
     String? errorMessage,
     @Default(false) bool isManualAccount,
+    @Default({}) Set<String> associatedPendingIds,
   }) = _TurnoverTagsState;
 
   factory TurnoverTagsState.fromJson(Map<String, dynamic> json) =>
@@ -89,5 +90,41 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     }
 
     return false;
+  }
+
+  /// Checks if adding new tag turnovers would exceed the turnover amount.
+  ///
+  /// Returns a record with:
+  /// - wouldExceed: true if the combined total would exceed the turnover amount
+  /// - combinedTotal: the combined absolute total of existing and new tag turnovers
+  /// - exceedingAmount: the amount by which it would exceed (zero if not exceeding)
+  ({bool wouldExceed, Decimal combinedTotal, Decimal exceedingAmount})
+      checkIfWouldExceed(List<TagTurnover> newTagTurnovers) {
+    final t = turnover;
+    if (t == null) {
+      return (
+        wouldExceed: false,
+        combinedTotal: Decimal.zero,
+        exceedingAmount: Decimal.zero,
+      );
+    }
+
+    final existingTotal = totalTagAmount.abs();
+    final newTotal = newTagTurnovers.fold<Decimal>(
+      Decimal.zero,
+      (sum, tt) => sum + tt.amountValue.abs(),
+    );
+    final combinedTotal = existingTotal + newTotal;
+    final turnoverAbsAmount = t.amountValue.abs();
+
+    final wouldExceed = combinedTotal > turnoverAbsAmount;
+    final exceedingAmount =
+        wouldExceed ? combinedTotal - turnoverAbsAmount : Decimal.zero;
+
+    return (
+      wouldExceed: wouldExceed,
+      combinedTotal: combinedTotal,
+      exceedingAmount: exceedingAmount,
+    );
   }
 }
