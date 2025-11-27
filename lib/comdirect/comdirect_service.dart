@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:finanalyzer/account/cubit/account_cubit.dart';
@@ -17,7 +18,14 @@ enum ResultStatus { success, unauthed, otherError }
 class FetchComdirectDataResult {
   ResultStatus status;
   String? errorMessage;
-  FetchComdirectDataResult({required this.status, this.errorMessage});
+  int autoMatchedCount;
+  List<Turnover> unmatchedTurnovers;
+  FetchComdirectDataResult({
+    required this.status,
+    this.errorMessage,
+    this.autoMatchedCount = 0,
+    this.unmatchedTurnovers = const [],
+  });
 }
 
 class ComdirectService {
@@ -25,11 +33,13 @@ class ComdirectService {
   final log = Logger();
   final AccountCubit accountCubit;
   final TurnoverCubit turnoverCubit;
+  final TurnoverMatchingService? matchingService;
 
   ComdirectService({
     required this.comdirectAPI,
     required this.accountCubit,
     required this.turnoverCubit,
+    this.matchingService,
   });
 
   /// Fetches accounts and turnovers from the Comdirect API.
@@ -134,8 +144,28 @@ class ComdirectService {
         }
       }
 
-      await turnoverCubit.storeNonExisting(turnovers);
-      log.i('Turnovers fetched and stored successfully');
+      await turnoverCubit.upsertTurnovers(turnovers);
+      log.i('Turnovers fetched and upserted successfully');
+
+      // Auto-match turnovers with pending expenses
+      var autoMatchedCount = 0;
+      final unmatchedTurnovers = <Turnover>[];
+      if (matchingService != null) {
+        for (final turnover in turnovers) {
+          final matched = await matchingService!.autoMatchPerfect(turnover);
+          if (matched) {
+            autoMatchedCount++;
+            log.i('Auto-matched turnover: ${turnover.purpose}');
+          } else {
+            // Check if there are any pending matches for this turnover
+            final matches = await matchingService!.findMatches(turnover);
+            if (matches.isNotEmpty) {
+              unmatchedTurnovers.add(turnover);
+            }
+          }
+        }
+        log.i('Auto-matched $autoMatchedCount turnovers');
+      }
 
       // Update balances for existing comdirect accounts
       for (final account in existingAccountsByApiId.values) {
@@ -150,7 +180,11 @@ class ComdirectService {
       }
       log.i('Account balances updated successfully');
 
-      return FetchComdirectDataResult(status: ResultStatus.success);
+      return FetchComdirectDataResult(
+        status: ResultStatus.success,
+        autoMatchedCount: autoMatchedCount,
+        unmatchedTurnovers: unmatchedTurnovers,
+      );
     } catch (e) {
       if (e is DioException) {
         if (e.response?.statusCode == 401) {

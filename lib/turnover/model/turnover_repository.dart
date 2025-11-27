@@ -102,6 +102,56 @@ class TurnoverRepository {
     return turnovers;
   }
 
+  Future<void> batchUpdate(List<Turnover> turnovers) async {
+    final db = await DatabaseHelper().database;
+    final batch = db.batch();
+    for (final turnover in turnovers) {
+      batch.update(
+        'turnover',
+        turnover.toJson(),
+        where: 'id = ?',
+        whereArgs: [turnover.id!.uuid],
+      );
+    }
+    await batch.commit();
+  }
+
+  Future<int> updateTurnover(Turnover turnover) async {
+    final db = await DatabaseHelper().database;
+    return await db.update(
+      'turnover',
+      turnover.toJson(),
+      where: 'id = ?',
+      whereArgs: [turnover.id!.uuid],
+    );
+  }
+
+  Future<int> deleteTurnover(UuidValue id) async {
+    final db = await DatabaseHelper().database;
+    return await db.delete(
+      'turnover',
+      where: 'id = ?',
+      whereArgs: [id.uuid],
+    );
+  }
+
+  Future<List<Turnover>> getTurnoversByApiIdsForAccount({
+    required UuidValue accountId,
+    required List<String> apiIds,
+  }) async {
+    final db = await DatabaseHelper().database;
+    if (apiIds.isEmpty) {
+      return [];
+    }
+    final result = await db.query(
+      'turnover',
+      where:
+          'accountId = ? AND apiId IN (${List.filled(apiIds.length, '?').join(',')})',
+      whereArgs: [accountId.uuid, ...apiIds],
+    );
+    return result.map((e) => Turnover.fromJson(e)).toList();
+  }
+
   /// Counts unallocated turnovers for a specific month and year.
   /// A turnover is considered unallocated if:
   /// - It has no tag_turnover entries, OR
@@ -198,6 +248,9 @@ class TurnoverRepository {
         tt.amountUnit as tt_amountUnit,
         tt.note as tt_note,
         tt.createdAt as tt_createdAt,
+        tt.booking_date as tt_bookingDate,
+        tt.account_id as tt_accountId,
+        tt.recurring_rule_id as tt_recurringRuleId,
         t.id as t_id,
         t.name as t_name,
         t.color as t_color
@@ -227,6 +280,11 @@ class TurnoverRepository {
         amountUnit: map['tt_amountUnit'] as String,
         note: map['tt_note'] as String?,
         createdAt: DateTime.parse(map['tt_createdAt'] as String),
+        bookingDate: DateTime.parse(map['tt_bookingDate'] as String),
+        accountId: UuidValue.fromString(map['tt_accountId'] as String),
+        recurringRuleId: map['tt_recurringRuleId'] != null
+            ? UuidValue.fromString(map['tt_recurringRuleId'] as String)
+            : null,
       );
 
       final tag = Tag(
@@ -261,19 +319,35 @@ class TurnoverRepository {
   }
 
   /// Get all turnovers for a specific account
-  /// Optionally filter by date (upTo)
+  /// Optionally filter by date range
+  /// [startDateInclusive] filters turnovers with bookingDate >= startDate
+  /// [endDateInclusive] filters turnovers with bookingDate <= endDate
   Future<List<Turnover>> getTurnoversForAccount({
     required UuidValue accountId,
-    DateTime? upTo,
+    DateTime? startDateInclusive,
+    DateTime? endDateInclusive,
   }) async {
     final db = await DatabaseHelper().database;
 
     final whereClauses = ['accountId = ?'];
     final whereArgs = <Object>[accountId.uuid];
 
-    if (upTo != null) {
+    if (startDateInclusive != null) {
+      whereClauses.add('bookingDate >= ?');
+      whereArgs.add(
+        Jiffy.parseFromDateTime(startDateInclusive).format(
+          pattern: isoDateFormat,
+        ),
+      );
+    }
+
+    if (endDateInclusive != null) {
       whereClauses.add('bookingDate <= ?');
-      whereArgs.add(Jiffy.parseFromDateTime(upTo).format(pattern: isoDateFormat));
+      whereArgs.add(
+        Jiffy.parseFromDateTime(endDateInclusive).format(
+          pattern: isoDateFormat,
+        ),
+      );
     }
 
     final maps = await db.query(
@@ -407,6 +481,9 @@ class TurnoverRepository {
         tt.amountUnit as tt_amountUnit,
         tt.note as tt_note,
         tt.createdAt as tt_createdAt,
+        tt.booking_date as tt_bookingDate,
+        tt.account_id as tt_accountId,
+        tt.recurring_rule_id as tt_recurringRuleId,
         t.id as t_id,
         t.name as t_name,
         t.color as t_color
@@ -436,6 +513,11 @@ class TurnoverRepository {
         amountUnit: map['tt_amountUnit'] as String,
         note: map['tt_note'] as String?,
         createdAt: DateTime.parse(map['tt_createdAt'] as String),
+        bookingDate: DateTime.parse(map['tt_bookingDate'] as String),
+        accountId: UuidValue.fromString(map['tt_accountId'] as String),
+        recurringRuleId: map['tt_recurringRuleId'] != null
+            ? UuidValue.fromString(map['tt_recurringRuleId'] as String)
+            : null,
       );
 
       final tag = Tag(

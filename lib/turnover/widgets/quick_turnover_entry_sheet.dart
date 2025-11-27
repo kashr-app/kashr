@@ -1,0 +1,393 @@
+import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/account/model/account.dart';
+import 'package:finanalyzer/core/amount_dialog.dart';
+import 'package:finanalyzer/core/currency.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag_repository.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
+import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
+
+class QuickTurnoverEntrySheet extends StatefulWidget {
+  final Account account;
+
+  const QuickTurnoverEntrySheet({required this.account, super.key});
+
+  @override
+  State<QuickTurnoverEntrySheet> createState() =>
+      _QuickTurnoverEntrySheetState();
+}
+
+class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _noteController = TextEditingController();
+  final _counterpartController = TextEditingController();
+
+  int? _amountScaled;
+
+  Tag? _selectedTag;
+  DateTime _selectedDate = DateTime.now();
+  bool _isSubmitting = false;
+  List<Tag> _availableTags = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTags();
+  }
+
+  Future<void> _loadTags() async {
+    final tagRepository = context.read<TagRepository>();
+    final tags = await tagRepository.getAllTags();
+    setState(() {
+      _availableTags = tags;
+    });
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    _counterpartController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectAmount() async {
+    final result = await AmountDialog.show(
+      context,
+      currencyUnit: widget.account.currency,
+      initialAmountScaled: _amountScaled?.abs() ?? 0,
+      showSignSwitch: true,
+      initialIsNegative: true,
+    );
+
+    if (result != null) {
+      setState(() {
+        _amountScaled = result;
+      });
+    }
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedTag == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a tag')));
+      return;
+    }
+    if (_amountScaled == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter an amount')));
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    try {
+      final amount = (Decimal.fromInt(_amountScaled!) / Decimal.fromInt(100))
+          .toDecimal(scaleOnInfinitePrecision: 2);
+      final note = _noteController.text.trim();
+      final counterpart = _counterpartController.text.trim();
+
+      final tagTurnoverRepository = context.read<TagTurnoverRepository>();
+      final turnoverRepository = context.read<TurnoverRepository>();
+
+      final isManual = widget.account.syncSource == SyncSource.manual;
+
+      if (isManual) {
+        // For manual accounts: create Turnover + TagTurnover
+        final turnover = Turnover(
+          id: const Uuid().v4obj(),
+          accountId: widget.account.id!,
+          bookingDate: _selectedDate,
+          amountValue: amount,
+          amountUnit: widget.account.currency,
+          purpose: note.isEmpty ? _selectedTag!.name : note,
+          counterPart: counterpart.isEmpty ? null : counterpart,
+          createdAt: DateTime.now(),
+        );
+
+        await turnoverRepository.createTurnover(turnover);
+
+        final tagTurnover = TagTurnover(
+          id: const Uuid().v4obj(),
+          turnoverId: turnover.id,
+          tagId: _selectedTag!.id!,
+          amountValue: amount,
+          amountUnit: turnover.amountUnit,
+          bookingDate: _selectedDate,
+          accountId: turnover.accountId,
+          note: note.isEmpty ? null : note,
+          createdAt: DateTime.now(),
+        );
+
+        await tagTurnoverRepository.createTagTurnover(tagTurnover);
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              amount < Decimal.zero ? 'Expense recorded' : 'Income recorded',
+            ),
+          ),
+        );
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        // For linked accounts: create unmatched TagTurnover
+        final tagTurnover = TagTurnover(
+          id: const Uuid().v4obj(),
+          turnoverId: null, // NOT MATCHED YET
+          tagId: _selectedTag!.id!,
+          amountValue: amount,
+          amountUnit: widget.account.currency,
+          bookingDate: _selectedDate,
+          accountId: widget.account.id!,
+          note: note.isEmpty ? null : note,
+          createdAt: DateTime.now(),
+        );
+
+        await tagTurnoverRepository.createTagTurnover(tagTurnover);
+
+        // Try to find and auto-match with existing synced turnovers
+        if (!mounted) return;
+        final matchingService = context.read<TurnoverMatchingService>();
+
+        // Get turnovers within date window around this expense (±dateMatchingWindow days)
+        final startDate = _selectedDate.subtract(
+          const Duration(days: dateMatchingWindow),
+        );
+        final endDate = _selectedDate.add(
+          const Duration(days: dateMatchingWindow),
+        );
+
+        final nearbyTurnovers = await turnoverRepository.getTurnoversForAccount(
+          accountId: widget.account.id!,
+          startDateInclusive: startDate,
+          endDateInclusive: endDate,
+        );
+
+        // Try to find a matching turnover
+        bool matched = false;
+        for (final turnover in nearbyTurnovers) {
+          // Check for exact amount match
+          if (turnover.amountValue == amount) {
+            final matches = await matchingService.findMatches(turnover);
+
+            // Check if our newly created tagTurnover is in the matches
+            final ourMatch = matches
+                .where((m) => m.tagTurnoverId == tagTurnover.id)
+                .firstOrNull;
+
+            if (ourMatch != null && ourMatch.confidence >= 0.95) {
+              await matchingService.confirmMatch(ourMatch);
+              matched = true;
+              break;
+            }
+          }
+        }
+
+        if (matched) {
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                amount < Decimal.zero
+                    ? 'Expense matched automatically!'
+                    : 'Income matched automatically!',
+              ),
+            ),
+          );
+        } else {
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                amount < Decimal.zero
+                    ? 'Expense logged, pending confirmation'
+                    : 'Income logged, pending confirmation',
+              ),
+            ),
+          );
+        }
+
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
+      }
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  String _formatAmount(int scaledAmount) {
+    final decimal = (Decimal.fromInt(scaledAmount) / Decimal.fromInt(100))
+        .toDecimal(scaleOnInfinitePrecision: 2);
+    final currency = Currency.currencyFrom(widget.account.currency);
+    return currency.format(decimal);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isManual = widget.account.syncSource == SyncSource.manual;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Log Turnover', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              'Account: ${widget.account.name}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: _selectAmount,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Amount',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.edit),
+                ),
+                child: Text(
+                  _amountScaled != null
+                      ? _formatAmount(_amountScaled!)
+                      : 'Tap to enter amount',
+                  style: _amountScaled == null
+                      ? theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        )
+                      : null,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<Tag>(
+              initialValue: _selectedTag,
+              decoration: const InputDecoration(
+                labelText: 'Tag',
+                border: OutlineInputBorder(),
+              ),
+              items: _availableTags
+                  .map(
+                    (tag) => DropdownMenuItem(
+                      value: tag,
+                      child: Row(
+                        children: [
+                          TagAvatar(tag: tag, radius: 12),
+                          const SizedBox(width: 8),
+                          Text(tag.name),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (tag) {
+                setState(() {
+                  _selectedTag = tag;
+                });
+              },
+              validator: (value) {
+                if (value == null) {
+                  return 'Please select a tag';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            if (isManual) ...[
+              TextFormField(
+                controller: _counterpartController,
+                decoration: const InputDecoration(
+                  labelText: 'Counterpart (optional)',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., Store name, Person',
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            TextFormField(
+              controller: _noteController,
+              decoration: const InputDecoration(
+                labelText: 'Note (optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: _selectDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Date',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                child: Text(
+                  '${_selectedDate.day.toString().padLeft(2, '0')}.${_selectedDate.month.toString().padLeft(2, '0')}.${_selectedDate.year}',
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _isSubmitting ? null : _submit,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      _amountScaled != null && _amountScaled! < 0
+                          ? 'Log Expense'
+                          : 'Log Income',
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

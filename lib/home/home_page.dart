@@ -9,18 +9,23 @@ import 'package:finanalyzer/comdirect/comdirect_page.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
 import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
+import 'package:finanalyzer/account/cubit/account_cubit.dart';
+import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/home/widgets/cashflow_card.dart';
 import 'package:finanalyzer/home/widgets/income_summary_card.dart';
 import 'package:finanalyzer/home/widgets/load_bank_data_section.dart';
+import 'package:finanalyzer/home/widgets/pending_turnovers_hint.dart';
 import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
+import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/tags_page.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
+import 'package:finanalyzer/turnover/pending_turnovers_page.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -34,6 +39,7 @@ part '../_gen/home/home_page.g.dart';
     TypedGoRoute<SettingsRoute>(path: 'settings'),
     TypedGoRoute<TagsRoute>(path: 'tags'),
     TypedGoRoute<AnalyticsRoute>(path: 'analytics'),
+    TypedGoRoute<PendingTurnoversRoute>(path: 'pending-turnovers'),
     TypedGoRoute<AccountsRoute>(
       path: 'accounts',
       routes: [
@@ -154,6 +160,8 @@ class HomePage extends StatelessWidget {
                         context.read<DashboardCubit>().nextMonth(),
                   ),
                   const SizedBox(height: 8),
+                  const PendingTurnoversHint(),
+                  const SizedBox(height: 8),
                   const LoadBankDataSection(),
                   const SizedBox(height: 8),
                   CashflowCard(
@@ -188,6 +196,84 @@ class HomePage extends StatelessWidget {
           },
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showQuickExpenseEntry(context),
+        tooltip: 'Log Expense',
+        child: const Icon(Icons.add),
+      ),
     );
+  }
+
+  void _showQuickExpenseEntry(BuildContext context) async {
+    final accountCubit = context.read<AccountCubit>();
+    final accounts = accountCubit.state.accounts;
+    if (accountCubit.state.status.isLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Accounts still loading, please try again in a second.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (accounts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please create an account first')),
+      );
+      return;
+    }
+
+    // If only one account, use it directly
+    if (accounts.length == 1) {
+      await _showEntrySheetAndRefresh(context, accounts.first);
+      return;
+    }
+
+    // Show account selector
+    final selectedAccount = await showDialog<Account>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Account'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: accounts.length,
+            itemBuilder: (context, index) {
+              final account = accounts[index];
+              return ListTile(
+                leading: Icon(account.accountType.icon),
+                title: Text(account.name),
+                subtitle: Text(account.accountType.label()),
+                onTap: () => Navigator.of(context).pop(account),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (selectedAccount != null && context.mounted) {
+      await _showEntrySheetAndRefresh(context, selectedAccount);
+    }
+  }
+
+  /// Shows the QuickTurnoverEntrySheet and refreshes the dashboard if a
+  /// turnover was successfully saved.
+  Future<void> _showEntrySheetAndRefresh(
+    BuildContext context,
+    Account account,
+  ) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => QuickTurnoverEntrySheet(account: account),
+    );
+
+    // Refresh dashboard if turnover was saved
+    if (result == true && context.mounted) {
+      context.read<DashboardCubit>().loadMonthData();
+    }
   }
 }

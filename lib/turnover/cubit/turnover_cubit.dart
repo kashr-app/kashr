@@ -41,42 +41,91 @@ class TurnoverCubit extends Cubit<TurnoverState> {
     ));
   }
 
-  /// Stores turnovers that haven't been persisted before, filtering based on the (accountId, apiId) combination.
-  Future<List<Turnover>> storeNonExisting(List<Turnover> turnovers) async {
-    // Extract the non-null apiIds
-    final turnoverApiIdsToCheck = turnovers
-        .where((turnover) => turnover.apiId != null)
-        .map((turnover) => turnover.apiId!)
-        .toList();
-
-    // Fetch existing pairs of (accountId, apiId) from the database
-    final existingAccountApiIdPairs =
-        await turnoverRepository.findAccountIdAndApiIdIn(turnoverApiIdsToCheck);
-
-    // Filter out turnovers whose (accountId, apiId) combination already exists in the database
-    final newTurnovers = turnovers.where((turnover) {
-      if (turnover.apiId != null) {
-        return !existingAccountApiIdPairs.contains(
-          TurnoverAccountIdAndApiId(
-            accountId: turnover.accountId,
-            apiId: turnover.apiId!,
-          ),
-        );
-      }
-      return true; // Allow turnovers with null apiId
-    }).toList();
-
-    if (existingAccountApiIdPairs.isNotEmpty) {
-      log.d(
-        'Will not store ${existingAccountApiIdPairs.length} turnovers out of ${turnovers.length} total, '
-        'because their apiId was already used in the same account.',
-      );
+  /// Upserts turnovers by inserting new ones and updating existing ones.
+  /// Uses apiId to determine if a turnover already exists for the account.
+  /// Performs batch operations to avoid N+1 queries.
+  Future<void> upsertTurnovers(List<Turnover> turnovers) async {
+    // Group turnovers by accountId for efficient querying
+    final turnoversByAccount = <UuidValue, List<Turnover>>{};
+    for (final turnover in turnovers) {
+      turnoversByAccount.putIfAbsent(turnover.accountId, () => []).add(turnover);
     }
 
-    // Store the new turnovers in the database
-    final storedTurnovers = await turnoverRepository.saveAll(newTurnovers);
-    log.i('Stored ${newTurnovers.length} turnovers');
+    final allToInsert = <Turnover>[];
+    final allToUpdate = <Turnover>[];
 
-    return storedTurnovers;
+    for (final entry in turnoversByAccount.entries) {
+      final accountId = entry.key;
+      final accountTurnovers = entry.value;
+
+      final apiIds = accountTurnovers
+          .where((t) => t.apiId != null)
+          .map((t) => t.apiId!)
+          .toList();
+
+      // Fetch existing turnovers for this account in one query
+      final existingTurnovers =
+          await turnoverRepository.getTurnoversByApiIdsForAccount(
+        accountId: accountId,
+        apiIds: apiIds,
+      );
+
+      // Create lookup map: apiId -> existing Turnover
+      final existingByApiId = <String, Turnover>{
+        for (final existing in existingTurnovers)
+          if (existing.apiId != null) existing.apiId!: existing,
+      };
+
+      // Classify each turnover as insert or update
+      for (final turnover in accountTurnovers) {
+        if (turnover.apiId == null) {
+          // No apiId means it's not originating from an api (unsynced account
+          // and we hence always treat it as a new turnover
+          allToInsert.add(turnover);
+        } else {
+          final existing = existingByApiId[turnover.apiId];
+          if (existing == null) {
+            // New turnover
+            allToInsert.add(turnover);
+          } else {
+            // Existing turnover - check if it needs updating by normalizing
+            // metadata fields and using freezed's generated equality
+            final normalizedExisting = existing.copyWith(
+              id: null,
+              createdAt: DateTime(2000),
+              accountId: turnover.accountId,
+              apiId: turnover.apiId,
+            );
+            final normalizedTurnover = turnover.copyWith(
+              id: null,
+              createdAt: DateTime(2000),
+            );
+
+            if (normalizedExisting != normalizedTurnover) {
+              // Update with existing ID to preserve database identity
+              allToUpdate.add(turnover.copyWith(
+                id: existing.id,
+                createdAt: existing.createdAt,
+              ));
+            }
+          }
+        }
+      }
+    }
+
+    // Perform batch operations
+    if (allToInsert.isNotEmpty) {
+      await turnoverRepository.saveAll(allToInsert);
+      log.i('Inserted ${allToInsert.length} new turnovers');
+    }
+
+    if (allToUpdate.isNotEmpty) {
+      await turnoverRepository.batchUpdate(allToUpdate);
+      log.i('Updated ${allToUpdate.length} existing turnovers');
+    }
+
+    if (allToInsert.isEmpty && allToUpdate.isEmpty) {
+      log.i('No turnovers to insert or update');
+    }
   }
 }

@@ -1,9 +1,12 @@
+import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/dialogs/discard_changes_dialog.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
+import 'package:finanalyzer/turnover/dialogs/delete_turnover_dialog.dart';
+import 'package:finanalyzer/turnover/dialogs/edit_turnover_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
@@ -27,8 +30,9 @@ class TurnoverTagsRoute extends GoRouteData with $TurnoverTagsRoute {
         context.read<TagTurnoverRepository>(),
         context.read<TagRepository>(),
         context.read<TurnoverRepository>(),
+        context.read<AccountRepository>(),
       )..loadTurnover(UuidValue.fromString(turnoverId)),
-      child: TurnoverTagsPage(),
+      child: const TurnoverTagsPage(),
     );
   }
 }
@@ -55,7 +59,31 @@ class TurnoverTagsPage extends StatelessWidget {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Turnover Tags')),
+        appBar: AppBar(
+          title: const Text('Turnover Tags'),
+          actions: [
+            BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
+              builder: (context, state) {
+                if (!state.isManualAccount) return const SizedBox.shrink();
+
+                return Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      tooltip: 'Edit Turnover',
+                      onPressed: () => _showEditDialog(context),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      tooltip: 'Delete Turnover',
+                      onPressed: () => _showDeleteDialog(context),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
         body: SafeArea(
           child: BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
             builder: (context, state) {
@@ -100,6 +128,7 @@ class TurnoverTagsPage extends StatelessWidget {
                             itemBuilder: (context, index) {
                               final tagTurnover = state.tagTurnovers[index];
                               return TagTurnoverItem(
+                                key: ValueKey(tagTurnover.tagTurnover.id),
                                 tagTurnoverWithTag: tagTurnover,
                                 maxAmountScaled:
                                     decimalScale(turnover.amountValue) ?? 0,
@@ -167,5 +196,36 @@ class TurnoverTagsPage extends StatelessWidget {
       builder: (dialogContext) =>
           AddTagDialog(cubit: context.read<TurnoverTagsCubit>()),
     );
+  }
+
+  Future<void> _showEditDialog(BuildContext context) async {
+    final cubit = context.read<TurnoverTagsCubit>();
+    final turnover = cubit.state.turnover;
+
+    if (turnover == null) return;
+
+    final updatedTurnover = await EditTurnoverDialog.show(
+      context,
+      turnover: turnover,
+    );
+
+    if (updatedTurnover != null && context.mounted) {
+      cubit.updateTurnover(updatedTurnover);
+    }
+  }
+
+  Future<void> _showDeleteDialog(BuildContext context) async {
+    final option = await DeleteTurnoverDialog.show(context);
+
+    if (option != null && context.mounted) {
+      final cubit = context.read<TurnoverTagsCubit>();
+      final makePending = option == DeleteTagTurnoversOption.makePending;
+
+      await cubit.deleteTurnover(makePending: makePending);
+
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+    }
   }
 }

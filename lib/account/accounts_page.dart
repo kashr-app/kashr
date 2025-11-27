@@ -95,9 +95,8 @@ class AccountsPage extends StatelessWidget {
                     _HiddenAccountsHint(
                       hiddenCount: hiddenAccounts.length,
                       isExpanded: showHidden,
-                      onTap: () => context
-                          .read<AccountCubit>()
-                          .toggleHiddenAccounts(),
+                      onTap: () =>
+                          context.read<AccountCubit>().toggleHiddenAccounts(),
                     ),
                   ],
                 ),
@@ -114,19 +113,23 @@ class AccountsPage extends StatelessWidget {
                     final balance = account.id != null
                         ? state.balances[account.id!.uuid]
                         : null;
+                    final projectedBalance = account.id != null
+                        ? state.projectedBalances[account.id!.uuid]
+                        : null;
 
                     return _AccountListItem(
                       account: account,
                       balance: balance,
+                      projectedBalance: projectedBalance,
+                      projectionDate: state.projectionDate,
                       onTap: () => _navigateToEditAccount(context, account),
                     );
                   } else {
                     return _HiddenAccountsHint(
                       hiddenCount: hiddenAccounts.length,
                       isExpanded: showHidden,
-                      onTap: () => context
-                          .read<AccountCubit>()
-                          .toggleHiddenAccounts(),
+                      onTap: () =>
+                          context.read<AccountCubit>().toggleHiddenAccounts(),
                     );
                   }
                 },
@@ -156,13 +159,35 @@ class AccountsPage extends StatelessWidget {
 class _AccountListItem extends StatelessWidget {
   final Account account;
   final Decimal? balance;
+  final Decimal? projectedBalance;
+  final DateTime projectionDate;
   final VoidCallback onTap;
 
   const _AccountListItem({
     required this.account,
     required this.balance,
+    required this.projectedBalance,
+    required this.projectionDate,
     required this.onTap,
   });
+
+  String _formatMonth(DateTime date) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return months[date.month - 1];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -214,6 +239,16 @@ class _AccountListItem extends StatelessWidget {
                     : null,
               ),
             ),
+            if (projectedBalance != null &&
+                balance != null &&
+                projectedBalance != balance)
+              Text(
+                'End of ${_formatMonth(projectionDate)}: ${currency.format(projectedBalance!)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
           ],
         ),
         onTap: onTap,

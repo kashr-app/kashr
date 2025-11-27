@@ -14,15 +14,26 @@ abstract class TagTurnover with _$TagTurnover {
 
   const factory TagTurnover({
     @UUIDNullableJsonConverter() UuidValue? id,
-    @UUIDJsonConverter() required UuidValue? turnoverId,
+    // Can be null for immediate/planned expenses that have not yet been associated with a turnover
+    @UUIDNullableJsonConverter() UuidValue? turnoverId,
     @UUIDJsonConverter() required UuidValue tagId,
     @DecimalJsonConverter() required Decimal amountValue,
     required String amountUnit,
-    required String? note,
+    String? note,
     required DateTime createdAt,
+    @JsonKey(name: 'booking_date') required DateTime bookingDate,
+    @JsonKey(name: 'account_id') @UUIDJsonConverter() required UuidValue accountId,
+    @JsonKey(name: 'recurring_rule_id')
+    @UUIDNullableJsonConverter()
+    UuidValue? recurringRuleId,
   }) = _TagTurnover;
 
   String format() => Currency.currencyFrom(amountUnit).format(amountValue);
+
+  // Computed properties
+  bool get isMatched => turnoverId != null;
+  bool get isUnmatched => turnoverId == null;
+  bool get isRecurring => recurringRuleId != null;
 
   factory TagTurnover.fromJson(Map<String, dynamic> json) =>
       _$TagTurnoverFromJson(json);

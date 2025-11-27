@@ -8,6 +8,7 @@ import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:finanalyzer/router.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/settings/settings_state.dart';
@@ -27,7 +28,11 @@ final turnoverRepository = TurnoverRepository();
 final accountRepository = AccountRepository();
 final tagRepository = TagRepository();
 final tagTurnoverRepository = TagTurnoverRepository();
-final balanceCalculationService = BalanceCalculationService(turnoverRepository);
+final balanceCalculationService = BalanceCalculationService(
+  turnoverRepository,
+  tagTurnoverRepository,
+);
+final turnoverMatchingService = TurnoverMatchingService(tagTurnoverRepository);
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -42,6 +47,9 @@ class MyApp extends StatelessWidget {
         Provider<TagTurnoverRepository>.value(value: tagTurnoverRepository),
         Provider<BalanceCalculationService>.value(
           value: balanceCalculationService,
+        ),
+        Provider<TurnoverMatchingService>.value(
+          value: turnoverMatchingService,
         ),
         BlocProvider(
           create: (_) => LocalAuthCubit(),

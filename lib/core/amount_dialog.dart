@@ -17,10 +17,18 @@ class AmountDialog extends StatefulWidget {
   /// Currency unit for display.
   final String currencyUnit;
 
+  /// Whether to show a sign switch (positive/negative).
+  final bool showSignSwitch;
+
+  /// Initial state of the sign (true = negative, false = positive).
+  final bool initialIsNegative;
+
   const AmountDialog({
     required this.currencyUnit,
     this.maxAmountScaled,
     this.initialAmountScaled = 0,
+    this.showSignSwitch = false,
+    this.initialIsNegative = false,
     super.key,
   });
 
@@ -33,6 +41,8 @@ class AmountDialog extends StatefulWidget {
     required String currencyUnit,
     int? maxAmountScaled,
     int initialAmountScaled = 0,
+    bool showSignSwitch = false,
+    bool initialIsNegative = false,
   }) async {
     return showDialog<int>(
       context: context,
@@ -40,6 +50,8 @@ class AmountDialog extends StatefulWidget {
         currencyUnit: currencyUnit,
         maxAmountScaled: maxAmountScaled,
         initialAmountScaled: initialAmountScaled,
+        showSignSwitch: showSignSwitch,
+        initialIsNegative: initialIsNegative,
       ),
     );
   }
@@ -48,11 +60,13 @@ class AmountDialog extends StatefulWidget {
 class _AmountDialogState extends State<AmountDialog> {
   late TextEditingController _controller;
   late int _amountScaled;
+  late bool _isNegative;
 
   @override
   void initState() {
     super.initState();
     _amountScaled = widget.initialAmountScaled;
+    _isNegative = widget.initialIsNegative;
     _controller = TextEditingController(text: _formatAmount(_amountScaled));
   }
 
@@ -74,6 +88,8 @@ class _AmountDialogState extends State<AmountDialog> {
     final currency = Currency.currencyFrom(widget.currencyUnit);
     return currency.format(decimal, decimalDigits: 2);
   }
+
+  int get _finalAmount => _isNegative ? -_amountScaled : _amountScaled;
 
   void _onDigitPressed(String digit) {
     setState(() {
@@ -167,12 +183,37 @@ class _AmountDialogState extends State<AmountDialog> {
             ),
             const SizedBox(height: 16),
             Text(
-              '${currency.symbol()} ${_controller.text}',
+              '${_isNegative && widget.showSignSwitch ? '-' : ''}${currency.symbol()} ${_controller.text}',
               style: theme.textTheme.headlineMedium?.copyWith(
                 color: _isAmountExceeded ? colorScheme.error : null,
               ),
               textAlign: TextAlign.center,
             ),
+
+            // Sign toggle (if enabled)
+            if (widget.showSignSwitch) ...[
+              const SizedBox(height: 16),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment<bool>(
+                    value: true,
+                    label: Text('Expense'),
+                    icon: Icon(Icons.remove_circle_outline),
+                  ),
+                  ButtonSegment<bool>(
+                    value: false,
+                    label: Text('Income'),
+                    icon: Icon(Icons.add_circle_outline),
+                  ),
+                ],
+                selected: {_isNegative},
+                onSelectionChanged: (Set<bool> selection) {
+                  setState(() {
+                    _isNegative = selection.first;
+                  });
+                },
+              ),
+            ],
             const SizedBox(height: 24),
 
             // Number pad
@@ -195,7 +236,7 @@ class _AmountDialogState extends State<AmountDialog> {
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: _canConfirm
-                      ? () => Navigator.of(context).pop(_amountScaled)
+                      ? () => Navigator.of(context).pop(_finalAmount)
                       : null,
                   child: const Text('OK'),
                 ),
@@ -276,10 +317,7 @@ class _NumberButton extends StatelessWidget {
       height: 56,
       child: FilledButton.tonal(
         onPressed: () => onPressed(digit),
-        child: Text(
-          digit,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        child: Text(digit, style: Theme.of(context).textTheme.titleLarge),
       ),
     );
   }
@@ -297,10 +335,7 @@ class _ActionButton extends StatelessWidget {
     return SizedBox(
       width: 72,
       height: 56,
-      child: FilledButton.tonal(
-        onPressed: onPressed,
-        child: Icon(icon),
-      ),
+      child: FilledButton.tonal(onPressed: onPressed, child: Icon(icon)),
     );
   }
 }

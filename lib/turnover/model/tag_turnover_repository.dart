@@ -71,6 +71,8 @@ class TagTurnoverRepository {
           amountUnit: turnover.amountUnit,
           note: null,
           createdAt: DateTime.now(),
+          bookingDate: turnover.bookingDate ?? DateTime.now(),
+          accountId: turnover.accountId,
         );
 
         batch.insert('tag_turnover', tagTurnover.toJson());
@@ -135,19 +137,51 @@ class TagTurnoverRepository {
     return maps.map((e) => TagTurnover.fromJson(e)).toList();
   }
 
-  Future<List<TagTurnover>> getUnfinalizedTagTurnovers() async {
+  /// Get unmatched TagTurnovers (turnoverId IS NULL)
+  /// Optionally filter by account and date range
+  Future<List<TagTurnover>> getUnmatched({
+    UuidValue? accountId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     final db = await DatabaseHelper().database;
+
+    final whereClauses = ['turnoverId IS NULL'];
+    final whereArgs = <Object>[];
+
+    if (accountId != null) {
+      whereClauses.add('account_id = ?');
+      whereArgs.add(accountId.uuid);
+    }
+
+    if (startDate != null) {
+      whereClauses.add('booking_date >= ?');
+      whereArgs.add(
+        Jiffy.parseFromDateTime(startDate).format(pattern: isoDateFormat),
+      );
+    }
+
+    if (endDate != null) {
+      whereClauses.add('booking_date < ?');
+      whereArgs.add(
+        Jiffy.parseFromDateTime(endDate).format(pattern: isoDateFormat),
+      );
+    }
+
     final maps = await db.query(
       'tag_turnover',
-      where: 'turnoverId IS NULL',
-      orderBy: 'createdAt DESC',
+      where: whereClauses.join(' AND '),
+      whereArgs: whereArgs,
+      orderBy: 'booking_date DESC',
     );
+
     return maps.map((e) => TagTurnover.fromJson(e)).toList();
   }
 
-  Future<int> finalizeTagTurnover(
-    UuidValue turnoverId,
+  /// Link an unmatched TagTurnover to a Turnover (confirm match)
+  Future<int> linkToTurnover(
     UuidValue tagTurnoverId,
+    UuidValue turnoverId,
   ) async {
     final db = await DatabaseHelper().database;
 
@@ -157,6 +191,31 @@ class TagTurnoverRepository {
       where: 'id = ?',
       whereArgs: [tagTurnoverId.uuid],
     );
+  }
+
+  /// Unlink a matched TagTurnover from its Turnover
+  Future<int> unlinkFromTurnover(UuidValue tagTurnoverId) async {
+    final db = await DatabaseHelper().database;
+
+    return await db.update(
+      'tag_turnover',
+      {'turnoverId': null},
+      where: 'id = ?',
+      whereArgs: [tagTurnoverId.uuid],
+    );
+  }
+
+  /// Get TagTurnover by ID
+  Future<TagTurnover?> getById(UuidValue id) async {
+    final db = await DatabaseHelper().database;
+    final maps = await db.query(
+      'tag_turnover',
+      where: 'id = ?',
+      whereArgs: [id.uuid],
+    );
+
+    if (maps.isEmpty) return null;
+    return TagTurnover.fromJson(maps.first);
   }
 
   Future<int> updateTagTurnover(TagTurnover tagTurnover) async {
@@ -242,7 +301,8 @@ class TagTurnoverRepository {
       FROM tag_turnover tt
       INNER JOIN tag t ON tt.tagId = t.id
       INNER JOIN turnover tv ON tt.turnoverId = tv.id
-      WHERE tv.bookingDate >= ? AND tv.bookingDate < ?
+      WHERE tt.booking_date >= ? AND tt.booking_date < ?
+        AND tt.turnoverId IS NOT NULL
       GROUP BY t.id, t.name, t.color
       ORDER BY total_amount DESC
       ''',
@@ -288,7 +348,8 @@ class TagTurnoverRepository {
       FROM tag_turnover tt
       INNER JOIN tag t ON tt.tagId = t.id
       INNER JOIN turnover tv ON tt.turnoverId = tv.id
-      WHERE tv.bookingDate >= ? AND tv.bookingDate < ?
+      WHERE tt.booking_date >= ? AND tt.booking_date < ?
+        AND tt.turnoverId IS NOT NULL
         AND tv.amountValue > 0
       GROUP BY t.id, t.name, t.color
       ORDER BY total_amount DESC
@@ -335,7 +396,8 @@ class TagTurnoverRepository {
       FROM tag_turnover tt
       INNER JOIN tag t ON tt.tagId = t.id
       INNER JOIN turnover tv ON tt.turnoverId = tv.id
-      WHERE tv.bookingDate >= ? AND tv.bookingDate < ?
+      WHERE tt.booking_date >= ? AND tt.booking_date < ?
+        AND tt.turnoverId IS NOT NULL
         AND tv.amountValue < 0
       GROUP BY t.id, t.name, t.color
       ORDER BY total_amount ASC
@@ -383,7 +445,7 @@ class TagTurnoverRepository {
     final result = await db.rawQuery(
       '''
       SELECT
-        strftime('%Y-%m', tv.bookingDate) as month,
+        strftime('%Y-%m', tt.booking_date) as month,
         t.id as tag_id,
         t.name as tag_name,
         t.color as tag_color,
@@ -391,7 +453,8 @@ class TagTurnoverRepository {
       FROM tag_turnover tt
       INNER JOIN tag t ON tt.tagId = t.id
       INNER JOIN turnover tv ON tt.turnoverId = tv.id
-      WHERE tv.bookingDate >= ? AND tv.bookingDate < ?
+      WHERE tt.booking_date >= ? AND tt.booking_date < ?
+        AND tt.turnoverId IS NOT NULL
       $tagFilter
       GROUP BY month, t.id, t.name, t.color
       ORDER BY month ASC, total_amount DESC

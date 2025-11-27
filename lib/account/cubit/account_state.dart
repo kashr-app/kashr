@@ -12,6 +12,8 @@ abstract class AccountState with _$AccountState {
     @Default([]) List<Account> accounts,
     @Default([]) List<Account> hiddenAccounts,
     @Default({}) Map<String, Decimal> balances,
+    @Default({}) Map<String, Decimal> projectedBalances,
+    required DateTime projectionDate,
     @Default(false) bool showHiddenAccounts,
     String? errorMessage,
   }) = _AccountState;

@@ -5,6 +5,7 @@ import 'package:finanalyzer/core/status.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:collection/collection.dart';
+import 'package:jiffy/jiffy.dart';
 import '../model/account_repository.dart';
 import '../model/account.dart';
 
@@ -14,7 +15,13 @@ class AccountCubit extends Cubit<AccountState> {
   final log = Logger();
 
   AccountCubit(this._accountRepository, this._balanceService)
-      : super(const AccountState());
+    : super(
+        AccountState(
+          projectionDate: Jiffy.parseFromDateTime(
+            DateTime.now(),
+          ).endOf(Unit.month).dateTime,
+        ),
+      );
 
   Future<void> loadAccounts() async {
     try {
@@ -22,14 +29,27 @@ class AccountCubit extends Cubit<AccountState> {
 
       final accounts = await _accountRepository.findAll();
 
+      // Calculate end of current month for projected balance
+      final now = DateTime.now();
+      final endOfMonth = Jiffy.parseFromDateTime(
+        now,
+      ).endOf(Unit.month).dateTime;
+
       // Calculate balances for all accounts
       final balances = <String, Decimal>{};
+      final projectedBalances = <String, Decimal>{};
       for (final account in accounts) {
         if (account.id != null) {
           final balance = await _balanceService.calculateCurrentBalance(
             account,
           );
           balances[account.id!.uuid] = balance;
+
+          final projected = await _balanceService.calculateProjectedBalance(
+            account,
+            asOf: endOfMonth,
+          );
+          projectedBalances[account.id!.uuid] = projected;
         }
       }
 
@@ -41,6 +61,8 @@ class AccountCubit extends Cubit<AccountState> {
           accounts: accountsByIsHidden[false] ?? [],
           hiddenAccounts: accountsByIsHidden[true] ?? [],
           balances: balances,
+          projectedBalances: projectedBalances,
+          projectionDate: endOfMonth,
         ),
       );
     } catch (e, stackTrace) {

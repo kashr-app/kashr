@@ -28,11 +28,13 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
   const factory TurnoverTagsState({
     @Default(Status.initial) Status status,
     Turnover? turnover,
+    Turnover? initialTurnover,
     @Default([]) List<TagTurnoverWithTag> tagTurnovers,
     @Default([]) List<TagTurnoverWithTag> initialTagTurnovers,
     @Default([]) List<Tag> availableTags,
     @Default([]) List<TagSuggestion> suggestions,
     String? errorMessage,
+    @Default(false) bool isManualAccount,
   }) = _TurnoverTagsState;
 
   factory TurnoverTagsState.fromJson(Map<String, dynamic> json) =>
@@ -71,6 +73,9 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
 
   /// Returns true if the current state differs from the initial state.
   bool get isDirty {
+    // Check if turnover has been modified
+    if (turnover != initialTurnover) return true;
+
     // Different number of tag turnovers
     if (tagTurnovers.length != initialTagTurnovers.length) return true;
 

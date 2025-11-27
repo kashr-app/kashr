@@ -48,8 +48,16 @@ class DashboardCubit extends Cubit<DashboardState> {
     );
     switch (result.status) {
       case ResultStatus.success:
+        final autoMatchMsg = result.autoMatchedCount > 0
+            ? ' ${result.autoMatchedCount} expenses auto-matched.'
+            : '';
+        final unmatchedMsg = result.unmatchedTurnovers.isNotEmpty
+            ? ' ${result.unmatchedTurnovers.length} transactions need review.'
+            : '';
         messenger.showSnackBar(
-          SnackBar(content: Text('Data was loaded successfully.')),
+          SnackBar(
+            content: Text('Data loaded successfully.$autoMatchMsg$unmatchedMsg'),
+          ),
         );
         setBankDownloadStatus(Status.success);
         loadMonthData();
