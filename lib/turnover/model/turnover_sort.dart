@@ -7,14 +7,19 @@ part '../../_gen/turnover/model/turnover_sort.g.dart';
 enum SortField {
   bookingDate,
   amount,
-  counterPart,
+  counterPart;
+
+  String label() {
+    return switch (this) {
+      SortField.bookingDate => 'Date',
+      SortField.amount => 'Amount',
+      SortField.counterPart => 'Counter Party',
+    };
+  }
 }
 
 /// Enum for sort direction
-enum SortDirection {
-  asc,
-  desc,
-}
+enum SortDirection { asc, desc }
 
 /// Sort configuration for querying turnovers.
 @freezed
@@ -49,7 +54,9 @@ abstract class TurnoverSort with _$TurnoverSort {
 
     // For bookingDate, add NULLS FIRST/LAST handling
     if (orderBy == SortField.bookingDate) {
-      final nullsHandling = direction == SortDirection.desc ? 'NULLS FIRST' : 'NULLS LAST';
+      final nullsHandling = direction == SortDirection.desc
+          ? 'NULLS FIRST'
+          : 'NULLS LAST';
       return '$fieldName $directionStr $nullsHandling';
     }
 

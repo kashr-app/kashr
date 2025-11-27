@@ -1,4 +1,4 @@
-import 'package:finanalyzer/account/model/account_cubit.dart';
+import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/comdirect/comdirect_api.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_service.dart';

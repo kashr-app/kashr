@@ -1,6 +1,7 @@
+import 'package:finanalyzer/account/services/balance_calculation_service.dart';
 import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
 import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
-import 'package:finanalyzer/account/model/account_cubit.dart';
+import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
@@ -26,6 +27,7 @@ final turnoverRepository = TurnoverRepository();
 final accountRepository = AccountRepository();
 final tagRepository = TagRepository();
 final tagTurnoverRepository = TagTurnoverRepository();
+final balanceCalculationService = BalanceCalculationService(turnoverRepository);
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -38,6 +40,9 @@ class MyApp extends StatelessWidget {
         Provider<AccountRepository>.value(value: accountRepository),
         Provider<TagRepository>.value(value: tagRepository),
         Provider<TagTurnoverRepository>.value(value: tagTurnoverRepository),
+        Provider<BalanceCalculationService>.value(
+          value: balanceCalculationService,
+        ),
         BlocProvider(
           create: (_) => LocalAuthCubit(),
         ),
@@ -48,7 +53,10 @@ class MyApp extends StatelessWidget {
           create: (_) => TurnoverCubit(turnoverRepository),
         ),
         BlocProvider(
-          create: (_) => AccountCubit(accountRepository),
+          create: (_) => AccountCubit(
+            accountRepository,
+            balanceCalculationService,
+          )..loadAccounts(),
         ),
         BlocProvider(
           create: (_) => ComdirectAuthCubit(),

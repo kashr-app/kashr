@@ -54,7 +54,7 @@ class TurnoversFilterChips extends StatelessWidget {
                         : Icons.arrow_downward,
                     size: 18,
                   ),
-                  label: Text(_getSortFieldName(sort.orderBy)),
+                  label: Text(sort.orderBy.label()),
                   onPressed: onSortDirectionToggled,
                 ),
               if (filter.unallocatedOnly == true)
@@ -97,14 +97,6 @@ class TurnoversFilterChips extends StatelessWidget {
     onFilterChanged(
       filter.copyWith(tagIds: updatedTagIds.isEmpty ? null : updatedTagIds),
     );
-  }
-
-  String _getSortFieldName(SortField field) {
-    return switch (field) {
-      SortField.bookingDate => 'Date',
-      SortField.amount => 'Amount',
-      SortField.counterPart => 'Counter Party',
-    };
   }
 }
 

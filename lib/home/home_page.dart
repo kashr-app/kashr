@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:finanalyzer/account/accounts_page.dart';
+import 'package:finanalyzer/account/create_account_page.dart';
+import 'package:finanalyzer/account/edit_account_page.dart';
 import 'package:finanalyzer/analytics/analytics_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
@@ -31,6 +34,13 @@ part '../_gen/home/home_page.g.dart';
     TypedGoRoute<SettingsRoute>(path: 'settings'),
     TypedGoRoute<TagsRoute>(path: 'tags'),
     TypedGoRoute<AnalyticsRoute>(path: 'analytics'),
+    TypedGoRoute<AccountsRoute>(
+      path: 'accounts',
+      routes: [
+        TypedGoRoute<CreateAccountRoute>(path: 'create'),
+        TypedGoRoute<EditAccountRoute>(path: ':accountId/edit'),
+      ],
+    ),
     TypedGoRoute<TurnoversRoute>(
       path: 'turnovers',
       routes: [TypedGoRoute<TurnoverTagsRoute>(path: ':turnoverId/tags')],
@@ -66,24 +76,34 @@ class HomePage extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
-            onPressed: () => const ComdirectRoute().go(context),
+            onPressed: () => const AccountsRoute().go(context),
             icon: const Icon(Icons.account_balance),
+            tooltip: 'Accounts',
+          ),
+          IconButton(
+            onPressed: () => const ComdirectRoute().go(context),
+            icon: const Icon(Icons.sync),
+            tooltip: 'Comdirect Sync',
           ),
           IconButton(
             onPressed: () => const TurnoversRoute().go(context),
             icon: const Icon(Icons.list_alt),
+            tooltip: 'Turnovers',
           ),
           IconButton(
             onPressed: () => const TagsRoute().go(context),
             icon: const Icon(Icons.label),
+            tooltip: 'Tags',
           ),
           IconButton(
             onPressed: () => const AnalyticsRoute().go(context),
             icon: const Icon(Icons.analytics),
+            tooltip: 'Analytics',
           ),
           IconButton(
             onPressed: () => const SettingsRoute().go(context),
             icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
           ),
         ],
         title: const Text('Finanalyze'),

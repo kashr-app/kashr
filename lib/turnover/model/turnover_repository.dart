@@ -260,6 +260,32 @@ class TurnoverRepository {
     }).toList();
   }
 
+  /// Get all turnovers for a specific account
+  /// Optionally filter by date (upTo)
+  Future<List<Turnover>> getTurnoversForAccount({
+    required UuidValue accountId,
+    DateTime? upTo,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final whereClauses = ['accountId = ?'];
+    final whereArgs = <Object>[accountId.uuid];
+
+    if (upTo != null) {
+      whereClauses.add('bookingDate <= ?');
+      whereArgs.add(Jiffy.parseFromDateTime(upTo).format(pattern: isoDateFormat));
+    }
+
+    final maps = await db.query(
+      'turnover',
+      where: whereClauses.join(' AND '),
+      whereArgs: whereArgs,
+      orderBy: 'bookingDate ASC',
+    );
+
+    return maps.map((e) => Turnover.fromJson(e)).toList();
+  }
+
   /// Fetches a paginated list of turnovers with their associated tags.
   /// This method efficiently loads all data in a single query to avoid N+1 problems.
   Future<List<TurnoverWithTags>> getTurnoversWithTagsPaginated({
