@@ -61,6 +61,7 @@ class MyApp extends StatelessWidget {
           create: (_) => TurnoverCubit(turnoverRepository),
         ),
         BlocProvider(
+          lazy: false,
           create: (_) => AccountCubit(
             accountRepository,
             balanceCalculationService,
