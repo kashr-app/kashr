@@ -30,9 +30,8 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
     this._turnoverRepository,
     this._accountRepository, {
     TagSuggestionService? suggestionService,
-  })  : _suggestionService =
-            suggestionService ?? TagSuggestionService(),
-        super(const TurnoverTagsState());
+  }) : _suggestionService = suggestionService ?? TagSuggestionService(),
+       super(const TurnoverTagsState());
 
   /// Loads the turnover and its associated tag turnovers.
   Future<void> loadTurnover(UuidValue turnoverId) async {
@@ -111,8 +110,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       );
 
       // Filter out tags that are already added to this turnover
-      final existingTagIds =
-          state.tagTurnovers.map((tt) => tt.tag.id).toSet();
+      final existingTagIds = state.tagTurnovers.map((tt) => tt.tag.id).toSet();
       final filteredSuggestions = suggestions
           .where((s) => !existingTagIds.contains(s.tag.id))
           .toList();
@@ -155,18 +153,19 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
         .where((s) => s.tag.id != tag.id)
         .toList();
 
-    emit(state.copyWith(
-      tagTurnovers: updatedTagTurnovers,
-      suggestions: updatedSuggestions,
-    ));
+    emit(
+      state.copyWith(
+        tagTurnovers: updatedTagTurnovers,
+        suggestions: updatedSuggestions,
+      ),
+    );
   }
 
   /// Updates the amount of a tag turnover locally (not saved to DB yet).
   void updateTagTurnoverAmount(UuidValue tagTurnoverId, int amountScaled) {
     final updatedTagTurnovers = state.tagTurnovers.map((tt) {
       if (tt.tagTurnover.id == tagTurnoverId) {
-        final newAmount = (Decimal.fromInt(amountScaled) /
-                Decimal.fromInt(100))
+        final newAmount = (Decimal.fromInt(amountScaled) / Decimal.fromInt(100))
             .toDecimal(scaleOnInfinitePrecision: 2);
         return tt.copyWith(
           tagTurnover: tt.tagTurnover.copyWith(amountValue: newAmount),
@@ -182,9 +181,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
   void updateTagTurnoverNote(UuidValue tagTurnoverId, String? note) {
     final updatedTagTurnovers = state.tagTurnovers.map((tt) {
       if (tt.tagTurnover.id == tagTurnoverId) {
-        return tt.copyWith(
-          tagTurnover: tt.tagTurnover.copyWith(note: note),
-        );
+        return tt.copyWith(tagTurnover: tt.tagTurnover.copyWith(note: note));
       }
       return tt;
     }).toList();
@@ -199,6 +196,32 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
         .toList();
 
     emit(state.copyWith(tagTurnovers: updatedTagTurnovers));
+  }
+
+  /// Unlinks a tag turnover from the current turnover.
+  /// The tag turnover is removed from the list and marked for unlinking.
+  /// After saving, it will become a pending tag turnover.
+  void unlinkTagTurnover(UuidValue tagTurnoverId) {
+    final updatedTagTurnovers = state.tagTurnovers
+        .where((tt) => tt.tagTurnover.id != tagTurnoverId)
+        .toList();
+
+    // Check if this tag turnover was in the initial state (already persisted)
+    final wasInitial = state.initialTagTurnovers.any(
+      (tt) => tt.tagTurnover.id == tagTurnoverId,
+    );
+
+    // If it was initial, track it for unlinking
+    final updatedUnlinkedIds = wasInitial
+        ? {...state.unlinkedTagTurnoverIds, tagTurnoverId.uuid}
+        : state.unlinkedTagTurnoverIds;
+
+    emit(
+      state.copyWith(
+        tagTurnovers: updatedTagTurnovers,
+        unlinkedTagTurnoverIds: updatedUnlinkedIds,
+      ),
+    );
   }
 
   /// Saves all changes to the database.
@@ -224,8 +247,20 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
           .whereType<UuidValue>()
           .toSet();
 
-      // Delete tag turnovers that were removed (in initial but not in current)
-      final removedIds = initialIds.difference(currentIds);
+      // Unlink tag turnovers that were marked for unlinking
+      for (final idString in state.unlinkedTagTurnoverIds) {
+        final id = UuidValue.fromString(idString);
+        await _tagTurnoverRepository.unlinkFromTurnover(id);
+      }
+
+      // Delete tag turnovers that were removed (in initial but not in current,
+      // and not in unlinked - those are just unlinked, not deleted)
+      final unlinkedUuidValues = state.unlinkedTagTurnoverIds
+          .map((id) => UuidValue.fromString(id))
+          .toSet();
+      final removedIds = initialIds
+          .difference(currentIds)
+          .difference(unlinkedUuidValues);
       for (final id in removedIds) {
         await _tagTurnoverRepository.deleteTagTurnover(id);
       }
@@ -253,13 +288,16 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       }
 
       // Reset initial state to current state after successful save
-      // Clear associatedPendingIds since they're now part of initial state
-      emit(state.copyWith(
-        status: Status.success,
-        initialTurnover: state.turnover,
-        initialTagTurnovers: state.tagTurnovers,
-        associatedPendingIds: {},
-      ));
+      // Clear associatedPendingIds and unlinkedTagTurnoverIds
+      emit(
+        state.copyWith(
+          status: Status.success,
+          initialTurnover: state.turnover,
+          initialTagTurnovers: state.tagTurnovers,
+          associatedPendingIds: {},
+          unlinkedTagTurnoverIds: {},
+        ),
+      );
       _log.i('Successfully saved turnover and tag turnovers');
     } catch (e, s) {
       _log.e('Failed to save changes', error: e, stackTrace: s);
@@ -286,11 +324,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
   /// Creates a new tag and adds it to the available tags.
   Future<Tag?> createAndAddTag(String name, String? color) async {
     try {
-      final newTag = Tag(
-        id: const Uuid().v4obj(),
-        name: name,
-        color: color,
-      );
+      final newTag = Tag(id: const Uuid().v4obj(), name: name, color: color);
 
       await _tagRepository.createTag(newTag);
 
@@ -362,10 +396,12 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       _log.i('Scaled tag turnovers to fit new amount');
     }
 
-    emit(state.copyWith(
-      turnover: updatedTurnover,
-      tagTurnovers: updatedTagTurnovers,
-    ));
+    emit(
+      state.copyWith(
+        turnover: updatedTurnover,
+        tagTurnovers: updatedTagTurnovers,
+      ),
+    );
   }
 
   /// Associates pending tag turnovers with the current turnover.
@@ -435,14 +471,14 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
         ...pendingIds,
       };
 
-      emit(state.copyWith(
-        tagTurnovers: updatedTagTurnovers,
-        associatedPendingIds: updatedAssociatedPendingIds,
-      ));
-
-      _log.i(
-        'Associated ${pendingTagTurnovers.length} pending tag turnovers',
+      emit(
+        state.copyWith(
+          tagTurnovers: updatedTagTurnovers,
+          associatedPendingIds: updatedAssociatedPendingIds,
+        ),
       );
+
+      _log.i('Associated ${pendingTagTurnovers.length} pending tag turnovers');
     } catch (e, s) {
       _log.e(
         'Failed to associate pending tag turnovers',

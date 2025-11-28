@@ -36,6 +36,7 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     String? errorMessage,
     @Default(false) bool isManualAccount,
     @Default({}) Set<String> associatedPendingIds,
+    @Default({}) Set<String> unlinkedTagTurnoverIds,
   }) = _TurnoverTagsState;
 
   factory TurnoverTagsState.fromJson(Map<String, dynamic> json) =>
@@ -99,7 +100,7 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
   /// - combinedTotal: the combined absolute total of existing and new tag turnovers
   /// - exceedingAmount: the amount by which it would exceed (zero if not exceeding)
   ({bool wouldExceed, Decimal combinedTotal, Decimal exceedingAmount})
-      checkIfWouldExceed(List<TagTurnover> newTagTurnovers) {
+  checkIfWouldExceed(List<TagTurnover> newTagTurnovers) {
     final t = turnover;
     if (t == null) {
       return (
@@ -118,8 +119,9 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     final turnoverAbsAmount = t.amountValue.abs();
 
     final wouldExceed = combinedTotal > turnoverAbsAmount;
-    final exceedingAmount =
-        wouldExceed ? combinedTotal - turnoverAbsAmount : Decimal.zero;
+    final exceedingAmount = wouldExceed
+        ? combinedTotal - turnoverAbsAmount
+        : Decimal.zero;
 
     return (
       wouldExceed: wouldExceed,

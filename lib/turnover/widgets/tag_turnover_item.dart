@@ -60,9 +60,10 @@ class TagTurnoverItem extends StatelessWidget {
             NoteField(
               note: tagTurnover.note,
               onNoteChanged: (note) {
-                context
-                    .read<TurnoverTagsCubit>()
-                    .updateTagTurnoverNote(tagTurnover.id!, note);
+                context.read<TurnoverTagsCubit>().updateTagTurnoverNote(
+                  tagTurnover.id!,
+                  note,
+                );
               },
             ),
           ],
@@ -71,28 +72,28 @@ class TagTurnoverItem extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
-    ThemeData theme,
-    tag,
-    tagTurnover,
-  ) {
+  Widget _buildHeader(BuildContext context, ThemeData theme, tag, tagTurnover) {
     return Row(
       children: [
         TagAvatar(tag: tag),
         const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            tag.name,
-            style: theme.textTheme.titleMedium,
-          ),
+        Expanded(child: Text(tag.name, style: theme.textTheme.titleMedium)),
+        IconButton(
+          icon: const Icon(Icons.link_off),
+          tooltip: 'Unlink from turnover',
+          onPressed: () {
+            context.read<TurnoverTagsCubit>().unlinkTagTurnover(
+              tagTurnover.id!,
+            );
+          },
         ),
         IconButton(
           icon: const Icon(Icons.delete_outline),
+          tooltip: 'Delete',
           onPressed: () {
-            context
-                .read<TurnoverTagsCubit>()
-                .removeTagTurnover(tagTurnover.id!);
+            context.read<TurnoverTagsCubit>().removeTagTurnover(
+              tagTurnover.id!,
+            );
           },
         ),
       ],
@@ -115,12 +116,10 @@ class TagTurnoverItem extends StatelessWidget {
       onChanged: (value) {
         // Apply the sign back when updating
         final signedValue = isNegative ? -value.toInt() : value.toInt();
-        context
-            .read<TurnoverTagsCubit>()
-            .updateTagTurnoverAmount(
-              tagTurnover.id!,
-              signedValue,
-            );
+        context.read<TurnoverTagsCubit>().updateTagTurnoverAmount(
+          tagTurnover.id!,
+          signedValue,
+        );
       },
     );
   }

@@ -14,6 +14,7 @@ import 'package:finanalyzer/turnover/widgets/turnover_info_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 
 class SelectPendingTagTurnoversPage extends StatefulWidget {
   final Turnover turnover;
@@ -66,13 +67,27 @@ class _SelectPendingTagTurnoversPageState
           .where((tt) => !existingTagTurnoverIds.contains(tt.id?.uuid))
           .toList();
 
+      // Load unlinked tag turnovers from the current session
+      final unlinkedIds = widget.cubit.state.unlinkedTagTurnoverIds;
+      final unlinkedTagTurnovers = <TagTurnover>[];
+      for (final idString in unlinkedIds) {
+        final id = UuidValue.fromString(idString);
+        final tagTurnover = await tagTurnoverRepository.getById(id);
+        if (tagTurnover != null) {
+          unlinkedTagTurnovers.add(tagTurnover);
+        }
+      }
+
+      // Combine unmatched and unlinked tag turnovers
+      final allAvailable = [...availableUnmatched, ...unlinkedTagTurnovers];
+
       final allTags = await tagRepository.getAllTags();
       final tagMap = {for (final tag in allTags) tag.id!: tag};
 
       final allAccounts = await accountRepository.findAll();
       final accountMap = {for (final acc in allAccounts) acc.id!: acc};
 
-      final withTagsAndAccounts = availableUnmatched.map((tt) {
+      final withTagsAndAccounts = allAvailable.map((tt) {
         final tag = tagMap[tt.tagId];
         final account = accountMap[tt.accountId];
         return _TagTurnoverWithTagAndAccount(
@@ -114,8 +129,9 @@ class _SelectPendingTagTurnoversPageState
         .where((tt) => _selectedIds.contains(tt.tagTurnover.id!.uuid))
         .toList();
 
-    final selectedTagTurnovers =
-        selectedTurnovers.map((tt) => tt.tagTurnover).toList();
+    final selectedTagTurnovers = selectedTurnovers
+        .map((tt) => tt.tagTurnover)
+        .toList();
 
     // Check for account divergence
     final divergingTagTurnovers = selectedTagTurnovers
@@ -224,64 +240,62 @@ class _SelectPendingTagTurnoversPageState
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _errorMessage != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                size: 48,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(_errorMessage!),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _loadPendingTurnovers,
-                                child: const Text('Retry'),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red,
                           ),
-                        )
-                      : _pendingTurnovers == null ||
-                              _pendingTurnovers!.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.check_circle_outline,
-                                    size: 64,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No pending turnovers',
-                                    style: theme.textTheme.titleLarge,
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: _pendingTurnovers!.length,
-                              itemBuilder: (context, index) {
-                                final item = _pendingTurnovers![index];
-                                final isSelected = _selectedIds.contains(
-                                  item.tagTurnover.id!.uuid,
-                                );
-                                final accountDiverges = item.account?.id !=
-                                    widget.turnover.accountId;
+                          const SizedBox(height: 16),
+                          Text(_errorMessage!),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadPendingTurnovers,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _pendingTurnovers == null || _pendingTurnovers!.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 64,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No pending turnovers',
+                            style: theme.textTheme.titleLarge,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _pendingTurnovers!.length,
+                      itemBuilder: (context, index) {
+                        final item = _pendingTurnovers![index];
+                        final isSelected = _selectedIds.contains(
+                          item.tagTurnover.id!.uuid,
+                        );
+                        final accountDiverges =
+                            item.account?.id != widget.turnover.accountId;
 
-                                return _SelectablePendingTurnoverItem(
-                                  tagTurnoverWithTagAndAccount: item,
-                                  isSelected: isSelected,
-                                  accountDiverges: accountDiverges,
-                                  onTap: () => _toggleSelection(
-                                    item.tagTurnover.id!.uuid,
-                                  ),
-                                );
-                              },
-                            ),
+                        return _SelectablePendingTurnoverItem(
+                          tagTurnoverWithTagAndAccount: item,
+                          isSelected: isSelected,
+                          accountDiverges: accountDiverges,
+                          onTap: () =>
+                              _toggleSelection(item.tagTurnover.id!.uuid),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -409,8 +423,9 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
                       color: accountDiverges
                           ? theme.colorScheme.error
                           : theme.colorScheme.onSurfaceVariant,
-                      fontWeight:
-                          accountDiverges ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: accountDiverges
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ],
