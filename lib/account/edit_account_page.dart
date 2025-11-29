@@ -353,12 +353,15 @@ class _EditAccountFormState extends State<_EditAccountForm> {
       final accountRepository = context.read<AccountRepository>();
       final accountCubit = context.read<AccountCubit>();
 
+      var needsReload = false;
+
       if (nameChanged || isHiddenChanged) {
         final updatedAccount = _originalAccount.copyWith(
           name: _nameController.text,
           isHidden: _isHidden,
         );
         await accountRepository.updateAccount(updatedAccount);
+        needsReload = true;
       }
 
       switch (_originalAccount.syncSource) {
@@ -380,8 +383,14 @@ class _EditAccountFormState extends State<_EditAccountForm> {
               _originalAccount,
               newBalance,
             );
+            needsReload = false; // updateBalanceFromReal already reloads
           }
           break;
+      }
+
+      // Reload accounts if needed to ensure the UI is up-to-date
+      if (needsReload) {
+        await accountCubit.loadAccounts();
       }
 
       if (mounted) {

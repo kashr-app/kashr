@@ -1,13 +1,13 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/accounts_page.dart';
+import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/model/account.dart';
-import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 const uuid = Uuid();
@@ -204,7 +204,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         isHidden: _isHidden,
       );
 
-      await context.read<AccountRepository>().createAccount(account);
+      await context.read<AccountCubit>().addAccount(account);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
