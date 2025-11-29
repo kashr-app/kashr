@@ -78,15 +78,4 @@ class TagCubit extends Cubit<TagState> {
       );
     }
   }
-
-  /// Searches for tags by name.
-  List<Tag> searchTags(String query) {
-    if (query.isEmpty) {
-      return state.tags;
-    }
-    final lowerQuery = query.toLowerCase();
-    return state.tags
-        .where((tag) => tag.name.toLowerCase().contains(lowerQuery))
-        .toList();
-  }
 }

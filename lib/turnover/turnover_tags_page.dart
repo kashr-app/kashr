@@ -2,12 +2,12 @@ import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/dialogs/discard_changes_dialog.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/delete_turnover_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/edit_turnover_dialog.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/widgets/select_from_pending_tag_turnovers_hint.dart';
@@ -29,7 +29,7 @@ class TurnoverTagsRoute extends GoRouteData with $TurnoverTagsRoute {
     return BlocProvider(
       create: (context) => TurnoverTagsCubit(
         context.read<TagTurnoverRepository>(),
-        context.read<TagRepository>(),
+        context.read<TagCubit>(),
         context.read<TurnoverRepository>(),
         context.read<AccountRepository>(),
       )..loadTurnover(UuidValue.fromString(turnoverId)),
@@ -194,12 +194,11 @@ class TurnoverTagsPage extends StatelessWidget {
     );
   }
 
-  void _showAddTagDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) =>
-          AddTagDialog(cubit: context.read<TurnoverTagsCubit>()),
-    );
+  Future<void> _showAddTagDialog(BuildContext context) async {
+    final selectedTag = await AddTagDialog.show(context);
+    if (selectedTag != null && context.mounted) {
+      context.read<TurnoverTagsCubit>().addTag(selectedTag);
+    }
   }
 
   Future<void> _showEditDialog(BuildContext context) async {

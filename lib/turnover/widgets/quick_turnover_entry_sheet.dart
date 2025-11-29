@@ -2,8 +2,8 @@ import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
 import 'package:finanalyzer/core/currency.dart';
+import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
@@ -34,21 +34,6 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
   Tag? _selectedTag;
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
-  List<Tag> _availableTags = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTags();
-  }
-
-  Future<void> _loadTags() async {
-    final tagRepository = context.read<TagRepository>();
-    final tags = await tagRepository.getAllTags();
-    setState(() {
-      _availableTags = tags;
-    });
-  }
 
   @override
   void dispose() {
@@ -261,131 +246,128 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
     final theme = Theme.of(context);
     final isManual = widget.account.syncSource == SyncSource.manual;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Log Turnover', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              'Account: ${widget.account.name}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: _selectAmount,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Amount',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.edit),
-                ),
-                child: Text(
-                  _amountScaled != null
-                      ? _formatAmount(_amountScaled!)
-                      : 'Tap to enter amount',
-                  style: _amountScaled == null
-                      ? theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        )
-                      : null,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<Tag>(
-              initialValue: _selectedTag,
-              decoration: const InputDecoration(
-                labelText: 'Tag',
-                border: OutlineInputBorder(),
-              ),
-              items: _availableTags
-                  .map(
-                    (tag) => DropdownMenuItem(
-                      value: tag,
-                      child: Row(
-                        children: [
-                          TagAvatar(tag: tag, radius: 12),
-                          const SizedBox(width: 8),
-                          Text(tag.name),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (tag) {
-                setState(() {
-                  _selectedTag = tag;
-                });
-              },
-              validator: (value) {
-                if (value == null) {
-                  return 'Please select a tag';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            if (isManual) ...[
-              TextFormField(
-                controller: _counterpartController,
-                decoration: const InputDecoration(
-                  labelText: 'Counterpart (optional)',
-                  border: OutlineInputBorder(),
-                  hintText: 'e.g., Store name, Person',
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Log Turnover', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Text(
+                'Account: ${widget.account.name}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 16),
-            ],
-            TextFormField(
-              controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: 'Note (optional)',
-                border: OutlineInputBorder(),
+              InkWell(
+                onTap: _selectAmount,
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Amount',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.edit),
+                  ),
+                  child: Text(
+                    _amountScaled != null
+                        ? _formatAmount(_amountScaled!)
+                        : 'Tap to enter amount',
+                    style: _amountScaled == null
+                        ? theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          )
+                        : null,
+                  ),
+                ),
               ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: _selectDate,
-              child: InputDecorator(
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () async {
+                  final selectedTag = await AddTagDialog.show(context);
+                  if (selectedTag != null) {
+                    setState(() {
+                      _selectedTag = selectedTag;
+                    });
+                  }
+                },
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Tag',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.arrow_drop_down),
+                  ),
+                  child: _selectedTag != null
+                      ? Row(
+                          children: [
+                            TagAvatar(tag: _selectedTag!, radius: 12),
+                            const SizedBox(width: 8),
+                            Text(_selectedTag!.name),
+                          ],
+                        )
+                      : Text(
+                          'Tap to select tag',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (isManual) ...[
+                TextFormField(
+                  controller: _counterpartController,
+                  decoration: const InputDecoration(
+                    labelText: 'Counterpart (optional)',
+                    border: OutlineInputBorder(),
+                    hintText: 'e.g., Store name, Person',
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              TextFormField(
+                controller: _noteController,
                 decoration: const InputDecoration(
-                  labelText: 'Date',
+                  labelText: 'Note (optional)',
                   border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
                 ),
-                child: Text(
-                  '${_selectedDate.day.toString().padLeft(2, '0')}.${_selectedDate.month.toString().padLeft(2, '0')}.${_selectedDate.year}',
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _selectDate,
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Date',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  child: Text(
+                    '${_selectedDate.day.toString().padLeft(2, '0')}.${_selectedDate.month.toString().padLeft(2, '0')}.${_selectedDate.year}',
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _isSubmitting ? null : _submit,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(
-                      _amountScaled != null && _amountScaled! < 0
-                          ? 'Log Expense'
-                          : 'Log Income',
-                    ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: _isSubmitting ? null : _submit,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text('Save'),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -2,9 +2,9 @@ import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:finanalyzer/core/status.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
@@ -18,7 +18,7 @@ import 'package:uuid/uuid.dart';
 /// Cubit for managing tags associated with a turnover.
 class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
   final TagTurnoverRepository _tagTurnoverRepository;
-  final TagRepository _tagRepository;
+  final TagCubit _tagCubit;
   final TurnoverRepository _turnoverRepository;
   final AccountRepository _accountRepository;
   final TagSuggestionService _suggestionService;
@@ -26,7 +26,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
 
   TurnoverTagsCubit(
     this._tagTurnoverRepository,
-    this._tagRepository,
+    this._tagCubit,
     this._turnoverRepository,
     this._accountRepository, {
     TagSuggestionService? suggestionService,
@@ -56,7 +56,8 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       final tagTurnovers = await _tagTurnoverRepository.getByTurnover(
         turnoverId,
       );
-      final allTags = await _tagRepository.getAllTags();
+      await _tagCubit.loadTags();
+      final allTags = _tagCubit.state.tags;
       final tagMap = {for (final tag in allTags) tag.id!: tag};
 
       final tagTurnoversWithTags = tagTurnovers.map((tt) {
@@ -74,7 +75,6 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
           initialTurnover: turnover,
           tagTurnovers: tagTurnoversWithTags,
           initialTagTurnovers: tagTurnoversWithTags,
-          availableTags: allTags,
           isManualAccount: isManual,
         ),
       );
@@ -310,41 +310,6 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
     }
   }
 
-  /// Searches for available tags by name.
-  List<Tag> searchTags(String query) {
-    if (query.isEmpty) {
-      return state.availableTags;
-    }
-    final lowerQuery = query.toLowerCase();
-    return state.availableTags
-        .where((tag) => tag.name.toLowerCase().contains(lowerQuery))
-        .toList();
-  }
-
-  /// Creates a new tag and adds it to the available tags.
-  Future<Tag?> createAndAddTag(String name, String? color) async {
-    try {
-      final newTag = Tag(id: const Uuid().v4obj(), name: name, color: color);
-
-      await _tagRepository.createTag(newTag);
-
-      final updatedAvailableTags = [...state.availableTags, newTag];
-      emit(state.copyWith(availableTags: updatedAvailableTags));
-
-      _log.i('Created new tag: $name');
-      return newTag;
-    } catch (e, s) {
-      _log.e('Failed to create tag', error: e, stackTrace: s);
-      emit(
-        state.copyWith(
-          status: Status.error,
-          errorMessage: 'Failed to create tag: $e',
-        ),
-      );
-      return null;
-    }
-  }
-
   /// Updates the turnover with new values.
   ///
   /// When the turnover's sign changes (e.g., from negative to positive),
@@ -426,7 +391,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       }).toList();
 
       // Get all tags for the updated tag turnovers
-      final allTags = state.availableTags;
+      final allTags = _tagCubit.state.tags;
       final tagMap = {for (final tag in allTags) tag.id!: tag};
 
       // Convert to TagTurnoverWithTag

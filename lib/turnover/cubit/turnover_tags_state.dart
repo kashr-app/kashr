@@ -31,7 +31,6 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     Turnover? initialTurnover,
     @Default([]) List<TagTurnoverWithTag> tagTurnovers,
     @Default([]) List<TagTurnoverWithTag> initialTagTurnovers,
-    @Default([]) List<Tag> availableTags,
     @Default([]) List<TagSuggestion> suggestions,
     String? errorMessage,
     @Default(false) bool isManualAccount,
