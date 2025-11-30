@@ -203,16 +203,7 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_tag?.name ?? 'Savings'),
-        actions: [
-          IconButton(
-            onPressed: _loadData,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(_tag?.name ?? 'Savings')),
       floatingActionButton: FloatingActionButton(
         onPressed: _addVirtualBooking,
         child: const Icon(Icons.add),
@@ -223,20 +214,45 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          children: const [
+            SizedBox(
+              height: 200,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ],
+        ),
+      );
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
           children: [
-            Text(
-              _errorMessage!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            SizedBox(
+              height: MediaQuery.of(context).size.height - 200,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _errorMessage!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _loadData,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: _loadData, child: const Text('Retry')),
           ],
         ),
       );
@@ -248,21 +264,24 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
           for (final a in state.accounts)
             if (a.id != null) a.id!: a,
         };
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _buildBalanceCard(),
-            const SizedBox(height: 16),
-            if (widget.savings.goalValue != null) ...[
-              _buildGoalCard(),
+        return RefreshIndicator(
+          onRefresh: _loadData,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildBalanceCard(),
               const SizedBox(height: 16),
+              if (widget.savings.goalValue != null) ...[
+                _buildGoalCard(),
+                const SizedBox(height: 16),
+              ],
+              if (_accountBreakdown.isNotEmpty) ...[
+                _buildAccountBreakdownCard(accountById),
+                const SizedBox(height: 16),
+              ],
+              _buildHistoryCard(accountById),
             ],
-            if (_accountBreakdown.isNotEmpty) ...[
-              _buildAccountBreakdownCard(accountById),
-              const SizedBox(height: 16),
-            ],
-            _buildHistoryCard(accountById),
-          ],
+          ),
         );
       },
     );

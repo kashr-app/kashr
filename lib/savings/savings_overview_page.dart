@@ -46,8 +46,7 @@ class _SavingsOverviewPageState extends State<SavingsOverviewPage> {
     });
 
     try {
-      final savings =
-          await context.read<SavingsRepository>().getAll();
+      final savings = await context.read<SavingsRepository>().getAll();
       setState(() {
         _savings = savings;
         _isLoading = false;
@@ -74,46 +73,55 @@ class _SavingsOverviewPageState extends State<SavingsOverviewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Savings'),
-        actions: [
-          IconButton(
-            onPressed: _loadSavings,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Savings')),
       floatingActionButton: FloatingActionButton(
         onPressed: _createSavings,
         child: const Icon(Icons.add),
       ),
-      body: SafeArea(
-        child: _buildBody(),
-      ),
+      body: SafeArea(child: _buildBody()),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return RefreshIndicator(
+        onRefresh: _loadSavings,
+        child: ListView(
+          children: const [
+            SizedBox(
+              height: 200,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ],
+        ),
+      );
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        onRefresh: _loadSavings,
+        child: ListView(
           children: [
-            Text(
-              _errorMessage!,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
+            SizedBox(
+              height: MediaQuery.of(context).size.height - 200,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _errorMessage!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _loadSavings,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _loadSavings,
-              child: const Text('Retry'),
             ),
           ],
         ),
@@ -121,53 +129,66 @@ class _SavingsOverviewPageState extends State<SavingsOverviewPage> {
     }
 
     if (_savings.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        onRefresh: _loadSavings,
+        child: ListView(
           children: [
-            Icon(
-              Icons.savings_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No savings yet',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Create a savings goal to get started',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _createSavings,
-              icon: const Icon(Icons.add),
-              label: const Text('Create Savings'),
+            SizedBox(
+              height: MediaQuery.of(context).size.height - 200,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.savings_outlined,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No savings yet',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Create a savings goal to get started',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: _createSavings,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create Savings'),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _savings.length,
-      itemBuilder: (context, index) {
-        final savings = _savings[index];
-        return _SavingsCard(
-          savings: savings,
-          onTap: () => _navigateToDetail(savings),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: _loadSavings,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _savings.length,
+        itemBuilder: (context, index) {
+          final savings = _savings[index];
+          return _SavingsCard(
+            savings: savings,
+            onTap: () => _navigateToDetail(savings),
+          );
+        },
+      ),
     );
   }
 
   void _navigateToDetail(Savings savings) {
-    SavingsDetailRoute(savingsId: savings.id!.uuid)
-        .push(context)
-        .then((_) => _loadSavings());
+    SavingsDetailRoute(
+      savingsId: savings.id!.uuid,
+    ).push(context).then((_) => _loadSavings());
   }
 }
 
@@ -175,10 +196,7 @@ class _SavingsCard extends StatelessWidget {
   final Savings savings;
   final VoidCallback onTap;
 
-  const _SavingsCard({
-    required this.savings,
-    required this.onTap,
-  });
+  const _SavingsCard({required this.savings, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -247,9 +265,7 @@ class _SavingsCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               Currency.EUR.format(balance),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
+                              style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: tagColor,
@@ -290,8 +306,9 @@ class _GoalProgressIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        goalValue > Decimal.zero ? (balance / goalValue).toDouble() : 0.0;
+    final progress = goalValue > Decimal.zero
+        ? (balance / goalValue).toDouble()
+        : 0.0;
     final percentage = (progress * 100).clamp(0, 100).toInt();
 
     return Column(
@@ -305,8 +322,9 @@ class _GoalProgressIndicator extends StatelessWidget {
               CircularProgressIndicator(
                 value: progress.clamp(0.0, 1.0),
                 strokeWidth: 4,
-                backgroundColor:
-                    Theme.of(context).colorScheme.surfaceContainerHighest,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   progress >= 1.0
                       ? Colors.green
@@ -315,9 +333,9 @@ class _GoalProgressIndicator extends StatelessWidget {
               ),
               Text(
                 '$percentage%',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
