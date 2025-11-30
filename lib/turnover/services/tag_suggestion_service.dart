@@ -227,7 +227,7 @@ class TagSuggestionService {
         t.id as tag_id,
         t.name as tag_name,
         t.color as tag_color,
-        COUNT(*) as usage_count,
+        COUNT(*) as usage_count
       FROM tag_turnover tt
       INNER JOIN tag t ON tt.tagId = t.id
       INNER JOIN turnover tv ON tt.turnoverId = tv.id
