@@ -88,6 +88,7 @@ class MyApp extends StatelessWidget {
           create: (_) => ComdirectAuthCubit(),
         ),
         BlocProvider(
+          lazy: false,
           create: (_) => TagCubit(tagRepository)..loadTags(),
         ),
       ],
