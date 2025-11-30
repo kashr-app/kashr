@@ -5,6 +5,7 @@ import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
@@ -337,7 +338,9 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
                   currency.format(_openingBalance!),
                   style: Theme.of(
                     context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold,
+                  color: Theme.of(context).decimalColor(_openingBalance!),
+                  ),
                 ),
             ],
           ),
