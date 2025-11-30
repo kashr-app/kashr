@@ -167,56 +167,67 @@ class HomePage extends StatelessWidget {
               );
             }
 
-            return RefreshIndicator(
-              onRefresh: () => context.read<DashboardCubit>().loadMonthData(),
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  PeriodSelector(
-                    selectedPeriod: state.selectedPeriod,
-                    onPreviousMonth: () =>
-                        context.read<DashboardCubit>().previousMonth(),
-                    onNextMonth: () =>
-                        context.read<DashboardCubit>().nextMonth(),
-                  ),
-                  const SizedBox(height: 8),
-                  const PendingTurnoversHint(),
-                  const SizedBox(height: 8),
-                  const LoadBankDataSection(),
-                  const SizedBox(height: 8),
-                  CashflowCard(
-                    totalIncome: state.totalIncome,
-                    totalExpenses: state.totalExpenses,
-                  ),
-                  const SizedBox(height: 16),
-                  UnallocatedTurnoversSection(
-                    unallocatedTurnovers: state.unallocatedTurnovers,
-                    unallocatedCount: state.unallocatedCount,
-                    onRefresh: () =>
-                        context.read<DashboardCubit>().loadMonthData(),
-                    selectedPeriod: state.selectedPeriod,
-                  ),
-                  const SizedBox(height: 16),
-                  IncomeSummaryCard(
-                    totalIncome: state.totalIncome,
-                    unallocatedIncome: state.unallocatedIncome,
-                    tagSummaries: state.incomeTagSummaries,
-                    selectedPeriod: state.selectedPeriod,
-                  ),
-                  const SizedBox(height: 16),
-                  SpendingSummaryCard(
-                    totalExpenses: -state.totalExpenses,
-                    unallocatedExpenses: -state.unallocatedExpenses,
-                    tagSummaries: state.expenseTagSummaries,
-                    selectedPeriod: state.selectedPeriod,
-                  ),
-                  const SizedBox(height: 16),
-                  TransferSummaryCard(
-                    totalTransfers: state.totalTransfers,
-                    tagSummaries: state.transferTagSummaries,
-                    selectedPeriod: state.selectedPeriod,
-                  ),
-                ],
+            return GestureDetector(
+              onHorizontalDragEnd: (details) {
+                final velocity = details.primaryVelocity ?? 0;
+                if (velocity > 0) {
+                  context.read<DashboardCubit>().previousMonth();
+                }
+                else if (velocity < 0) {
+                  context.read<DashboardCubit>().nextMonth();
+                }
+              },
+              child: RefreshIndicator(
+                onRefresh: () => context.read<DashboardCubit>().loadMonthData(),
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    PeriodSelector(
+                      selectedPeriod: state.selectedPeriod,
+                      onPreviousMonth: () =>
+                          context.read<DashboardCubit>().previousMonth(),
+                      onNextMonth: () =>
+                          context.read<DashboardCubit>().nextMonth(),
+                    ),
+                    const SizedBox(height: 8),
+                    const PendingTurnoversHint(),
+                    const SizedBox(height: 8),
+                    const LoadBankDataSection(),
+                    const SizedBox(height: 8),
+                    CashflowCard(
+                      totalIncome: state.totalIncome,
+                      totalExpenses: state.totalExpenses,
+                    ),
+                    const SizedBox(height: 16),
+                    UnallocatedTurnoversSection(
+                      unallocatedTurnovers: state.unallocatedTurnovers,
+                      unallocatedCount: state.unallocatedCount,
+                      onRefresh: () =>
+                          context.read<DashboardCubit>().loadMonthData(),
+                      selectedPeriod: state.selectedPeriod,
+                    ),
+                    const SizedBox(height: 16),
+                    IncomeSummaryCard(
+                      totalIncome: state.totalIncome,
+                      unallocatedIncome: state.unallocatedIncome,
+                      tagSummaries: state.incomeTagSummaries,
+                      selectedPeriod: state.selectedPeriod,
+                    ),
+                    const SizedBox(height: 16),
+                    SpendingSummaryCard(
+                      totalExpenses: -state.totalExpenses,
+                      unallocatedExpenses: -state.unallocatedExpenses,
+                      tagSummaries: state.expenseTagSummaries,
+                      selectedPeriod: state.selectedPeriod,
+                    ),
+                    const SizedBox(height: 16),
+                    TransferSummaryCard(
+                      totalTransfers: state.totalTransfers,
+                      tagSummaries: state.transferTagSummaries,
+                      selectedPeriod: state.selectedPeriod,
+                    ),
+                  ],
+                ),
               ),
             );
           },
