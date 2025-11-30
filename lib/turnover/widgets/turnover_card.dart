@@ -1,5 +1,5 @@
-import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/color_utils.dart';
+import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:finanalyzer/turnover/widgets/tag_amount_bar.dart';
 import 'package:flutter/material.dart';
@@ -26,9 +26,7 @@ class TurnoverCard extends StatelessWidget {
     final turnover = turnoverWithTags.turnover;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    final isNegative = turnover.amountValue < Decimal.zero;
-    final amountColor = isNegative ? colorScheme.error : colorScheme.primary;
+    final amountColor = theme.decimalColor(turnover.amountValue);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -210,4 +208,3 @@ class TagNoteDisplay extends StatelessWidget {
     );
   }
 }
-

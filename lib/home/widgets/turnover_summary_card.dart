@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/widgets/tag_summary_row.dart';
+import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
@@ -19,7 +20,6 @@ class TurnoverSummaryCard extends StatelessWidget {
   final YearMonth selectedPeriod;
   final String currencyCode;
   final String title;
-  final Color amountColor;
   final String subtitle;
   final String emptyMessage;
   final TurnoverSign turnoverSign;
@@ -31,7 +31,6 @@ class TurnoverSummaryCard extends StatelessWidget {
     required this.tagSummaries,
     required this.selectedPeriod,
     required this.title,
-    required this.amountColor,
     required this.subtitle,
     required this.emptyMessage,
     required this.turnoverSign,
@@ -71,7 +70,7 @@ class TurnoverSummaryCard extends StatelessWidget {
                       currency.format(totalAmount),
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: amountColor,
+                        color: theme.decimalColor(totalAmount),
                       ),
                     ),
                   ],

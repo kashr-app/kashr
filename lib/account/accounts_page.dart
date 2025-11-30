@@ -1,11 +1,16 @@
 import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/account/account_details_page.dart';
 import 'package:finanalyzer/account/create_account_page.dart';
 import 'package:finanalyzer/account/cubit/account_state.dart';
-import 'package:finanalyzer/account/edit_account_page.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/savings/model/savings.dart';
+import 'package:finanalyzer/savings/savings_detail_page.dart';
+import 'package:finanalyzer/savings/services/savings_balance_service.dart';
+import 'package:finanalyzer/theme.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -122,7 +127,7 @@ class AccountsPage extends StatelessWidget {
                       balance: balance,
                       projectedBalance: projectedBalance,
                       projectionDate: state.projectionDate,
-                      onTap: () => _navigateToEditAccount(context, account),
+                      onTap: () => _navigateToAccountDetails(context, account),
                     );
                   } else {
                     return _HiddenAccountsHint(
@@ -149,14 +154,14 @@ class AccountsPage extends StatelessWidget {
     const CreateAccountRoute().go(context);
   }
 
-  void _navigateToEditAccount(BuildContext context, Account account) {
+  void _navigateToAccountDetails(BuildContext context, Account account) {
     if (account.id != null) {
-      EditAccountRoute(accountId: account.id!.uuid).go(context);
+      AccountDetailsRoute(accountId: account.id!.uuid).go(context);
     }
   }
 }
 
-class _AccountListItem extends StatelessWidget {
+class _AccountListItem extends StatefulWidget {
   final Account account;
   final Decimal? balance;
   final Decimal? projectedBalance;
@@ -170,6 +175,37 @@ class _AccountListItem extends StatelessWidget {
     required this.projectionDate,
     required this.onTap,
   });
+
+  @override
+  State<_AccountListItem> createState() => _AccountListItemState();
+}
+
+class _AccountListItemState extends State<_AccountListItem> {
+  Map<Savings, SavingsAccountInfo>? _savingsBreakdown;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavingsBreakdown();
+  }
+
+  Future<void> _loadSavingsBreakdown() async {
+    if (widget.account.id == null) return;
+
+    try {
+      final savingsService = context.read<SavingsBalanceService>();
+      final breakdown = await savingsService.getSavingsBreakdownForAccount(
+        widget.account.id!,
+      );
+      if (mounted) {
+        setState(() {
+          _savingsBreakdown = breakdown;
+        });
+      }
+    } catch (e) {
+      // Silently fail - savings breakdown is optional
+    }
+  }
 
   String _formatMonth(DateTime date) {
     const months = [
@@ -191,68 +227,187 @@ class _AccountListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currency = Currency.currencyFrom(account.currency);
-    final balanceText = balance != null
-        ? currency.format(balance!)
+    final currency = Currency.currencyFrom(widget.account.currency);
+    final balanceText = widget.balance != null
+        ? currency.format(widget.balance!)
         : 'Calculating...';
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          child: Icon(
-            account.accountType.icon,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
+    final totalSavings = _savingsBreakdown?.values.fold(
+      Decimal.zero,
+      (sum, value) => sum + value.savingsOnAccount,
+    );
+    final spendableBalance = widget.balance != null && totalSavings != null
+        ? widget.balance! - totalSavings
+        : widget.balance;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            children: [
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  child: Icon(
+                    widget.account.accountType.icon,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                title: Text(
+                  widget.account.name,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.account.accountType.label()),
+                    if (widget.account.syncSource != null &&
+                        widget.account.syncSource != SyncSource.manual)
+                      Text(
+                        'Synced with ${widget.account.syncSource!.label()}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    if (widget.account.syncSource != null &&
+                        widget.account.syncSource != SyncSource.manual)
+                      Text(
+                        'Last sync: Not yet available',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      balanceText,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Theme.of(context).decimalColor(widget.balance),
+                      ),
+                    ),
+                    if (widget.projectedBalance != null &&
+                        widget.balance != null &&
+                        widget.projectedBalance != widget.balance)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'End of ${_formatMonth(widget.projectionDate)}: ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Text(
+                            currency.format(widget.projectedBalance!),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(
+                                context,
+                              ).decimalColor(widget.projectedBalance),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                onTap: widget.onTap,
+              ),
+              if (_savingsBreakdown != null &&
+                  _savingsBreakdown!.isNotEmpty) ...[
+                // spendable money
+                ListTile(
+                  leading: Icon(
+                    Icons.account_balance_wallet,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text(
+                    'Spendable',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  trailing: Text(
+                    spendableBalance != null
+                        ? currency.format(spendableBalance)
+                        : 'Calculating...',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Theme.of(context).decimalColor(spendableBalance),
+                    ),
+                  ),
+                ),
+                Divider(),
+                ..._savingsBreakdown!.entries.map((entry) {
+                  return _SavingsRow(
+                    savings: entry.key,
+                    amount: entry.value.savingsOnAccount,
+                    currency: currency,
+                  );
+                }),
+              ],
+            ],
           ),
         ),
-        title: Text(
-          account.name,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(account.accountType.label()),
-            if (account.syncSource != null &&
-                account.syncSource != SyncSource.manual)
-              Text(
-                'Synced with ${account.syncSource!.label()}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              balanceText,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: balance != null && balance! < Decimal.zero
-                    ? Theme.of(context).colorScheme.error
-                    : null,
-              ),
-            ),
-            if (projectedBalance != null &&
-                balance != null &&
-                projectedBalance != balance)
-              Text(
-                'End of ${_formatMonth(projectionDate)}: ${currency.format(projectedBalance!)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
-        ),
-        onTap: onTap,
+      ],
+    );
+  }
+}
+
+class _SavingsRow extends StatelessWidget {
+  final Savings savings;
+  final Decimal amount;
+  final Currency currency;
+
+  const _SavingsRow({
+    required this.savings,
+    required this.amount,
+    required this.currency,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tagCubit = context.read<TagCubit>();
+    final tag = tagCubit.state.tags.firstWhere(
+      (t) => t.id == savings.tagId,
+      orElse: () => throw StateError('Tag not found'),
+    );
+
+    return ListTile(
+      leading: Icon(
+        Icons.savings,
+        color: Theme.of(context).colorScheme.secondary,
       ),
+      title: Text(
+        tag.name,
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+      trailing: Text(
+        currency.format(amount),
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          color: Theme.of(context).decimalColor(amount),
+        ),
+      ),
+      onTap: () {
+        if (savings.id != null) {
+          SavingsDetailRoute(savingsId: savings.id!.uuid).go(context);
+        }
+      },
     );
   }
 }

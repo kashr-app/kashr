@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:finanalyzer/account/account_all_turnovers_page.dart';
+import 'package:finanalyzer/account/account_details_page.dart';
 import 'package:finanalyzer/account/accounts_page.dart';
 import 'package:finanalyzer/account/create_account_page.dart';
 import 'package:finanalyzer/account/edit_account_page.dart';
@@ -46,7 +48,13 @@ part '../_gen/home/home_page.g.dart';
       path: 'accounts',
       routes: [
         TypedGoRoute<CreateAccountRoute>(path: 'create'),
-        TypedGoRoute<EditAccountRoute>(path: ':accountId/edit'),
+        TypedGoRoute<AccountDetailsRoute>(
+          path: ':accountId',
+          routes: [
+            TypedGoRoute<EditAccountRoute>(path: 'edit'),
+            TypedGoRoute<AccountAllTurnoversRoute>(path: 'turnovers'),
+          ],
+        ),
       ],
     ),
     TypedGoRoute<TurnoversRoute>(
@@ -196,8 +204,8 @@ class HomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   SpendingSummaryCard(
-                    totalExpenses: state.totalExpenses,
-                    unallocatedExpenses: state.unallocatedExpenses,
+                    totalExpenses: -state.totalExpenses,
+                    unallocatedExpenses: -state.unallocatedExpenses,
                     tagSummaries: state.expenseTagSummaries,
                     selectedPeriod: state.selectedPeriod,
                   ),

@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/home/widgets/turnover_summary_card.dart';
+import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
@@ -25,8 +26,6 @@ class SpendingSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return TurnoverSummaryCard(
       totalAmount: totalExpenses,
       unallocatedAmount: unallocatedExpenses,
@@ -34,7 +33,6 @@ class SpendingSummaryCard extends StatelessWidget {
       selectedPeriod: selectedPeriod,
       currencyCode: currencyCode,
       title: 'Total Expenses',
-      amountColor: theme.colorScheme.error,
       subtitle: 'Spending by Tag',
       emptyMessage: 'No expenses this month',
       turnoverSign: TurnoverSign.expense,

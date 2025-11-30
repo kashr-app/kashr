@@ -6,6 +6,7 @@ import 'package:finanalyzer/savings/model/savings.dart';
 import 'package:finanalyzer/savings/model/savings_repository.dart';
 import 'package:finanalyzer/savings/savings_detail_page.dart';
 import 'package:finanalyzer/savings/services/savings_balance_service.dart';
+import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:flutter/material.dart';
@@ -245,7 +246,7 @@ class _SavingsCard extends StatelessWidget {
                       // Tag indicator
                       Container(
                         width: 4,
-                        height: 40,
+                        height: 50,
                         decoration: BoxDecoration(
                           color: tagColor,
                           borderRadius: BorderRadius.circular(2),
@@ -264,11 +265,15 @@ class _SavingsCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              Currency.EUR.format(balance),
+                              Currency.currencyFrom(
+                                savings.goalUnit ?? Currency.EUR.name,
+                              ).format(balance),
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: tagColor,
+                                    color: Theme.of(
+                                      context,
+                                    ).decimalColor(balance),
                                   ),
                             ),
                           ],

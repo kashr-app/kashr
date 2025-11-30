@@ -304,10 +304,7 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
             const SizedBox(height: 8),
             Text(
               Currency.EUR.format(_totalBalance ?? Decimal.zero),
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: tagColor,
-              ),
+              style: Theme.of(context).textTheme.displayMedium,
             ),
           ],
         ),

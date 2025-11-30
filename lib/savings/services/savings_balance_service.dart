@@ -24,7 +24,9 @@ class SavingsBalanceService {
   /// Calculate total balance for a savings (across all accounts)
   Future<Decimal> calculateTotalBalance(Savings savings) async {
     final turnoversSum = await _tagTurnoverRepository.sumByTag(savings.tagId);
-    final virtualSum = await _virtualBookingRepository.sumBySavingsId(savings.id!);
+    final virtualSum = await _virtualBookingRepository.sumBySavingsId(
+      savings.id!,
+    );
     return turnoversSum + virtualSum;
   }
 
@@ -68,12 +70,12 @@ class SavingsBalanceService {
   }
 
   /// Get savings breakdown per savings for an account
-  Future<Map<Savings, Decimal>> getSavingsBreakdownForAccount(
+  Future<Map<Savings, SavingsAccountInfo>> getSavingsBreakdownForAccount(
     UuidValue accountId,
   ) async {
     final allSavings = await _savingsRepository.getAll();
 
-    final breakdown = <Savings, Decimal>{};
+    final breakdown = <Savings, SavingsAccountInfo>{};
     for (final savings in allSavings) {
       final savingsForAccount = await calculateBalanceForAccount(
         savings,
@@ -81,7 +83,11 @@ class SavingsBalanceService {
       );
 
       if (savingsForAccount != Decimal.zero) {
-        breakdown[savings] = savingsForAccount;
+        final total = await calculateTotalBalance(savings);
+        breakdown[savings] = SavingsAccountInfo(
+          totalSavings: total,
+          savingsOnAccount: savingsForAccount,
+        );
       }
     }
 
@@ -100,4 +106,14 @@ class SavingsBalanceService {
     final progress = (currentSavingsBalance / savings.goalValue!).toDouble();
     return progress;
   }
+}
+
+class SavingsAccountInfo {
+  final Decimal totalSavings;
+  final Decimal savingsOnAccount;
+
+  SavingsAccountInfo({
+    required this.totalSavings,
+    required this.savingsOnAccount,
+  });
 }

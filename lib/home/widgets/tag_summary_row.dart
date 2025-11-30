@@ -133,6 +133,6 @@ class TagSummaryRow extends StatelessWidget {
     if (totalAmount == Decimal.zero) {
       return 0.0;
     }
-    return (amount.abs() / totalAmount).toDouble() * 100;
+    return (amount.abs() / totalAmount.abs()).toDouble() * 100;
   }
 }
