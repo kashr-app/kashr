@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
@@ -15,40 +16,36 @@ class TagTurnoverRepository {
   /// Batch adds a tag to multiple turnovers.
   /// For each turnover, allocates the remaining unallocated amount to the tag.
   /// This is done efficiently in a single database transaction to avoid N+1.
-  Future<void> batchAddTagToTurnovers(
-    List<Turnover> turnovers,
-    Tag tag,
-  ) async {
+  Future<void> batchAddTagToTurnovers(List<Turnover> turnovers, Tag tag) async {
     if (turnovers.isEmpty || tag.id == null) return;
 
     final db = await DatabaseHelper().database;
 
     // Get all turnover IDs
-    final turnoverIds =
-        turnovers.where((t) => t.id != null).map((t) => t.id!.uuid).toList();
+    final turnoverIds = turnovers
+        .where((t) => t.id != null)
+        .map((t) => t.id!.uuid)
+        .toList();
 
     if (turnoverIds.isEmpty) return;
 
     // Fetch all existing tag turnovers for these turnovers in one query
-    final placeholders = List.generate(turnoverIds.length, (_) => '?').join(',');
-    final existingTagTurnovers = await db.rawQuery(
-      '''
+    final placeholders = List.generate(
+      turnoverIds.length,
+      (_) => '?',
+    ).join(',');
+    final existingTagTurnovers = await db.rawQuery('''
       SELECT turnoverId, SUM(amountValue) as total
       FROM tag_turnover
       WHERE turnoverId IN ($placeholders)
       GROUP BY turnoverId
-      ''',
-      turnoverIds,
-    );
+      ''', turnoverIds);
 
     // Build a map of turnover ID to allocated amount
     final allocatedByTurnover = <String, Decimal>{};
     for (final row in existingTagTurnovers) {
       final turnoverId = row['turnoverId'] as String;
-      final totalInt = row['total'] as int? ?? 0;
-      allocatedByTurnover[turnoverId] = (Decimal.fromInt(totalInt) /
-              Decimal.fromInt(100))
-          .toDecimal(scaleOnInfinitePrecision: 2);
+      allocatedByTurnover[turnoverId] = _unscale(row['total']);
     }
 
     // Create batch insert
@@ -95,13 +92,18 @@ class TagTurnoverRepository {
     final db = await DatabaseHelper().database;
 
     // Get all turnover IDs
-    final turnoverIds =
-        turnovers.where((t) => t.id != null).map((t) => t.id!.uuid).toList();
+    final turnoverIds = turnovers
+        .where((t) => t.id != null)
+        .map((t) => t.id!.uuid)
+        .toList();
 
     if (turnoverIds.isEmpty) return;
 
     // Build the SQL query with placeholders
-    final placeholders = List.generate(turnoverIds.length, (_) => '?').join(',');
+    final placeholders = List.generate(
+      turnoverIds.length,
+      (_) => '?',
+    ).join(',');
 
     // Delete all tag_turnover entries for this tag and these turnovers
     await db.rawDelete(
@@ -245,10 +247,7 @@ class TagTurnoverRepository {
     );
   }
 
-  Future<int> updateAmount(
-    UuidValue id,
-    Decimal amountValue,
-  ) async {
+  Future<int> updateAmount(UuidValue id, Decimal amountValue) async {
     final db = await DatabaseHelper().database;
 
     return await db.update(
@@ -271,13 +270,25 @@ class TagTurnoverRepository {
       [tagId.uuid],
     );
 
-    final totalString = result.first['total']?.toString();
-    final total = (totalString == null)
-        ? Decimal.zero
-        : Decimal.parse(totalString);
-    return (total / Decimal.fromInt(100)).toDecimal(
-      scaleOnInfinitePrecision: 2,
+    return _unscale(result.first['total']);
+  }
+
+  Future<Decimal> sumByTagAndAccount(
+    UuidValue tagId,
+    UuidValue accountId,
+  ) async {
+    final db = await DatabaseHelper().database;
+
+    final result = await db.rawQuery(
+      '''
+      SELECT SUM(amountValue) AS total
+      FROM tag_turnover
+      WHERE tagId = ? AND account_id = ?
+    ''',
+      [tagId.uuid, accountId.uuid],
     );
+
+    return _unscale(result.first['total']);
   }
 
   /// Fetches tag summaries for a specific month and year.
@@ -319,10 +330,7 @@ class TagTurnoverRepository {
         color: map['tag_color'] as String?,
       );
 
-      final totalAmountInt = map['total_amount'] as int? ?? 0;
-      final totalAmount = (Decimal.fromInt(totalAmountInt) /
-              Decimal.fromInt(100))
-          .toDecimal(scaleOnInfinitePrecision: 2);
+      final totalAmount = _unscale(map['total_amount']);
 
       return TagSummary(tag: tag, totalAmount: totalAmount);
     }).toList();
@@ -367,10 +375,7 @@ class TagTurnoverRepository {
         color: map['tag_color'] as String?,
       );
 
-      final totalAmountInt = map['total_amount'] as int? ?? 0;
-      final totalAmount = (Decimal.fromInt(totalAmountInt) /
-              Decimal.fromInt(100))
-          .toDecimal(scaleOnInfinitePrecision: 2);
+      final totalAmount = _unscale(map['total_amount']);
 
       return TagSummary(tag: tag, totalAmount: totalAmount);
     }).toList();
@@ -415,10 +420,7 @@ class TagTurnoverRepository {
         color: map['tag_color'] as String?,
       );
 
-      final totalAmountInt = map['total_amount'] as int? ?? 0;
-      final totalAmount = (Decimal.fromInt(totalAmountInt) /
-              Decimal.fromInt(100))
-          .toDecimal(scaleOnInfinitePrecision: 2);
+      final totalAmount = _unscale(map['total_amount']);
 
       return TagSummary(tag: tag, totalAmount: totalAmount);
     }).toList();
@@ -439,8 +441,7 @@ class TagTurnoverRepository {
         ? 'AND t.id IN (${List.filled(tagIds.length, '?').join(',')})'
         : '';
 
-    final tagArgs =
-        tagIds?.map((id) => id.uuid).toList() ?? <String>[];
+    final tagArgs = tagIds?.map((id) => id.uuid).toList() ?? <String>[];
 
     final result = await db.rawQuery(
       '''
@@ -476,10 +477,7 @@ class TagTurnoverRepository {
         color: map['tag_color'] as String?,
       );
 
-      final totalAmountInt = map['total_amount'] as int? ?? 0;
-      final totalAmount = (Decimal.fromInt(totalAmountInt) /
-              Decimal.fromInt(100))
-          .toDecimal(scaleOnInfinitePrecision: 2);
+      final totalAmount = _unscale(map['total_amount']);
 
       final summary = TagSummary(tag: tag, totalAmount: totalAmount);
 
@@ -487,6 +485,25 @@ class TagTurnoverRepository {
     }
 
     return summariesByMonth;
+  }
+
+  Decimal _unscale(Object? result) {
+    return decimalUnscale(result as int? ?? 0) ?? Decimal.zero;
+  }
+
+  Future<List<UuidValue>> findAccountsByTagId(UuidValue tagId) async {
+    final db = await DatabaseHelper().database;
+    final result = await db.rawQuery(
+      '''
+      SELECT DISTINCT account_id
+      FROM tag_turnover
+      WHERE tagId = ?
+      ''',
+      [tagId.uuid],
+    );
+    return result
+        .map((m) => UuidValue.fromString(m['account_id'] as String))
+        .toList();
   }
 }
 

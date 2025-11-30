@@ -3,6 +3,9 @@ import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
 import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/model/account_repository.dart';
+import 'package:finanalyzer/savings/model/savings_repository.dart';
+import 'package:finanalyzer/savings/model/savings_virtual_booking_repository.dart';
+import 'package:finanalyzer/savings/services/savings_balance_service.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
@@ -28,9 +31,16 @@ final turnoverRepository = TurnoverRepository();
 final accountRepository = AccountRepository();
 final tagRepository = TagRepository();
 final tagTurnoverRepository = TagTurnoverRepository();
+final savingsRepository = SavingsRepository();
+final savingsVirtualBookingRepository = SavingsVirtualBookingRepository();
 final balanceCalculationService = BalanceCalculationService(
   turnoverRepository,
   tagTurnoverRepository,
+);
+final savingsBalanceService = SavingsBalanceService(
+  tagTurnoverRepository,
+  savingsVirtualBookingRepository,
+  savingsRepository,
 );
 final turnoverMatchingService = TurnoverMatchingService(tagTurnoverRepository);
 
@@ -45,8 +55,15 @@ class MyApp extends StatelessWidget {
         Provider<AccountRepository>.value(value: accountRepository),
         Provider<TagRepository>.value(value: tagRepository),
         Provider<TagTurnoverRepository>.value(value: tagTurnoverRepository),
+        Provider<SavingsRepository>.value(value: savingsRepository),
+        Provider<SavingsVirtualBookingRepository>.value(
+          value: savingsVirtualBookingRepository,
+        ),
         Provider<BalanceCalculationService>.value(
           value: balanceCalculationService,
+        ),
+        Provider<SavingsBalanceService>.value(
+          value: savingsBalanceService,
         ),
         Provider<TurnoverMatchingService>.value(
           value: turnoverMatchingService,
