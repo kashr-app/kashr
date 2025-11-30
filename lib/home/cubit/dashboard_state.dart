@@ -16,6 +16,7 @@ abstract class DashboardState with _$DashboardState {
     required YearMonth selectedPeriod,
     required Decimal totalIncome,
     required Decimal totalExpenses,
+    required Decimal totalTransfers,
     required Decimal unallocatedIncome,
     required Decimal unallocatedExpenses,
     @JsonKey(includeFromJson: false, includeToJson: false)
@@ -24,6 +25,9 @@ abstract class DashboardState with _$DashboardState {
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TagSummary> expenseTagSummaries,
+    @JsonKey(includeFromJson: false, includeToJson: false)
+    @Default([])
+    List<TagSummary> transferTagSummaries,
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TurnoverWithTags> unallocatedTurnovers,

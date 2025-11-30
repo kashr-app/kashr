@@ -1,11 +1,12 @@
+import 'package:finanalyzer/core/color_utils.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/widgets/tag_edit_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 
 class TagsRoute extends GoRouteData with $TagsRoute {
   const TagsRoute();
@@ -102,10 +103,7 @@ class _TagsPageState extends State<TagsPage> {
   }
 
   void _showTagDialog(BuildContext context, {Tag? tag}) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => _TagEditDialog(tag: tag),
-    );
+    TagEditBottomSheet.show(context, tag: tag);
   }
 
   void _confirmDelete(BuildContext context, Tag tag) {
@@ -146,7 +144,7 @@ class _TagListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = tag.color != null ? _parseColor(tag.color!) : null;
+    final color = ColorUtils.parseColor(tag.color);
 
     return ListTile(
       leading: CircleAvatar(
@@ -155,184 +153,18 @@ class _TagListItem extends StatelessWidget {
           tag.name.isNotEmpty ? tag.name[0].toUpperCase() : '?',
           style: TextStyle(
             color: color != null
-                ? _getContrastingTextColor(color)
+                ? ColorUtils.getContrastingTextColor(color)
                 : theme.colorScheme.onPrimaryContainer,
           ),
         ),
       ),
       title: Text(tag.name),
+      subtitle: tag.isTransfer ? const Text('Transfer') : null,
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline),
         onPressed: onDelete,
       ),
       onTap: onTap,
     );
-  }
-
-  Color? _parseColor(String colorString) {
-    try {
-      return Color(int.parse(colorString.replaceFirst('#', '0xff')));
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Color _getContrastingTextColor(Color backgroundColor) {
-    final luminance = backgroundColor.computeLuminance();
-    return luminance > 0.5 ? Colors.black : Colors.white;
-  }
-}
-
-class _TagEditDialog extends StatefulWidget {
-  final Tag? tag;
-
-  const _TagEditDialog({this.tag});
-
-  @override
-  State<_TagEditDialog> createState() => _TagEditDialogState();
-}
-
-class _TagEditDialogState extends State<_TagEditDialog> {
-  late TextEditingController _nameController;
-  Color? _selectedColor;
-
-  final List<Color> _availableColors = [
-    Colors.red,
-    Colors.pink,
-    Colors.purple,
-    Colors.deepPurple,
-    Colors.indigo,
-    Colors.blue,
-    Colors.lightBlue,
-    Colors.cyan,
-    Colors.teal,
-    Colors.green,
-    Colors.lightGreen,
-    Colors.lime,
-    Colors.yellow,
-    Colors.amber,
-    Colors.orange,
-    Colors.deepOrange,
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.tag?.name ?? '');
-    _selectedColor = widget.tag?.color != null
-        ? _parseColor(widget.tag!.color!)
-        : null;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  Color? _parseColor(String colorString) {
-    try {
-      return Color(int.parse(colorString.replaceFirst('#', '0xff')));
-    } catch (e) {
-      return null;
-    }
-  }
-
-  String _colorToString(Color color) {
-    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEditing = widget.tag != null;
-
-    return AlertDialog(
-      title: Text(isEditing ? 'Edit Tag' : 'Create Tag'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              border: OutlineInputBorder(),
-            ),
-            textCapitalization: TextCapitalization.words,
-            autofocus: true,
-          ),
-          const SizedBox(height: 16),
-          const Text('Color'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _availableColors.map((color) {
-              final isSelected = _selectedColor == color;
-              return InkWell(
-                onTap: () => setState(() => _selectedColor = color),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: isSelected
-                        ? Border.all(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 3,
-                          )
-                        : null,
-                  ),
-                  child: isSelected
-                      ? Icon(
-                          Icons.check,
-                          color: _getContrastingTextColor(color),
-                        )
-                      : null,
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _nameController.text.trim().isEmpty
-              ? null
-              : () {
-                  final name = _nameController.text.trim();
-                  final colorString = _selectedColor != null
-                      ? _colorToString(_selectedColor!)
-                      : null;
-
-                  final tag = Tag(
-                    id: widget.tag?.id ?? const Uuid().v4obj(),
-                    name: name,
-                    color: colorString,
-                  );
-
-                  if (isEditing) {
-                    context.read<TagCubit>().updateTag(tag);
-                  } else {
-                    context.read<TagCubit>().createTag(tag);
-                  }
-
-                  Navigator.of(context).pop();
-                },
-          child: Text(isEditing ? 'Save' : 'Create'),
-        ),
-      ],
-    );
-  }
-
-  Color _getContrastingTextColor(Color backgroundColor) {
-    final luminance = backgroundColor.computeLuminance();
-    return luminance > 0.5 ? Colors.black : Colors.white;
   }
 }

@@ -2,9 +2,9 @@ import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
+import 'package:finanalyzer/turnover/widgets/tag_edit_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uuid/uuid.dart';
 
 /// A dialog for selecting or creating a tag.
 ///
@@ -54,7 +54,6 @@ class _AddTagDialogState extends State<AddTagDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tagCubit = context.read<TagCubit>();
 
     return Dialog(
       child: Padding(
@@ -95,12 +94,11 @@ class _AddTagDialogState extends State<AddTagDialog> {
                     ),
                     title: Text('Create "$searchQuery"'),
                     onTap: () async {
-                      final newTag = Tag(
-                        id: const Uuid().v4obj(),
-                        name: searchQuery,
+                      final newTag = await TagEditBottomSheet.show(
+                        context,
+                        initialName: searchQuery,
                       );
-                      await tagCubit.createTag(newTag);
-                      if (context.mounted) {
+                      if (context.mounted && newTag != null) {
                         Navigator.of(context).pop(newTag);
                       }
                     },

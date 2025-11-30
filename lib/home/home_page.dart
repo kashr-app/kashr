@@ -20,6 +20,7 @@ import 'package:finanalyzer/home/widgets/income_summary_card.dart';
 import 'package:finanalyzer/home/widgets/load_bank_data_section.dart';
 import 'package:finanalyzer/home/widgets/pending_turnovers_hint.dart';
 import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
+import 'package:finanalyzer/home/widgets/transfer_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
 import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
@@ -207,6 +208,12 @@ class HomePage extends StatelessWidget {
                     totalExpenses: -state.totalExpenses,
                     unallocatedExpenses: -state.unallocatedExpenses,
                     tagSummaries: state.expenseTagSummaries,
+                    selectedPeriod: state.selectedPeriod,
+                  ),
+                  const SizedBox(height: 16),
+                  TransferSummaryCard(
+                    totalTransfers: state.totalTransfers,
+                    tagSummaries: state.transferTagSummaries,
                     selectedPeriod: state.selectedPeriod,
                   ),
                 ],

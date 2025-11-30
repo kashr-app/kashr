@@ -22,6 +22,7 @@ class DashboardCubit extends Cubit<DashboardState> {
           selectedPeriod: YearMonth.now(),
           totalIncome: Decimal.zero,
           totalExpenses: Decimal.zero,
+          totalTransfers: Decimal.zero,
           unallocatedIncome: Decimal.zero,
           unallocatedExpenses: Decimal.zero,
           unallocatedTurnovers: const [],
@@ -56,7 +57,9 @@ class DashboardCubit extends Cubit<DashboardState> {
             : '';
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Data loaded successfully.$autoMatchMsg$unmatchedMsg'),
+            content: Text(
+              'Data loaded successfully.$autoMatchMsg$unmatchedMsg',
+            ),
           ),
         );
         setBankDownloadStatus(Status.success);
@@ -99,6 +102,12 @@ class DashboardCubit extends Cubit<DashboardState> {
             month: state.selectedPeriod.month,
           );
 
+      final transferTagSummaries = await _tagTurnoverRepository
+          .getTransferTagSummariesForMonth(
+            year: state.selectedPeriod.year,
+            month: state.selectedPeriod.month,
+          );
+
       final unallocatedTurnovers = await _turnoverRepository
           .getUnallocatedTurnoversForMonth(
             year: state.selectedPeriod.year,
@@ -112,15 +121,15 @@ class DashboardCubit extends Cubit<DashboardState> {
             month: state.selectedPeriod.month,
           );
 
-      // Separate income (positive) from expenses (negative)
-      final totalIncome = turnovers
+      // Calculate total from all turnovers (including transfers)
+      final totalAllIncome = turnovers
           .where((t) => t.amountValue > Decimal.zero)
           .fold<Decimal>(
             Decimal.zero,
             (sum, turnover) => sum + turnover.amountValue,
           );
 
-      final totalExpenses = turnovers
+      final totalAllExpenses = turnovers
           .where((t) => t.amountValue < Decimal.zero)
           .fold<Decimal>(
             Decimal.zero,
@@ -128,31 +137,70 @@ class DashboardCubit extends Cubit<DashboardState> {
           )
           .abs();
 
-      // Sum of all tagged income
+      // Sum of all tagged income (non-transfer)
       final totalAllocatedIncome = incomeTagSummaries.fold<Decimal>(
         Decimal.zero,
         (sum, summary) => sum + summary.totalAmount.abs(),
       );
 
-      // Sum of all tagged expenses
+      // Sum of all tagged expenses (non-transfer)
       final totalAllocatedExpenses = expenseTagSummaries.fold<Decimal>(
         Decimal.zero,
         (sum, summary) => sum + summary.totalAmount.abs(),
       );
 
-      // Unallocated amounts
-      final unallocatedIncome = totalIncome - totalAllocatedIncome;
-      final unallocatedExpenses = totalExpenses - totalAllocatedExpenses;
+      // Sum of all transfer tags (inflow)
+      final totalTransferIncome = transferTagSummaries
+          .where((s) => s.totalAmount > Decimal.zero)
+          .fold<Decimal>(Decimal.zero, (sum, s) => sum + s.totalAmount);
+
+      // Sum of all transfer tags (outflow)
+      final totalTransferExpenses = transferTagSummaries
+          .where((s) => s.totalAmount < Decimal.zero)
+          .fold<Decimal>(Decimal.zero, (sum, s) => sum + s.totalAmount.abs());
+
+      // Unallocated = total - allocated income/expense - transfers
+      final unallocatedIncome =
+          totalAllIncome - totalAllocatedIncome - totalTransferIncome;
+      final unallocatedExpenses =
+          totalAllExpenses - totalAllocatedExpenses - totalTransferExpenses;
+
+      // Total income/expenses for cashflow = allocated + unallocated
+      // (excludes transfers)
+      final totalIncome = totalAllocatedIncome + unallocatedIncome;
+      final totalExpenses = totalAllocatedExpenses + unallocatedExpenses;
+
+      // Calculate total transfers accounting for internal vs external transfers
+      // For internal transfers (between tracked accounts), the amount appears
+      // twice (once negative, once positive), but we sum in abs() so we divide by 2.
+      // For external transfers (to/from untracked accounts), they appear once.
+      final sumWithSign = transferTagSummaries.fold<Decimal>(
+        Decimal.zero,
+        (sum, summary) => sum + summary.totalAmount,
+      );
+      final sumOfAbs = transferTagSummaries.fold<Decimal>(
+        Decimal.zero,
+        (sum, summary) => sum + summary.totalAmount.abs(),
+      );
+      // External amount = abs(sumWithSign) (net that doesn't cancel)
+      // Internal amount = (sumOfAbs - abs(sumWithSign)) / 2 (counted twice)
+      // Total amount: internal / 2 + external = (sumOfAbs + abs(sumWithSign)) / 2
+      final totalTransfers =
+          ((sumOfAbs + sumWithSign.abs()) / Decimal.fromInt(2)).toDecimal(
+            scaleOnInfinitePrecision: 2,
+          );
 
       emit(
         state.copyWith(
           status: Status.success,
           totalIncome: totalIncome,
           totalExpenses: totalExpenses,
+          totalTransfers: totalTransfers,
           unallocatedIncome: unallocatedIncome,
           unallocatedExpenses: unallocatedExpenses,
           incomeTagSummaries: incomeTagSummaries,
           expenseTagSummaries: expenseTagSummaries,
+          transferTagSummaries: transferTagSummaries,
           unallocatedTurnovers: unallocatedTurnovers,
           unallocatedCount: unallocatedCount,
         ),

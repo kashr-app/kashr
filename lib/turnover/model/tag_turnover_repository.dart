@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
+import 'package:finanalyzer/turnover/model/tag_semantic_converter.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
@@ -337,6 +338,7 @@ class TagTurnoverRepository {
   }
 
   /// Fetches income tag summaries (positive turnovers only) for a month.
+  /// Excludes transfer tags (semantic = 'transfer').
   Future<List<TagSummary>> getIncomeTagSummariesForMonth({
     required int year,
     required int month,
@@ -359,6 +361,7 @@ class TagTurnoverRepository {
       WHERE tt.booking_date >= ? AND tt.booking_date < ?
         AND tt.turnoverId IS NOT NULL
         AND tv.amountValue > 0
+        AND t.semantic IS NULL
       GROUP BY t.id, t.name, t.color
       ORDER BY total_amount DESC
       ''',
@@ -382,6 +385,7 @@ class TagTurnoverRepository {
   }
 
   /// Fetches expense tag summaries (negative turnovers only) for a month.
+  /// Excludes transfer tags (semantic = 'transfer').
   Future<List<TagSummary>> getExpenseTagSummariesForMonth({
     required int year,
     required int month,
@@ -404,6 +408,7 @@ class TagTurnoverRepository {
       WHERE tt.booking_date >= ? AND tt.booking_date < ?
         AND tt.turnoverId IS NOT NULL
         AND tv.amountValue < 0
+        AND t.semantic IS NULL
       GROUP BY t.id, t.name, t.color
       ORDER BY total_amount ASC
       ''',
@@ -418,6 +423,55 @@ class TagTurnoverRepository {
         id: UuidValue.fromString(map['tag_id'] as String),
         name: map['tag_name'] as String,
         color: map['tag_color'] as String?,
+      );
+
+      final totalAmount = _unscale(map['total_amount']);
+
+      return TagSummary(tag: tag, totalAmount: totalAmount);
+    }).toList();
+  }
+
+  /// Fetches transfer tag summaries for a month.
+  /// Only includes tags with semantic = 'transfer'.
+  Future<List<TagSummary>> getTransferTagSummariesForMonth({
+    required int year,
+    required int month,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final endDate = startDate.add(months: 1);
+
+    final result = await db.rawQuery(
+      '''
+      SELECT
+        t.id as tag_id,
+        t.name as tag_name,
+        t.color as tag_color,
+        t.semantic as tag_semantic,
+        SUM(tt.amountValue) as total_amount
+      FROM tag_turnover tt
+      INNER JOIN tag t ON tt.tagId = t.id
+      WHERE tt.booking_date >= ? AND tt.booking_date < ?
+        AND tt.turnoverId IS NOT NULL
+        AND t.semantic = 'transfer'
+      GROUP BY t.id, t.name, t.color, t.semantic
+      ORDER BY total_amount DESC
+      ''',
+      [
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+      ],
+    );
+
+    return result.map((map) {
+      final tag = Tag(
+        id: UuidValue.fromString(map['tag_id'] as String),
+        name: map['tag_name'] as String,
+        color: map['tag_color'] as String?,
+        semantic: map['tag_semantic'] == 'transfer'
+            ? TagSemantic.transfer
+            : null,
       );
 
       final totalAmount = _unscale(map['total_amount']);
