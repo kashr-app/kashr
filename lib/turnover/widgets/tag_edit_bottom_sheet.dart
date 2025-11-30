@@ -94,170 +94,173 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
         maxChildSize: 0.95,
         expand: false,
         builder: (context, scrollController) {
-          return Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(context).dividerColor,
+          return SafeArea(
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).dividerColor,
+                      ),
                     ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        isEditing ? 'Edit Tag' : 'Create Tag',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      TextField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Name',
-                          border: OutlineInputBorder(),
+                      Expanded(
+                        child: Text(
+                          isEditing ? 'Edit Tag' : 'Create Tag',
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
-                        textCapitalization: TextCapitalization.words,
-                        autofocus: true,
-                        onChanged: (_) => setState(() {}),
                       ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Color',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close),
                       ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _availableColors.map((color) {
-                          final isSelected =
-                              _selectedColor?.toARGB32() == color.toARGB32();
-                          return InkWell(
-                            onTap: () => setState(() => _selectedColor = color),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                                border: isSelected
-                                    ? Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        width: 3,
-                                      )
-                                    : null,
-                              ),
-                              child: isSelected
-                                  ? Icon(
-                                      Icons.check,
-                                      color:
-                                          ColorUtils.getContrastingTextColor(
-                                              color),
-                                    )
-                                  : null,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 24),
-                      DropdownButtonFormField<TagSemantic?>(
-                        initialValue: _selectedSemantic,
-                        decoration: const InputDecoration(
-                          labelText: 'Tag Type',
-                          border: OutlineInputBorder(),
-                          helperText:
-                              'Transfer tags exclude transactions from cashflow calculations',
-                          helperMaxLines: 2,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: null,
-                            child: Text('Normal (Income/Expense)'),
-                          ),
-                          DropdownMenuItem(
-                            value: TagSemantic.transfer,
-                            child: Text('Transfer'),
-                          ),
-                        ],
-                        onChanged: (value) =>
-                            setState(() => _selectedSemantic = value),
-                      ),
-                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  border: Border(
-                    top: BorderSide(
-                      color: Theme.of(context).dividerColor,
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Name',
+                            border: OutlineInputBorder(),
+                          ),
+                          textCapitalization: TextCapitalization.words,
+                          autofocus: true,
+                          onChanged: (_) => setState(() {}),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Color',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _availableColors.map((color) {
+                            final isSelected =
+                                _selectedColor?.toARGB32() == color.toARGB32();
+                            return InkWell(
+                              onTap: () =>
+                                  setState(() => _selectedColor = color),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                  border: isSelected
+                                      ? Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          width: 3,
+                                        )
+                                      : null,
+                                ),
+                                child: isSelected
+                                    ? Icon(
+                                        Icons.check,
+                                        color:
+                                            ColorUtils.getContrastingTextColor(
+                                                color),
+                                      )
+                                    : null,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 24),
+                        DropdownButtonFormField<TagSemantic?>(
+                          initialValue: _selectedSemantic,
+                          decoration: const InputDecoration(
+                            labelText: 'Tag Type',
+                            border: OutlineInputBorder(),
+                            helperText:
+                                'Transfer tags exclude transactions from cashflow calculations',
+                            helperMaxLines: 2,
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: null,
+                              child: Text('Normal (Income/Expense)'),
+                            ),
+                            DropdownMenuItem(
+                              value: TagSemantic.transfer,
+                              child: Text('Transfer'),
+                            ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _selectedSemantic = value),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                     ),
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(context).dividerColor,
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: _nameController.text.trim().isEmpty
-                          ? null
-                          : () async {
-                              final name = _nameController.text.trim();
-                              final colorString = _selectedColor != null
-                                  ? ColorUtils.colorToString(_selectedColor!)
-                                  : null;
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: _nameController.text.trim().isEmpty
+                            ? null
+                            : () async {
+                                final name = _nameController.text.trim();
+                                final colorString = _selectedColor != null
+                                    ? ColorUtils.colorToString(_selectedColor!)
+                                    : null;
 
-                              final tag = Tag(
-                                id: widget.tag?.id ?? const Uuid().v4obj(),
-                                name: name,
-                                color: colorString,
-                                semantic: _selectedSemantic,
-                              );
+                                final tag = Tag(
+                                  id: widget.tag?.id ?? const Uuid().v4obj(),
+                                  name: name,
+                                  color: colorString,
+                                  semantic: _selectedSemantic,
+                                );
 
-                              if (isEditing) {
-                                await context.read<TagCubit>().updateTag(tag);
-                              } else {
-                                await context.read<TagCubit>().createTag(tag);
-                              }
+                                if (isEditing) {
+                                  await context.read<TagCubit>().updateTag(tag);
+                                } else {
+                                  await context.read<TagCubit>().createTag(tag);
+                                }
 
-                              if (context.mounted) {
-                                Navigator.of(context).pop(tag);
-                              }
-                            },
-                      child: Text(isEditing ? 'Save' : 'Create'),
-                    ),
-                  ],
+                                if (context.mounted) {
+                                  Navigator.of(context).pop(tag);
+                                }
+                              },
+                        child: Text(isEditing ? 'Save' : 'Create'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
