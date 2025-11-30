@@ -3,6 +3,7 @@ import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
 import 'package:finanalyzer/core/currency.dart';
+import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/savings/model/savings.dart';
 import 'package:finanalyzer/savings/model/savings_virtual_booking.dart';
 import 'package:finanalyzer/savings/model/savings_virtual_booking_repository.dart';
@@ -10,11 +11,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 
+/// A dialog for creating or editing virtual savings bookings.
+///
+/// Virtual bookings allow users to allocate or deallocate funds to/from
+/// savings without actual transactions.
+///
+/// When [booking] is null, the dialog operates in create mode.
+/// When [booking] is provided, the dialog operates in edit mode with
+/// pre-filled values and a delete option.
+///
+/// Returns `true` if a booking was created, updated, or deleted.
+/// Returns `null` if the dialog was cancelled without changes.
+///
+/// Example usage:
+/// ```dart
+/// // Create a new booking
+/// final result = await showDialog<bool>(
+///   context: context,
+///   builder: (context) => VirtualBookingDialog(savings: savings),
+/// );
+///
+/// // Edit an existing booking
+/// final result = await showDialog<bool>(
+///   context: context,
+///   builder: (context) => VirtualBookingDialog(
+///     savings: savings,
+///     booking: existingBooking,
+///   ),
+/// );
+///
+/// if (result == true) {
+///   // Reload data to reflect changes
+/// }
+/// ```
 class VirtualBookingDialog extends StatefulWidget {
+  /// The savings instance to create or edit bookings for.
   final Savings savings;
+
+  /// The booking to edit. If null, creates a new booking.
+  final SavingsVirtualBooking? booking;
 
   const VirtualBookingDialog({
     required this.savings,
+    this.booking,
     super.key,
   });
 
@@ -31,6 +70,22 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
   bool _isAllocating = true; // true = add to savings, false = remove from savings
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.booking != null) {
+      _initializeFromBooking();
+    }
+  }
+
+  void _initializeFromBooking() {
+    final booking = widget.booking!;
+    final absAmount = booking.amountValue.abs();
+    _amountScaled = (absAmount * Decimal.fromInt(100)).toBigInt().toInt();
+    _isAllocating = booking.amountValue >= Decimal.zero;
+    _noteController.text = booking.note ?? '';
+  }
 
   @override
   void dispose() {
@@ -63,10 +118,63 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
   }
 
   String _formatAmount(int scaledAmount) {
-    final decimal = (Decimal.fromInt(scaledAmount) / Decimal.fromInt(100))
-        .toDecimal(scaleOnInfinitePrecision: 2);
-    final currency = Currency.currencyFrom(_selectedAccount!.currency);
+    final decimal = decimalUnscale(scaledAmount)!;
+    final currencyUnit = widget.booking?.amountUnit ??
+                         _selectedAccount?.currency;
+    if (currencyUnit == null) {
+      return decimal.toString();
+    }
+    final currency = Currency.currencyFrom(currencyUnit);
     return currency.format(decimal);
+  }
+
+  Future<void> _delete() async {
+    if (widget.booking == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Adjustment'),
+        content: Text(
+          'Are you sure you want to delete this adjustment of ${widget.booking!.format()}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      try {
+        await context.read<SavingsVirtualBookingRepository>().delete(
+          widget.booking!.id!,
+        );
+
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
+      } catch (e) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -95,7 +203,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
       final adjustedAmount = _isAllocating ? amount : -amount;
 
       final booking = SavingsVirtualBooking(
-        id: const Uuid().v4obj(),
+        id: widget.booking?.id ?? const Uuid().v4obj(),
         savingsId: widget.savings.id!,
         accountId: _selectedAccount!.id!,
         amountValue: adjustedAmount,
@@ -103,11 +211,16 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
         note: _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
-        bookingDate: DateTime.now(),
-        createdAt: DateTime.now(),
+        bookingDate: widget.booking?.bookingDate ?? DateTime.now(),
+        createdAt: widget.booking?.createdAt ?? DateTime.now(),
       );
 
-      await context.read<SavingsVirtualBookingRepository>().create(booking);
+      final repository = context.read<SavingsVirtualBookingRepository>();
+      if (widget.booking != null) {
+        await repository.update(booking);
+      } else {
+        await repository.create(booking);
+      }
 
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -122,8 +235,10 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditMode = widget.booking != null;
+
     return AlertDialog(
-      title: const Text('Adjust Savings'),
+      title: Text(isEditMode ? 'Edit Adjustment' : 'Adjust Savings'),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -158,6 +273,14 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
                     if (accounts.isEmpty) {
                       return const Text('No accounts available');
+                    }
+
+                    // Initialize selected account from booking if not yet set
+                    if (widget.booking != null && _selectedAccount == null) {
+                      _selectedAccount = accounts.firstWhere(
+                        (a) => a.id == widget.booking!.accountId,
+                        orElse: () => accounts.first,
+                      );
                     }
 
                     return DropdownButtonFormField<Account>(
@@ -262,6 +385,15 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
         ),
       ),
       actions: [
+        if (isEditMode)
+          TextButton(
+            onPressed: _isLoading ? null : _delete,
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        const Spacer(),
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
           child: const Text('Cancel'),

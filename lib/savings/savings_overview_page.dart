@@ -11,7 +11,6 @@ import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 
 class SavingsRoute extends GoRouteData with $SavingsRoute {
   const SavingsRoute();
@@ -19,56 +18,6 @@ class SavingsRoute extends GoRouteData with $SavingsRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) {
     return const SavingsOverviewPage();
-  }
-}
-
-class SavingsDetailRoute extends GoRouteData with $SavingsDetailRoute {
-  final String savingsId;
-
-  const SavingsDetailRoute({required this.savingsId});
-
-  @override
-  Widget build(BuildContext context, GoRouterState state) {
-    return _SavingsDetailPageWrapper(savingsId: savingsId);
-  }
-}
-
-/// Wrapper widget that loads savings by ID and passes it to SavingsDetailPage
-class _SavingsDetailPageWrapper extends StatelessWidget {
-  final String savingsId;
-
-  const _SavingsDetailPageWrapper({required this.savingsId});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Savings?>(
-      future: context
-          .read<SavingsRepository>()
-          .getById(UuidValue.fromString(savingsId)),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasError || snapshot.data == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Error')),
-            body: Center(
-              child: Text(
-                snapshot.hasError
-                    ? 'Error: ${snapshot.error}'
-                    : 'Savings not found',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          );
-        }
-
-        return SavingsDetailPage(savings: snapshot.data!);
-      },
-    );
   }
 }
 

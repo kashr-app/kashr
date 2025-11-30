@@ -7,6 +7,7 @@ import 'package:finanalyzer/analytics/analytics_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
+import 'package:finanalyzer/savings/savings_detail_page.dart';
 import 'package:finanalyzer/savings/savings_overview_page.dart';
 import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
