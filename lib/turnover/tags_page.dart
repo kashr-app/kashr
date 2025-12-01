@@ -1,7 +1,12 @@
 import 'package:finanalyzer/core/color_utils.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/savings/model/savings_repository.dart';
+import 'package:finanalyzer/savings/services/savings_balance_service.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
+import 'package:finanalyzer/turnover/dialogs/merge_final_confirmation_dialog.dart';
+import 'package:finanalyzer/turnover/dialogs/merge_tags_preview_dialog.dart';
+import 'package:finanalyzer/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/widgets/tag_edit_bottom_sheet.dart';
 import 'package:flutter/material.dart';
@@ -89,6 +94,7 @@ class _TagsPageState extends State<TagsPage> {
                   tag: tag,
                   onTap: () => _showTagDialog(context, tag: tag),
                   onDelete: () => _confirmDelete(context, tag),
+                  onMerge: () => _showMergeDialog(context, tag),
                 );
               },
             );
@@ -128,17 +134,87 @@ class _TagsPageState extends State<TagsPage> {
       ),
     );
   }
+
+  Future<void> _showMergeDialog(BuildContext context, Tag sourceTag) async {
+    // Step 1: Show tag picker dialog to select target tag
+    final targetTag = await TagPickerDialog.show(
+      context,
+      excludeTag: sourceTag,
+    );
+
+    if (targetTag == null || !context.mounted) {
+      return;
+    }
+
+    // Step 2: Fetch savings info for both tags
+    final savingsRepo = context.read<SavingsRepository>();
+    final savingsBalanceService = context.read<SavingsBalanceService>();
+
+    final sourceSavings = await savingsRepo.getByTagId(sourceTag.id!);
+    final targetSavings = await savingsRepo.getByTagId(targetTag.id!);
+
+    // Calculate balances using the SavingsBalanceService
+    final sourceBalance = sourceSavings != null
+        ? await savingsBalanceService.calculateTotalBalance(sourceSavings)
+        : null;
+    final targetBalance = targetSavings != null
+        ? await savingsBalanceService.calculateTotalBalance(targetSavings)
+        : null;
+
+    if (!context.mounted) return;
+
+    // Step 3: Show merge preview dialog with savings implications
+    final previewResult = await MergeTagsPreviewDialog.show(
+      context,
+      sourceTag: sourceTag,
+      targetTag: targetTag,
+      sourceSavings: sourceSavings,
+      targetSavings: targetSavings,
+      sourceBalance: sourceBalance,
+      targetBalance: targetBalance,
+    );
+
+    if (previewResult == null || !previewResult.proceed || !context.mounted) {
+      return;
+    }
+
+    // Step 4: Show final confirmation dialog
+    final confirmed = await MergeFinalConfirmationDialog.show(
+      context,
+      sourceTag: sourceTag,
+      targetTag: targetTag,
+    );
+
+    if (!confirmed || !context.mounted) {
+      return;
+    }
+
+    // Step 5: Execute the merge
+    await context.read<TagCubit>().mergeTags(sourceTag.id!, targetTag.id!);
+
+    if (!context.mounted) return;
+
+    // Step 6: Show success feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('"${sourceTag.name}" merged into "${targetTag.name}"'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
+    );
+  }
 }
 
 class _TagListItem extends StatelessWidget {
   final Tag tag;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final VoidCallback onMerge;
 
   const _TagListItem({
     required this.tag,
     required this.onTap,
     required this.onDelete,
+    required this.onMerge,
   });
 
   @override
@@ -160,9 +236,39 @@ class _TagListItem extends StatelessWidget {
       ),
       title: Text(tag.name),
       subtitle: tag.isTransfer ? const Text('Transfer') : null,
-      trailing: IconButton(
-        icon: const Icon(Icons.delete_outline),
-        onPressed: onDelete,
+      trailing: PopupMenuButton<String>(
+        onSelected: (value) {
+          switch (value) {
+            case 'merge':
+              onMerge();
+              break;
+            case 'delete':
+              onDelete();
+              break;
+          }
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'merge',
+            child: Row(
+              children: [
+                Icon(Icons.merge),
+                SizedBox(width: 12),
+                Text('Merge with...'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'delete',
+            child: Row(
+              children: [
+                Icon(Icons.delete_outline),
+                SizedBox(width: 12),
+                Text('Delete'),
+              ],
+            ),
+          ),
+        ],
       ),
       onTap: onTap,
     );

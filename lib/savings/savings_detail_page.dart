@@ -4,6 +4,7 @@ import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/savings/dialogs/delete_savings_dialog.dart';
 import 'package:finanalyzer/savings/model/savings.dart';
 import 'package:finanalyzer/savings/model/savings_repository.dart';
 import 'package:finanalyzer/savings/model/savings_virtual_booking.dart';
@@ -200,10 +201,75 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
     }
   }
 
+  Future<void> _confirmDeleteSavings() async {
+    if (_tag == null || _totalBalance == null) {
+      return;
+    }
+
+    final confirmed = await DeleteSavingsDialog.show(
+      context,
+      savings: widget.savings,
+      tag: _tag!,
+      currentBalance: _totalBalance!,
+    );
+
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    try {
+      await context.read<SavingsRepository>().delete(widget.savings.id!);
+
+      if (!mounted) return;
+
+      // Navigate back to previous page
+      context.pop();
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Savings for "${_tag!.name}" deleted'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete savings: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_tag?.name ?? 'Savings')),
+      appBar: AppBar(
+        title: Text(_tag?.name ?? 'Savings'),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'delete') {
+                _confirmDeleteSavings();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline),
+                    SizedBox(width: 12),
+                    Text('Delete Savings'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addVirtualBooking,
         child: const Icon(Icons.add),

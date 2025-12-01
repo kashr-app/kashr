@@ -60,4 +60,17 @@ class SavingsRepository {
       whereArgs: [id.uuid],
     );
   }
+
+  /// Updates the tag_id reference for a savings entry.
+  ///
+  /// Used during tag merge to transfer savings from one tag to another.
+  Future<int> updateTagId(UuidValue oldTagId, UuidValue newTagId) async {
+    final db = await DatabaseHelper().database;
+    return await db.update(
+      'savings',
+      {'tag_id': newTagId.uuid},
+      where: 'tag_id = ?',
+      whereArgs: [oldTagId.uuid],
+    );
+  }
 }

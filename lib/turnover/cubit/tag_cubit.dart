@@ -78,4 +78,27 @@ class TagCubit extends Cubit<TagState> {
       );
     }
   }
+
+  /// Merges two tags by moving all tag_turnover references from source to
+  /// target.
+  ///
+  /// Parameters:
+  /// - [sourceTagId]: The tag to merge from (will be deleted)
+  /// - [targetTagId]: The tag to merge into (will remain)
+  Future<void> mergeTags(UuidValue sourceTagId, UuidValue targetTagId) async {
+    emit(state.copyWith(status: Status.loading));
+    try {
+      await _repository.mergeTags(sourceTagId, targetTagId);
+      await loadTags();
+      _log.i('Successfully merged tags');
+    } catch (e, s) {
+      _log.e('Failed to merge tags', error: e, stackTrace: s);
+      emit(
+        state.copyWith(
+          status: Status.error,
+          errorMessage: 'Failed to merge tags: $e',
+        ),
+      );
+    }
+  }
 }
