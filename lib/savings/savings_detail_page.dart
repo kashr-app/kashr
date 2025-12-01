@@ -354,10 +354,6 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
   }
 
   Widget _buildBalanceCard() {
-    final tagColor = _tag?.color != null
-        ? Color(int.parse(_tag!.color!.replaceFirst('#', '0xFF')))
-        : Theme.of(context).colorScheme.primary;
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24),
