@@ -61,7 +61,7 @@ class TagTurnoverItem extends StatelessWidget {
               note: tagTurnover.note,
               onNoteChanged: (note) {
                 context.read<TurnoverTagsCubit>().updateTagTurnoverNote(
-                  tagTurnover.id!,
+                  tagTurnover.id,
                   note,
                 );
               },

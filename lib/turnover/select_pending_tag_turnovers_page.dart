@@ -59,12 +59,11 @@ class _SelectPendingTagTurnoversPageState
 
       // Filter out tag turnovers that are already associated with this turnover
       final existingTagTurnoverIds = widget.cubit.state.tagTurnovers
-          .map((tt) => tt.tagTurnover.id?.uuid)
-          .whereType<String>()
+          .map((tt) => tt.tagTurnover.id.uuid)
           .toSet();
 
       final availableUnmatched = unmatched
-          .where((tt) => !existingTagTurnoverIds.contains(tt.id?.uuid))
+          .where((tt) => !existingTagTurnoverIds.contains(tt.id.uuid))
           .toList();
 
       // Load unlinked tag turnovers from the current session
@@ -126,7 +125,7 @@ class _SelectPendingTagTurnoversPageState
     final tagRepository = context.read<TagRepository>();
 
     final selectedTurnovers = _pendingTurnovers!
-        .where((tt) => _selectedIds.contains(tt.tagTurnover.id!.uuid))
+        .where((tt) => _selectedIds.contains(tt.tagTurnover.id.uuid))
         .toList();
 
     final selectedTagTurnovers = selectedTurnovers
@@ -282,7 +281,7 @@ class _SelectPendingTagTurnoversPageState
                       itemBuilder: (context, index) {
                         final item = _pendingTurnovers![index];
                         final isSelected = _selectedIds.contains(
-                          item.tagTurnover.id!.uuid,
+                          item.tagTurnover.id.uuid,
                         );
                         final accountDiverges =
                             item.account?.id != widget.turnover.accountId;
@@ -292,7 +291,7 @@ class _SelectPendingTagTurnoversPageState
                           isSelected: isSelected,
                           accountDiverges: accountDiverges,
                           onTap: () =>
-                              _toggleSelection(item.tagTurnover.id!.uuid),
+                              _toggleSelection(item.tagTurnover.id.uuid),
                         );
                       },
                     ),

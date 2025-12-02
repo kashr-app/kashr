@@ -117,7 +117,11 @@ class _TurnoversPageState extends State<TurnoversPage> {
         _isLoading = false;
       });
     } catch (error, stackTrace) {
-      _log.e('Error fetching turnovers page', error: error, stackTrace: stackTrace);
+      _log.e(
+        'Error fetching turnovers page',
+        error: error,
+        stackTrace: stackTrace,
+      );
       setState(() {
         _error = error.toString();
         _isLoading = false;
@@ -186,11 +190,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
   }
 
   List<TurnoverWithTags> get _selectedTurnovers => _items
-      .where(
-        (item) =>
-            item.turnover.id != null &&
-            _selectedTurnoverIds.contains(item.turnover.id!.uuid),
-      )
+      .where((item) => _selectedTurnoverIds.contains(item.turnover.id.uuid))
       .toList();
 
   Future<void> _batchAddTag() async {
@@ -201,10 +201,8 @@ class _TurnoversPageState extends State<TurnoversPage> {
 
     final selectedTag = await showDialog<Tag>(
       context: context,
-      builder: (context) => BatchTagDialog(
-        availableTags: allTags,
-        mode: BatchTagMode.add,
-      ),
+      builder: (context) =>
+          BatchTagDialog(availableTags: allTags, mode: BatchTagMode.add),
     );
 
     if (selectedTag == null || !mounted) return;
@@ -252,7 +250,10 @@ class _TurnoversPageState extends State<TurnoversPage> {
       if (isAdd) {
         await _tagTurnoverRepository.batchAddTagToTurnovers(turnovers, tag);
       } else {
-        await _tagTurnoverRepository.batchRemoveTagFromTurnovers(turnovers, tag);
+        await _tagTurnoverRepository.batchRemoveTagFromTurnovers(
+          turnovers,
+          tag,
+        );
       }
 
       _clearSelection();
@@ -288,7 +289,6 @@ class _TurnoversPageState extends State<TurnoversPage> {
 
   void _handleItemTap(TurnoverWithTags item) async {
     final id = item.turnover.id;
-    if (id == null) return;
 
     if (_isBatchMode) {
       _toggleTurnoverSelection(id.uuid);
@@ -300,7 +300,6 @@ class _TurnoversPageState extends State<TurnoversPage> {
 
   void _handleItemLongPress(TurnoverWithTags item) {
     final id = item.turnover.id;
-    if (id == null) return;
     _toggleTurnoverSelection(id.uuid);
   }
 

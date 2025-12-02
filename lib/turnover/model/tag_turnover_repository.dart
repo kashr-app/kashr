@@ -33,8 +33,7 @@ class TagTurnoverRepository {
 
     // Get all turnover IDs
     final turnoverIds = turnovers
-        .where((t) => t.id != null)
-        .map((t) => t.id!.uuid)
+        .map((t) => t.id.uuid)
         .toList();
 
     if (turnoverIds.isEmpty) return;
@@ -62,17 +61,15 @@ class TagTurnoverRepository {
     final batch = db.batch();
 
     for (final turnover in turnovers) {
-      if (turnover.id == null) continue;
-
       final allocatedAmount =
-          allocatedByTurnover[turnover.id!.uuid] ?? Decimal.zero;
+          allocatedByTurnover[turnover.id.uuid] ?? Decimal.zero;
       final remainingAmount = turnover.amountValue - allocatedAmount;
 
       // Only create if there's remaining amount to allocate
       if (remainingAmount != Decimal.zero) {
         final tagTurnover = TagTurnover(
           id: const Uuid().v4obj(),
-          turnoverId: turnover.id!,
+          turnoverId: turnover.id,
           tagId: tag.id!,
           amountValue: remainingAmount,
           amountUnit: turnover.amountUnit,
@@ -103,8 +100,7 @@ class TagTurnoverRepository {
 
     // Get all turnover IDs
     final turnoverIds = turnovers
-        .where((t) => t.id != null)
-        .map((t) => t.id!.uuid)
+        .map((t) => t.id.uuid)
         .toList();
 
     if (turnoverIds.isEmpty) return;
@@ -237,7 +233,7 @@ class TagTurnoverRepository {
       'tag_turnover',
       tagTurnover.toJson(),
       where: 'id = ?',
-      whereArgs: [tagTurnover.id?.uuid],
+      whereArgs: [tagTurnover.id.uuid],
     );
   }
 

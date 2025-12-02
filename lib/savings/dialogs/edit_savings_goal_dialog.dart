@@ -86,7 +86,7 @@ class _EditSavingsGoalDialogState extends State<EditSavingsGoalDialog> {
           : null;
 
       await savingsCubit.updateGoal(
-        widget.savings.id!,
+        widget.savings.id,
         goalValue,
         goalUnit,
       );

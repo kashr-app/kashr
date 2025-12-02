@@ -1,11 +1,10 @@
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_card.dart';
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
 
 /// Displays the turnovers list content including error, empty, and list states.
 class TurnoversListContent extends StatelessWidget {
-  TurnoversListContent({
+  const TurnoversListContent({
     required this.items,
     required this.isLoading,
     required this.hasMore,
@@ -31,8 +30,6 @@ class TurnoversListContent extends StatelessWidget {
   final void Function(TurnoverWithTags) onItemLongPress;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
-
-  final _log = Logger();
 
   @override
   Widget build(BuildContext context) {
@@ -68,28 +65,17 @@ class TurnoversListContent extends StatelessWidget {
         }
 
         final turnoverWithTags = items[index];
-        final turnoverId = turnoverWithTags.turnover.id?.uuid;
-        final isSelected =
-            turnoverId != null && selectedIds.contains(turnoverId);
+        final turnoverId = turnoverWithTags.turnover.id.uuid;
+        final isSelected = selectedIds.contains(turnoverId);
 
         return TurnoverCard(
           turnoverWithTags: turnoverWithTags,
           isSelected: isSelected,
           isBatchMode: isBatchMode,
           onTap: () {
-            final id = turnoverWithTags.turnover.id;
-            if (id == null) {
-              _log.e('Turnover has no id');
-              return;
-            }
             onItemTap(turnoverWithTags);
           },
           onLongPress: () {
-            final id = turnoverWithTags.turnover.id;
-            if (id == null) {
-              _log.e('Turnover has no id');
-              return;
-            }
             onItemLongPress(turnoverWithTags);
           },
         );

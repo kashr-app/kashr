@@ -75,12 +75,8 @@ class UnallocatedTurnoversSection extends StatelessWidget {
           turnoverWithTags: unallocatedTurnovers.first,
           onTap: () async {
             final turnoverId = unallocatedTurnovers.first.turnover.id;
-            if (turnoverId != null) {
-              await TurnoverTagsRoute(
-                turnoverId: turnoverId.uuid,
-              ).push(context);
-              onRefresh();
-            }
+            await TurnoverTagsRoute(turnoverId: turnoverId.uuid).push(context);
+            onRefresh();
           },
         ),
       ],

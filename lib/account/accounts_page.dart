@@ -413,9 +413,7 @@ class _SavingsRow extends StatelessWidget {
         ),
       ),
       onTap: () {
-        if (savings.id != null) {
-          SavingsDetailRoute(savingsId: savings.id!.uuid).go(context);
-        }
+        SavingsDetailRoute(savingsId: savings.id.uuid).go(context);
       },
     );
   }

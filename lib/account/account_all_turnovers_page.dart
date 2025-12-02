@@ -137,26 +137,24 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
 
       final newItems = <TurnoverWithTags>[];
       for (final turnover in paginatedTurnovers.reversed) {
-        if (turnover.id != null) {
-          final tagTurnovers = await _tagTurnoverRepository.getByTurnover(
-            turnover.id!,
-          );
+        final tagTurnovers = await _tagTurnoverRepository.getByTurnover(
+          turnover.id,
+        );
 
-          final tagTurnoversWithTags = tagTurnovers.map((tt) {
-            final tag = tagMap[tt.tagId];
-            return TagTurnoverWithTag(
-              tagTurnover: tt,
-              tag: tag ?? Tag(name: 'Unknown', id: tt.tagId, color: null),
-            );
-          }).toList();
-
-          newItems.add(
-            TurnoverWithTags(
-              turnover: turnover,
-              tagTurnovers: tagTurnoversWithTags,
-            ),
+        final tagTurnoversWithTags = tagTurnovers.map((tt) {
+          final tag = tagMap[tt.tagId];
+          return TagTurnoverWithTag(
+            tagTurnover: tt,
+            tag: tag ?? Tag(name: 'Unknown', id: tt.tagId, color: null),
           );
-        }
+        }).toList();
+
+        newItems.add(
+          TurnoverWithTags(
+            turnover: turnover,
+            tagTurnovers: tagTurnoversWithTags,
+          ),
+        );
       }
 
       setState(() {
@@ -285,11 +283,9 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
                   turnoverWithTags: turnoverWithTags,
                   onTap: () {
                     final id = turnoverWithTags.turnover.id;
-                    if (id != null) {
-                      TurnoverTagsRoute(
-                        turnoverId: id.uuid,
-                      ).push(context).then((_) => _refresh());
-                    }
+                    TurnoverTagsRoute(
+                      turnoverId: id.uuid,
+                    ).push(context).then((_) => _refresh());
                   },
                 );
               },
@@ -336,10 +332,9 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
               if (_openingBalance != null)
                 Text(
                   currency.format(_openingBalance!),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold,
-                  color: Theme.of(context).decimalColor(_openingBalance!),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).decimalColor(_openingBalance!),
                   ),
                 ),
             ],

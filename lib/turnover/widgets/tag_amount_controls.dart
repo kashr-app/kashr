@@ -112,7 +112,7 @@ class TagAmountControls extends StatelessWidget {
     }
 
     final signedValue = isNegative ? -newAbsoluteAmount : newAbsoluteAmount;
-    cubit.updateTagTurnoverAmount(tagTurnover.id!, signedValue);
+    cubit.updateTagTurnoverAmount(tagTurnover.id, signedValue);
   }
 
   Future<void> _editAmount(
@@ -133,7 +133,7 @@ class TagAmountControls extends StatelessWidget {
       final signedResult = isNegative ? -result : result;
       context
           .read<TurnoverTagsCubit>()
-          .updateTagTurnoverAmount(tagTurnover.id!, signedResult);
+          .updateTagTurnoverAmount(tagTurnover.id, signedResult);
     }
   }
 }

@@ -53,7 +53,7 @@ class TagSuggestionService {
       ORDER BY tt.createdAt DESC
       LIMIT ?
       ''',
-      [turnover.id?.uuid ?? '', _maxHistoricalRecords],
+      [turnover.id.uuid, _maxHistoricalRecords],
     );
 
     if (historicalData.isEmpty) {

@@ -231,7 +231,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       emit(state.copyWith(status: Status.loading));
 
       final t = state.turnover;
-      if (t == null || t.id == null) return;
+      if (t == null) return;
 
       // Update the turnover itself
       await _turnoverRepository.updateTurnover(t);
@@ -268,12 +268,6 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       // Update or create current tag turnovers
       for (final tt in state.tagTurnovers) {
         final id = tt.tagTurnover.id;
-        if (id == null) {
-          // Should never happen, but handle it
-          await _tagTurnoverRepository.createTagTurnover(tt.tagTurnover);
-          continue;
-        }
-
         final idString = id.uuid;
         final wasInitial = initialIds.contains(id);
         final wasPending = state.associatedPendingIds.contains(idString);
@@ -379,7 +373,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
   void associatePendingTagTurnovers(List<TagTurnover> pendingTagTurnovers) {
     try {
       final t = state.turnover;
-      if (t == null || t.id == null) return;
+      if (t == null) return;
 
       // Update account IDs and link to turnover
       final updatedPendingTagTurnovers = pendingTagTurnovers.map((tt) {
@@ -427,7 +421,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
 
       // Track the IDs of pending tag turnovers we're associating
       final pendingIds = updatedPendingTagTurnovers
-          .map((tt) => tt.id?.uuid)
+          .map((tt) => tt.id.uuid)
           .whereType<String>()
           .toSet();
 
@@ -467,23 +461,21 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       emit(state.copyWith(status: Status.loading));
 
       final t = state.turnover;
-      if (t == null || t.id == null) return;
+      if (t == null) return;
 
       if (makePending) {
         // Set turnoverId to null for all tag turnovers
-        final tagTurnovers = await _tagTurnoverRepository.getByTurnover(t.id!);
+        final tagTurnovers = await _tagTurnoverRepository.getByTurnover(t.id);
         for (final tagTurnover in tagTurnovers) {
-          if (tagTurnover.id != null) {
-            await _tagTurnoverRepository.unlinkFromTurnover(tagTurnover.id!);
-          }
+          await _tagTurnoverRepository.unlinkFromTurnover(tagTurnover.id);
         }
       } else {
         // Delete all tag turnovers
-        await _tagTurnoverRepository.deleteAllForTurnover(t.id!);
+        await _tagTurnoverRepository.deleteAllForTurnover(t.id);
       }
 
       // Delete the turnover
-      await _turnoverRepository.deleteTurnover(t.id!);
+      await _turnoverRepository.deleteTurnover(t.id);
 
       _log.i('Successfully deleted turnover');
       emit(state.copyWith(status: Status.success));

@@ -6,16 +6,13 @@ import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 
 class QuickTransferEntrySheet extends StatefulWidget {
   final Account fromAccount;

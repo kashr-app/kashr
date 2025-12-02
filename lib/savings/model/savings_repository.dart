@@ -48,7 +48,7 @@ class SavingsRepository {
       'savings',
       savings.toJson(),
       where: 'id = ?',
-      whereArgs: [savings.id?.uuid],
+      whereArgs: [savings.id.uuid],
     );
   }
 

@@ -22,7 +22,7 @@ class SelectFromPendingTagTurnoversHint extends StatelessWidget {
           turnover: turnover,
           tagTurnoverRepository: tagTurnoverRepository,
           existingTagTurnoverIds: state.tagTurnovers
-              .map((tt) => tt.tagTurnover.id?.uuid)
+              .map((tt) => tt.tagTurnover.id.uuid)
               .whereType<String>()
               .toSet(),
           unlinkedTagTurnoverIds: state.unlinkedTagTurnoverIds,
@@ -57,7 +57,7 @@ class _HintContent extends StatelessWidget {
 
         // Filter out tag turnovers that are already associated with this turnover
         final availablePendingTurnovers = unmatchedFromDb
-            .where((tt) => !existingTagTurnoverIds.contains(tt.id?.uuid))
+            .where((tt) => !existingTagTurnoverIds.contains(tt.id.uuid))
             .toList();
 
         // Add count of unlinked tag turnovers

@@ -103,26 +103,24 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
 
       final turnoversWithTags = <TurnoverWithTags>[];
       for (final turnover in recentTurnovers) {
-        if (turnover.id != null) {
-          final tagTurnovers = await tagTurnoverRepository.getByTurnover(
-            turnover.id!,
-          );
+        final tagTurnovers = await tagTurnoverRepository.getByTurnover(
+          turnover.id,
+        );
 
-          final tagTurnoversWithTags = tagTurnovers.map((tt) {
-            final tag = tagMap[tt.tagId];
-            return TagTurnoverWithTag(
-              tagTurnover: tt,
-              tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
-            );
-          }).toList();
-
-          turnoversWithTags.add(
-            TurnoverWithTags(
-              turnover: turnover,
-              tagTurnovers: tagTurnoversWithTags,
-            ),
+        final tagTurnoversWithTags = tagTurnovers.map((tt) {
+          final tag = tagMap[tt.tagId];
+          return TagTurnoverWithTag(
+            tagTurnover: tt,
+            tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
           );
-        }
+        }).toList();
+
+        turnoversWithTags.add(
+          TurnoverWithTags(
+            turnover: turnover,
+            tagTurnovers: tagTurnoversWithTags,
+          ),
+        );
       }
 
       if (mounted) {
@@ -377,7 +375,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: Theme.of(context).decimalColor(amount.savingsOnAccount),
+                      color: Theme.of(
+                        context,
+                      ).decimalColor(amount.savingsOnAccount),
                     ),
                   ),
                 ],
@@ -398,9 +398,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ],
               ),
               onTap: () {
-                if (savings.id != null) {
-                  SavingsDetailRoute(savingsId: savings.id!.uuid).go(context);
-                }
+                SavingsDetailRoute(savingsId: savings.id.uuid).go(context);
               },
             ),
           );
@@ -458,9 +456,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
               turnoverWithTags: turnoverWithTags,
               onTap: () {
                 final id = turnoverWithTags.turnover.id;
-                if (id != null) {
-                  TurnoverTagsRoute(turnoverId: id.uuid).push(context);
-                }
+                TurnoverTagsRoute(turnoverId: id.uuid).push(context);
               },
             );
           }),
