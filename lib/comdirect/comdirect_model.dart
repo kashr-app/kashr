@@ -1,4 +1,4 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:finanalyzer/core/secure_storage.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:decimal/decimal.dart';
 import 'package:local_auth/local_auth.dart';
@@ -23,10 +23,6 @@ class Credentials {
     required this.password,
   });
 
-  static FlutterSecureStorage _secureStorage() => FlutterSecureStorage(
-    aOptions: const AndroidOptions(encryptedSharedPreferences: true),
-  );
-
   static Future<Credentials?> load() async {
     Future<bool> authenticate() async {
       try {
@@ -45,7 +41,7 @@ class Credentials {
     if (!authenticated) {
       return null;
     }
-    final storage = _secureStorage();
+    final storage = secureStorage();
     final clientId = await storage.read(key: 'comdirectClientId') ?? '';
     final clientSecret = await storage.read(key: 'comdirectClientSecret') ?? '';
     final username = await storage.read(key: 'comdirectUsername') ?? '';
@@ -59,7 +55,7 @@ class Credentials {
   }
 
   Future<void> store() async {
-    final storage = _secureStorage();
+    final storage = secureStorage();
     await storage.write(key: 'comdirectClientId', value: clientId);
     await storage.write(key: 'comdirectClientSecret', value: clientSecret);
     await storage.write(key: 'comdirectUsername', value: username);
@@ -67,7 +63,7 @@ class Credentials {
   }
 
   Future<void> delete() async {
-    final storage = _secureStorage();
+    final storage = secureStorage();
     await storage.delete(key: 'comdirectClientId');
     await storage.delete(key: 'comdirectClientSecret');
     await storage.delete(key: 'comdirectUsername');

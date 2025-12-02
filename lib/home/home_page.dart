@@ -6,6 +6,7 @@ import 'package:finanalyzer/account/accounts_page.dart';
 import 'package:finanalyzer/account/create_account_page.dart';
 import 'package:finanalyzer/account/edit_account_page.dart';
 import 'package:finanalyzer/analytics/analytics_page.dart';
+import 'package:finanalyzer/backup/backup_list_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
@@ -42,6 +43,12 @@ part '../_gen/home/home_page.g.dart';
   path: '/app',
   routes: <TypedGoRoute<GoRouteData>>[
     TypedGoRoute<SettingsRoute>(path: 'settings'),
+    TypedGoRoute<BackupListRoute>(
+      path: 'backups',
+      routes: [
+        TypedGoRoute<NextcloudSettingsRoute>(path: 'nextcloud-settings'),
+      ],
+    ),
     TypedGoRoute<TagsRoute>(path: 'tags'),
     TypedGoRoute<AnalyticsRoute>(path: 'analytics'),
     TypedGoRoute<PendingTurnoversRoute>(path: 'pending-turnovers'),

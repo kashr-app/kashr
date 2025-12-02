@@ -1,4 +1,11 @@
 import 'package:finanalyzer/account/services/balance_calculation_service.dart';
+import 'package:finanalyzer/backup/cubit/backup_cubit.dart';
+import 'package:finanalyzer/backup/model/backup_repository.dart';
+import 'package:finanalyzer/backup/services/archive_service.dart';
+import 'package:finanalyzer/backup/services/backup_service.dart';
+import 'package:finanalyzer/backup/services/local_storage_service.dart';
+import 'package:finanalyzer/core/secure_storage.dart';
+import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
 import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:finanalyzer/account/cubit/account_cubit.dart';
@@ -44,6 +51,19 @@ final savingsBalanceService = SavingsBalanceService(
 );
 final turnoverMatchingService = TurnoverMatchingService(tagTurnoverRepository);
 
+// Backup services
+final archiveService = ArchiveService();
+final localStorageService = LocalStorageService();
+final backupRepository = BackupRepository(
+  localStorageService: localStorageService,
+);
+final backupService = BackupService(
+  dbHelper: DatabaseHelper(),
+  backupRepository: backupRepository,
+  archiveService: archiveService,
+  localStorageService: localStorageService,
+);
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -68,6 +88,7 @@ class MyApp extends StatelessWidget {
         Provider<TurnoverMatchingService>.value(
           value: turnoverMatchingService,
         ),
+        Provider<BackupService>.value(value: backupService),
         BlocProvider(
           create: (_) => LocalAuthCubit(),
         ),
@@ -90,6 +111,9 @@ class MyApp extends StatelessWidget {
         BlocProvider(
           lazy: false,
           create: (_) => TagCubit(tagRepository)..loadTags(),
+        ),
+        BlocProvider(
+          create: (_) => BackupCubit(backupService, secureStorage()),
         ),
       ],
       child: BlocListener<LocalAuthCubit, LocalAuthState>(

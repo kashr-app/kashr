@@ -1,3 +1,4 @@
+import 'package:finanalyzer/backup/backup_list_page.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
@@ -84,21 +85,28 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
-                Divider(),
+                const Divider(),
+                ListTile(
+                  title: const Text('Backup & Restore'),
+                  subtitle: const Text('Manage database backups'),
+                  leading: const Icon(Icons.backup),
+                  onTap: () => context.push(const BackupListRoute().location),
+                ),
+                const Divider(),
                 ListTile(
                   title: Text('App Version'),
                   subtitle: Text(version),
-                  leading: Icon(Icons.info_outline),
+                  leading: const Icon(Icons.info_outline),
                 ),
                 ListTile(
                   title: Text('Build Number'),
                   subtitle: Text(buildNumber),
-                  leading: Icon(Icons.build),
+                  leading: const Icon(Icons.build),
                 ),
                 ListTile(
-                  title: Text('Database Version'),
+                  title: const Text('Database Version'),
                   subtitle: Text('$dbVersion'),
-                  leading: Icon(Icons.storage),
+                  leading: const Icon(Icons.storage),
                 ),
               ],
             ),
