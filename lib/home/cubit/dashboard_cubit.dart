@@ -244,10 +244,10 @@ class DashboardCubit extends Cubit<DashboardState> {
   }
 
   /// Sets a specific month and year.
-  Future<void> selectMonth(int year, int month) async {
+  Future<void> selectMonth(YearMonth yearMonth) async {
     emit(
       state.copyWith(
-        selectedPeriod: YearMonth(year: year, month: month),
+        selectedPeriod: yearMonth,
       ),
     );
     await loadMonthData();

@@ -179,8 +179,7 @@ class HomePage extends StatelessWidget {
                 final velocity = details.primaryVelocity ?? 0;
                 if (velocity > 0) {
                   context.read<DashboardCubit>().previousMonth();
-                }
-                else if (velocity < 0) {
+                } else if (velocity < 0) {
                   context.read<DashboardCubit>().nextMonth();
                 }
               },
@@ -195,6 +194,9 @@ class HomePage extends StatelessWidget {
                           context.read<DashboardCubit>().previousMonth(),
                       onNextMonth: () =>
                           context.read<DashboardCubit>().nextMonth(),
+                      onMonthSelected: (yearMonth) => context
+                          .read<DashboardCubit>()
+                          .selectMonth(yearMonth),
                     ),
                     const SizedBox(height: 8),
                     const PendingTurnoversHint(),

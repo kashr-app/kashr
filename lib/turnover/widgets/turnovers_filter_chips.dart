@@ -34,6 +34,8 @@ class TurnoversFilterChips extends StatelessWidget {
               selectedPeriod: filter.period!,
               onPreviousMonth: () => _navigatePeriod(context, -1),
               onNextMonth: () => _navigatePeriod(context, 1),
+              onMonthSelected: (yearMonth) =>
+                  onFilterChanged(filter.copyWith(period: yearMonth)),
               onAction: OnAction(
                 tooltip: 'Clear period filter',
                 onAction: () => onFilterChanged(filter.copyWith(period: null)),
@@ -60,15 +62,16 @@ class TurnoversFilterChips extends StatelessWidget {
               if (filter.unallocatedOnly == true)
                 Chip(
                   label: const Text('Unallocated'),
-                  onDeleted: () => onFilterChanged(
-                    filter.copyWith(unallocatedOnly: null),
-                  ),
+                  onDeleted: () =>
+                      onFilterChanged(filter.copyWith(unallocatedOnly: null)),
                 ),
               if (filter.tagIds != null)
-                ...filter.tagIds!.map((tagId) => _TagFilterChip(
-                      tagId: tagId,
-                      onDeleted: () => _removeTagFilter(tagId),
-                    )),
+                ...filter.tagIds!.map(
+                  (tagId) => _TagFilterChip(
+                    tagId: tagId,
+                    onDeleted: () => _removeTagFilter(tagId),
+                  ),
+                ),
             ],
           ),
         ],
@@ -110,8 +113,8 @@ class _TagFilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: context.read<TagRepository>().getTagById(
-            UuidValue.fromString(tagId),
-          ),
+        UuidValue.fromString(tagId),
+      ),
       builder: (context, snapshot) {
         final tag = snapshot.data;
         final tagName = tag?.name ?? tagId.substring(0, 8);
@@ -122,7 +125,9 @@ class _TagFilterChip extends StatelessWidget {
         return Chip(
           label: Text(tagName),
           backgroundColor: tagColor?.withValues(alpha: 0.2),
-          side: tagColor != null ? BorderSide(color: tagColor, width: 1.5) : null,
+          side: tagColor != null
+              ? BorderSide(color: tagColor, width: 1.5)
+              : null,
           onDeleted: onDeleted,
         );
       },
