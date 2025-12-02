@@ -1,3 +1,4 @@
+import 'package:finanalyzer/core/extensions/associate_by.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
@@ -18,7 +19,13 @@ class TagCubit extends Cubit<TagState> {
     emit(state.copyWith(status: Status.loading));
     try {
       final tags = await _repository.getAllTags();
-      emit(state.copyWith(status: Status.success, tags: tags));
+      emit(
+        state.copyWith(
+          status: Status.success,
+          tags: tags,
+          tagById: tags.associateBy((t) => t.id!),
+        ),
+      );
     } catch (e, s) {
       _log.e('Failed to load tags', error: e, stackTrace: s);
       emit(

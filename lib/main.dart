@@ -11,6 +11,7 @@ import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
 import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/model/account_repository.dart';
+import 'package:finanalyzer/savings/cubit/savings_cubit.dart';
 import 'package:finanalyzer/savings/model/savings_repository.dart';
 import 'package:finanalyzer/savings/model/savings_virtual_booking_repository.dart';
 import 'package:finanalyzer/savings/services/savings_balance_service.dart';
@@ -85,35 +86,27 @@ class MyApp extends StatelessWidget {
         Provider<BalanceCalculationService>.value(
           value: balanceCalculationService,
         ),
-        Provider<SavingsBalanceService>.value(
-          value: savingsBalanceService,
-        ),
-        Provider<TurnoverMatchingService>.value(
-          value: turnoverMatchingService,
-        ),
+        Provider<SavingsBalanceService>.value(value: savingsBalanceService),
+        Provider<TurnoverMatchingService>.value(value: turnoverMatchingService),
         Provider<BackupService>.value(value: backupService),
-        BlocProvider(
-          create: (_) => LocalAuthCubit(),
-        ),
-        BlocProvider(
-          create: (_) => SettingsCubit(),
-        ),
-        BlocProvider(
-          create: (_) => TurnoverCubit(turnoverRepository),
-        ),
+        BlocProvider(create: (_) => LocalAuthCubit()),
+        BlocProvider(create: (_) => SettingsCubit()),
+        BlocProvider(create: (_) => TurnoverCubit(turnoverRepository)),
         BlocProvider(
           lazy: false,
-          create: (_) => AccountCubit(
-            accountRepository,
-            balanceCalculationService,
-          )..loadAccounts(),
+          create: (_) =>
+              AccountCubit(accountRepository, balanceCalculationService)
+                ..loadAccounts(),
         ),
-        BlocProvider(
-          create: (_) => ComdirectAuthCubit(),
-        ),
+        BlocProvider(create: (_) => ComdirectAuthCubit()),
         BlocProvider(
           lazy: false,
           create: (_) => TagCubit(tagRepository)..loadTags(),
+        ),
+        BlocProvider(
+          create: (_) =>
+              SavingsCubit(savingsRepository, savingsBalanceService)
+                ..loadAllSavings(),
         ),
         BlocProvider(
           create: (_) => BackupCubit(backupService, secureStorage()),
@@ -124,16 +117,17 @@ class MyApp extends StatelessWidget {
         listener: (context, state) => router.refresh(),
         child: ListenAppLifecycle(
           child: BlocBuilder<SettingsCubit, SettingsState>(
-              builder: (context, state) {
-            return MaterialApp.router(
-              title: 'Finanalyzer',
-              theme: lightMode,
-              darkTheme: darkMode,
-              themeMode: state.themeMode,
-              debugShowCheckedModeBanner: false,
-              routerConfig: router,
-            );
-          }),
+            builder: (context, state) {
+              return MaterialApp.router(
+                title: 'Finanalyzer',
+                theme: lightMode,
+                darkTheme: darkMode,
+                themeMode: state.themeMode,
+                debugShowCheckedModeBanner: false,
+                routerConfig: router,
+              );
+            },
+          ),
         ),
       ),
     );

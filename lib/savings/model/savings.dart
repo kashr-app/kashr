@@ -16,7 +16,7 @@ abstract class Savings with _$Savings {
   const Savings._();
 
   const factory Savings({
-    @UUIDNullableJsonConverter() UuidValue? id,
+    @UUIDJsonConverter() required UuidValue id,
     @JsonKey(name: 'tag_id') @UUIDJsonConverter() required UuidValue tagId,
     @JsonKey(name: 'goal_value')
     @DecimalNullableJsonConverter()

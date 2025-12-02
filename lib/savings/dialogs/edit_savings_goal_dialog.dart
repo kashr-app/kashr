@@ -1,31 +1,49 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
 import 'package:finanalyzer/core/currency.dart';
+import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/savings/cubit/savings_cubit.dart';
 import 'package:finanalyzer/savings/model/savings.dart';
-import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uuid/uuid.dart';
 
-class CreateSavingsDialog extends StatefulWidget {
-  const CreateSavingsDialog({super.key});
+/// Dialog for editing the savings goal.
+class EditSavingsGoalDialog extends StatefulWidget {
+  final Savings savings;
+
+  const EditSavingsGoalDialog({required this.savings, super.key});
+
+  /// Shows the dialog and returns true if the goal was updated.
+  static Future<bool?> show(BuildContext context, Savings savings) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => EditSavingsGoalDialog(savings: savings),
+    );
+  }
 
   @override
-  State<CreateSavingsDialog> createState() => _CreateSavingsDialogState();
+  State<EditSavingsGoalDialog> createState() => _EditSavingsGoalDialogState();
 }
 
-class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
+class _EditSavingsGoalDialogState extends State<EditSavingsGoalDialog> {
   final _formKey = GlobalKey<FormState>();
 
-  Tag? _selectedTag;
   bool _hasGoal = false;
   int? _goalAmountScaled;
   final Currency _goalCurrency = Currency.EUR;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _hasGoal = widget.savings.goalValue != null;
+    if (_hasGoal && widget.savings.goalValue != null) {
+      _goalAmountScaled = (widget.savings.goalValue! * Decimal.fromInt(100))
+          .toBigInt()
+          .toInt();
+    }
+  }
 
   Future<void> _selectGoalAmount() async {
     final result = await AmountDialog.show(
@@ -52,13 +70,6 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedTag == null) {
-      setState(() {
-        _errorMessage = 'Please select a tag';
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -67,21 +78,18 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
     try {
       final savingsCubit = context.read<SavingsCubit>();
 
-      // Create savings
-      final savings = Savings(
-        id: const Uuid().v4obj(),
-        tagId: _selectedTag!.id!,
-        goalValue: _hasGoal && _goalAmountScaled != null
-            ? (Decimal.fromInt(_goalAmountScaled!) / Decimal.fromInt(100))
-                .toDecimal(scaleOnInfinitePrecision: 2)
-            : null,
-        goalUnit: _hasGoal && _goalAmountScaled != null
-            ? _goalCurrency.name
-            : null,
-        createdAt: DateTime.now(),
-      );
+      final goalValue = _hasGoal && _goalAmountScaled != null
+          ? decimalUnscale(_goalAmountScaled)
+          : null;
+      final goalUnit = _hasGoal && _goalAmountScaled != null
+          ? _goalCurrency.name
+          : null;
 
-      await savingsCubit.createSavings(savings);
+      await savingsCubit.updateGoal(
+        widget.savings.id!,
+        goalValue,
+        goalUnit,
+      );
 
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -97,7 +105,7 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create Savings'),
+      title: const Text('Edit Savings Goal'),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -124,46 +132,6 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
                   ),
                   const SizedBox(height: 16),
                 ],
-
-                // Tag selection
-                InkWell(
-                  onTap: () async {
-                    final selectedTag = await AddTagDialog.show(context);
-                    if (selectedTag != null) {
-                      setState(() {
-                        _selectedTag = selectedTag;
-                        _errorMessage = null;
-                      });
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Tag',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.arrow_drop_down),
-                    ),
-                    child: _selectedTag != null
-                        ? Row(
-                            children: [
-                              TagAvatar(tag: _selectedTag!, radius: 12),
-                              const SizedBox(width: 8),
-                              Text(_selectedTag!.name),
-                            ],
-                          )
-                        : Text(
-                            'Tap to select or create tag',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 16),
 
                 // Goal toggle
                 SwitchListTile(
@@ -194,10 +162,10 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
                             : 'Tap to enter amount',
                         style: _goalAmountScaled == null
                             ? Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                )
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              )
                             : null,
                       ),
                     ),
@@ -221,7 +189,7 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Create'),
+              : const Text('Save'),
         ),
       ],
     );

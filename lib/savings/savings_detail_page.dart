@@ -4,15 +4,18 @@ import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/savings/cubit/savings_cubit.dart';
+import 'package:finanalyzer/savings/cubit/savings_state.dart';
 import 'package:finanalyzer/savings/dialogs/delete_savings_dialog.dart';
+import 'package:finanalyzer/savings/dialogs/edit_savings_goal_dialog.dart';
 import 'package:finanalyzer/savings/model/savings.dart';
-import 'package:finanalyzer/savings/model/savings_repository.dart';
 import 'package:finanalyzer/savings/model/savings_virtual_booking.dart';
 import 'package:finanalyzer/savings/model/savings_virtual_booking_repository.dart';
 import 'package:finanalyzer/savings/services/savings_balance_service.dart';
 import 'package:finanalyzer/savings/virtual_booking_dialog.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
@@ -29,46 +32,7 @@ class SavingsDetailRoute extends GoRouteData with $SavingsDetailRoute {
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return _SavingsDetailPageWrapper(savingsId: savingsId);
-  }
-}
-
-/// Wrapper widget that loads savings by ID and passes it to SavingsDetailPage
-class _SavingsDetailPageWrapper extends StatelessWidget {
-  final String savingsId;
-
-  const _SavingsDetailPageWrapper({required this.savingsId});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Savings?>(
-      future: context.read<SavingsRepository>().getById(
-        UuidValue.fromString(savingsId),
-      ),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasError || snapshot.data == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Error')),
-            body: Center(
-              child: Text(
-                snapshot.hasError
-                    ? 'Error: ${snapshot.error}'
-                    : 'Savings not found',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          );
-        }
-
-        return SavingsDetailPage(savings: snapshot.data!);
-      },
-    );
+    return SavingsDetailPage(savingsId: UuidValue.fromString(savingsId));
   }
 }
 
@@ -120,123 +84,132 @@ class TagTurnoverItem extends SavingsTransactionItem {
 }
 
 class SavingsDetailPage extends StatefulWidget {
-  final Savings savings;
+  final UuidValue savingsId;
 
-  const SavingsDetailPage({required this.savings, super.key});
+  const SavingsDetailPage({super.key, required this.savingsId});
 
   @override
   State<SavingsDetailPage> createState() => _SavingsDetailPageState();
 }
 
 class _SavingsDetailPageState extends State<SavingsDetailPage> {
-  Tag? _tag;
+  bool _isLoadingDetails = true;
   Decimal? _totalBalance;
   Map<UuidValue, Decimal> _accountBreakdown = {};
   List<SavingsTransactionItem> _transactions = [];
-  bool _isLoading = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadDetails();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadDetails() async {
     setState(() {
-      _isLoading = true;
+      _isLoadingDetails = true;
       _errorMessage = null;
     });
 
     try {
-      final tagRepository = context.read<TagRepository>();
+      final savings = context
+          .read<SavingsCubit>()
+          .state
+          .savingsById[widget.savingsId];
+      if (savings == null) {
+        setState(() {
+          _errorMessage = 'Savings not found';
+          _isLoadingDetails = false;
+        });
+        return;
+      }
+
       final savingsBalanceService = context.read<SavingsBalanceService>();
       final virtualBookingRepository = context
           .read<SavingsVirtualBookingRepository>();
       final tagTurnoverRepository = context.read<TagTurnoverRepository>();
 
       final results = await Future.wait([
-        tagRepository.getTagById(widget.savings.tagId),
-        savingsBalanceService.calculateTotalBalance(widget.savings),
-        savingsBalanceService.getAccountBreakdown(widget.savings),
-        virtualBookingRepository.getBySavingsId(widget.savings.id!),
-        tagTurnoverRepository.getByTag(widget.savings.tagId),
+        savingsBalanceService.calculateTotalBalance(savings),
+        savingsBalanceService.getAccountBreakdown(savings),
+        virtualBookingRepository.getBySavingsId(savings.id),
+        tagTurnoverRepository.getByTag(savings.tagId),
       ]);
 
-      final virtualBookings = results[3] as List<SavingsVirtualBooking>;
-      final tagTurnovers = results[4] as List<TagTurnover>;
+      final virtualBookings = results[2] as List<SavingsVirtualBooking>;
+      final tagTurnovers = results[3] as List<TagTurnover>;
 
-      // Combine virtual bookings and tag turnovers into transaction items
       final transactions = <SavingsTransactionItem>[
         ...virtualBookings.map((b) => VirtualBookingItem(b)),
         ...tagTurnovers.map((t) => TagTurnoverItem(t)),
       ];
 
-      // Sort by booking date descending (newest first)
       transactions.sort((a, b) => b.bookingDate.compareTo(a.bookingDate));
 
       setState(() {
-        _tag = results[0] as Tag?;
-        _totalBalance = results[1] as Decimal;
-        _accountBreakdown = results[2] as Map<UuidValue, Decimal>;
+        _totalBalance = results[0] as Decimal;
+        _accountBreakdown = results[1] as Map<UuidValue, Decimal>;
         _transactions = transactions;
-        _isLoading = false;
+        _isLoadingDetails = false;
       });
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
-        _isLoading = false;
+        _isLoadingDetails = false;
       });
     }
   }
 
-  Future<void> _addVirtualBooking() async {
+  Future<void> _addVirtualBooking(Savings savings) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => VirtualBookingDialog(savings: widget.savings),
+      builder: (context) => VirtualBookingDialog(savings: savings),
     );
 
-    if (result == true) {
-      _loadData();
+    if (result == true && mounted) {
+      _loadDetails();
     }
   }
 
-  Future<void> _confirmDeleteSavings() async {
-    if (_tag == null || _totalBalance == null) {
-      return;
-    }
+  Future<void> _editGoal(Savings savings) async {
+    final result = await EditSavingsGoalDialog.show(context, savings);
 
+    if (result == true && mounted) {
+      _loadDetails();
+    }
+  }
+
+  Future<void> _confirmDeleteSavings(
+    Savings savings,
+    Tag tag,
+    Decimal totalBalance,
+  ) async {
     final confirmed = await DeleteSavingsDialog.show(
       context,
-      savings: widget.savings,
-      tag: _tag!,
-      currentBalance: _totalBalance!,
+      savings: savings,
+      tag: tag,
+      currentBalance: totalBalance,
     );
 
     if (!confirmed || !mounted) {
       return;
     }
 
-    try {
-      await context.read<SavingsRepository>().delete(widget.savings.id!);
+    final success = await context.read<SavingsCubit>().deleteSavings(
+      widget.savingsId,
+    );
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      // Navigate back to previous page
+    if (success) {
       context.pop();
-
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Savings for "${_tag!.name}" deleted'),
-        ),
+        SnackBar(content: Text('Savings for "${tag.name}" deleted')),
       );
-    } catch (e) {
-      if (!mounted) return;
-
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete savings: $e'),
+          content: const Text('Failed to delete savings'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -245,43 +218,88 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_tag?.name ?? 'Savings'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'delete') {
-                _confirmDeleteSavings();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_outline),
-                    SizedBox(width: 12),
-                    Text('Delete Savings'),
-                  ],
-                ),
+    return BlocBuilder<SavingsCubit, SavingsState>(
+      builder: (context, savingsState) {
+        final savings = savingsState.savingsById[widget.savingsId];
+        if (savings == null) {
+          return _buildErrorScaffold('Savings not found');
+        }
+
+        return BlocBuilder<TagCubit, TagState>(
+          builder: (context, tagState) {
+            final tag = tagState.tagById[savings.tagId];
+            if (tag == null) {
+              return _buildErrorScaffold('Savings tag not found');
+            }
+
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(tag.name),
+                actions: [
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit_goal') {
+                        _editGoal(savings);
+                      } else if (value == 'delete' && _totalBalance != null) {
+                        _confirmDeleteSavings(savings, tag, _totalBalance!);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit_goal',
+                        child: Row(
+                          children: [
+                            Icon(Icons.flag_outlined),
+                            SizedBox(width: 12),
+                            Text('Edit Goal'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline),
+                            SizedBox(width: 12),
+                            Text('Delete Savings'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addVirtualBooking,
-        child: const Icon(Icons.add),
-      ),
-      body: SafeArea(child: _buildBody()),
+              floatingActionButton: FloatingActionButton(
+                onPressed: () => _addVirtualBooking(savings),
+                child: const Icon(Icons.add),
+              ),
+              body: SafeArea(child: _buildBody(savings)),
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
+  Scaffold _buildErrorScaffold(String error) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Savings')),
+      body: Container(
+        color: Theme.of(context).colorScheme.errorContainer,
+        child: Text(
+          'ERROR: $error',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onErrorContainer,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(Savings? savings) {
+    if (_isLoadingDetails) {
       return RefreshIndicator(
-        onRefresh: _loadData,
+        onRefresh: _loadDetails,
         child: ListView(
           children: const [
             SizedBox(
@@ -295,7 +313,7 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
 
     if (_errorMessage != null) {
       return RefreshIndicator(
-        onRefresh: _loadData,
+        onRefresh: _loadDetails,
         child: ListView(
           children: [
             SizedBox(
@@ -312,7 +330,7 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
                     ),
                     const SizedBox(height: 16),
                     FilledButton(
-                      onPressed: _loadData,
+                      onPressed: _loadDetails,
                       child: const Text('Retry'),
                     ),
                   ],
@@ -325,27 +343,27 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
     }
 
     return BlocBuilder<AccountCubit, AccountState>(
-      builder: (context, state) {
+      builder: (context, accountState) {
         final accountById = {
-          for (final a in state.accounts)
+          for (final a in accountState.accounts)
             if (a.id != null) a.id!: a,
         };
         return RefreshIndicator(
-          onRefresh: _loadData,
+          onRefresh: _loadDetails,
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               _buildBalanceCard(),
               const SizedBox(height: 16),
-              if (widget.savings.goalValue != null) ...[
-                _buildGoalCard(),
+              if (savings?.goalValue != null) ...[
+                _buildGoalCard(savings!),
                 const SizedBox(height: 16),
               ],
               if (_accountBreakdown.isNotEmpty) ...[
                 _buildAccountBreakdownCard(accountById),
                 const SizedBox(height: 16),
               ],
-              _buildHistoryCard(accountById),
+              _buildHistoryCard(accountById, savings),
             ],
           ),
         );
@@ -374,10 +392,10 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
     );
   }
 
-  Widget _buildGoalCard() {
-    if (widget.savings.goalValue == null) return const SizedBox();
+  Widget _buildGoalCard(Savings savings) {
+    if (savings.goalValue == null) return const SizedBox();
 
-    final goalValue = widget.savings.goalValue!;
+    final goalValue = savings.goalValue!;
     final currentBalance = _totalBalance ?? Decimal.zero;
     final progress = goalValue > Decimal.zero
         ? (currentBalance / goalValue).toDouble()
@@ -391,11 +409,22 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Goal Progress',
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Goal Progress',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  iconSize: 20,
+                  onPressed: () => _editGoal(savings),
+                  tooltip: 'Edit Goal',
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             LinearProgressIndicator(
               value: progress.clamp(0.0, 1.0),
               minHeight: 8,
@@ -473,7 +502,10 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
     );
   }
 
-  Widget _buildHistoryCard(Map<UuidValue, Account> accountById) {
+  Widget _buildHistoryCard(
+    Map<UuidValue, Account> accountById,
+    Savings? savings,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -502,8 +534,8 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
                 return _TransactionTile(
                   transaction: transaction,
                   accountById: accountById,
-                  onReload: _loadData,
-                  savings: widget.savings,
+                  onReload: _loadDetails,
+                  savings: savings!,
                 );
               }),
           ],

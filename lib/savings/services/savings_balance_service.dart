@@ -25,7 +25,7 @@ class SavingsBalanceService {
   Future<Decimal> calculateTotalBalance(Savings savings) async {
     final turnoversSum = await _tagTurnoverRepository.sumByTag(savings.tagId);
     final virtualSum = await _virtualBookingRepository.sumBySavingsId(
-      savings.id!,
+      savings.id,
     );
     return turnoversSum + virtualSum;
   }
@@ -40,7 +40,7 @@ class SavingsBalanceService {
       accountId,
     );
     final virtualSum = await _virtualBookingRepository.sumBySavingsIdAndAccount(
-      savings.id!,
+      savings.id,
       accountId,
     );
 
@@ -53,7 +53,7 @@ class SavingsBalanceService {
     // for this savings
     final accountIds = {
       ...(await _tagTurnoverRepository.findAccountsByTagId(savings.tagId)),
-      ...(await _virtualBookingRepository.findAccountsBySavings(savings.id!)),
+      ...(await _virtualBookingRepository.findAccountsBySavings(savings.id)),
     }.toList();
 
     final breakdown = <UuidValue, Decimal>{};

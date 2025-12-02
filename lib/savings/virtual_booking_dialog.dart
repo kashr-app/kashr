@@ -204,7 +204,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
       final booking = SavingsVirtualBooking(
         id: widget.booking?.id ?? const Uuid().v4obj(),
-        savingsId: widget.savings.id!,
+        savingsId: widget.savings.id,
         accountId: _selectedAccount!.id!,
         amountValue: adjustedAmount,
         amountUnit: _selectedAccount!.currency,

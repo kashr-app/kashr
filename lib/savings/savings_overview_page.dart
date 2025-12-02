@@ -2,16 +2,17 @@ import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/savings/create_savings_dialog.dart';
+import 'package:finanalyzer/savings/cubit/savings_cubit.dart';
+import 'package:finanalyzer/savings/cubit/savings_state.dart';
 import 'package:finanalyzer/savings/model/savings.dart';
-import 'package:finanalyzer/savings/model/savings_repository.dart';
 import 'package:finanalyzer/savings/savings_detail_page.dart';
-import 'package:finanalyzer/savings/services/savings_balance_service.dart';
 import 'package:finanalyzer/theme.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 class SavingsRoute extends GoRouteData with $SavingsRoute {
   const SavingsRoute();
@@ -30,34 +31,10 @@ class SavingsOverviewPage extends StatefulWidget {
 }
 
 class _SavingsOverviewPageState extends State<SavingsOverviewPage> {
-  List<Savings> _savings = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-
   @override
   void initState() {
     super.initState();
-    _loadSavings();
-  }
-
-  Future<void> _loadSavings() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final savings = await context.read<SavingsRepository>().getAll();
-      setState(() {
-        _savings = savings;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
-    }
+    context.read<SavingsCubit>().loadAllSavings();
   }
 
   Future<void> _createSavings() async {
@@ -66,8 +43,8 @@ class _SavingsOverviewPageState extends State<SavingsOverviewPage> {
       builder: (context) => const CreateSavingsDialog(),
     );
 
-    if (result == true) {
-      _loadSavings();
+    if (result == true && mounted) {
+      // Data will be automatically reloaded by the dialog through the cubit
     }
   }
 
@@ -84,125 +61,147 @@ class _SavingsOverviewPageState extends State<SavingsOverviewPage> {
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return RefreshIndicator(
-        onRefresh: _loadSavings,
-        child: ListView(
-          children: const [
-            SizedBox(
-              height: 200,
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return RefreshIndicator(
-        onRefresh: _loadSavings,
-        child: ListView(
-          children: [
-            SizedBox(
-              height: MediaQuery.of(context).size.height - 200,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _errorMessage!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: _loadSavings,
-                      child: const Text('Retry'),
-                    ),
-                  ],
+    return BlocBuilder<SavingsCubit, SavingsState>(
+      builder: (context, state) {
+        if (state.status.isLoading) {
+          return RefreshIndicator(
+            onRefresh: () => context.read<SavingsCubit>().loadAllSavings(),
+            child: ListView(
+              children: const [
+                SizedBox(
+                  height: 200,
+                  child: Center(child: CircularProgressIndicator()),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      );
-    }
-
-    if (_savings.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _loadSavings,
-        child: ListView(
-          children: [
-            SizedBox(
-              height: MediaQuery.of(context).size.height - 200,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.savings_outlined,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No savings yet',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Create a savings goal to get started',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: _createSavings,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create Savings'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadSavings,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _savings.length,
-        itemBuilder: (context, index) {
-          final savings = _savings[index];
-          return _SavingsCard(
-            savings: savings,
-            onTap: () => _navigateToDetail(savings),
           );
-        },
-      ),
+        }
+
+        if (state.status.isError) {
+          return RefreshIndicator(
+            onRefresh: () => context.read<SavingsCubit>().loadAllSavings(),
+            child: ListView(
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height - 200,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          state.errorMessage ?? 'An error occurred',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: () =>
+                              context.read<SavingsCubit>().loadAllSavings(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (state.savingsById.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: () => context.read<SavingsCubit>().loadAllSavings(),
+            child: ListView(
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height - 200,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.savings_outlined,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No savings yet',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Create a savings goal to get started',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 24),
+                        FilledButton.icon(
+                          onPressed: _createSavings,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Create Savings'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final allSavings = state.savingsById.values.toList();
+        return RefreshIndicator(
+          onRefresh: () => context.read<SavingsCubit>().loadAllSavings(),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: allSavings.length,
+            itemBuilder: (context, index) {
+              final savings = allSavings[index];
+              final balance = state.balancesBySavingsId[savings.id];
+              return BlocBuilder<TagCubit, TagState>(
+                builder: (context, tagState) {
+                  final tag = tagState.tagById[savings.tagId];
+                  return _SavingsCard(
+                    savings: savings,
+                    tag: tag,
+                    balance: balance,
+                    onTap: () => _navigateToDetail(savings),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
   void _navigateToDetail(Savings savings) {
-    SavingsDetailRoute(
-      savingsId: savings.id!.uuid,
-    ).push(context).then((_) => _loadSavings());
+    SavingsDetailRoute(savingsId: savings.id.uuid).push(context);
   }
 }
 
 class _SavingsCard extends StatelessWidget {
   final Savings savings;
+  final Tag? tag;
+  final Decimal? balance;
   final VoidCallback onTap;
 
-  const _SavingsCard({required this.savings, required this.onTap});
+  const _SavingsCard({
+    required this.savings,
+    required this.tag,
+    required this.balance,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final savingsBalanceService = context.read<SavingsBalanceService>();
-    final tagRepository = context.read<TagRepository>();
+    final tagName = tag?.name ?? 'Unknown';
+    final tagColor = tag?.color != null
+        ? Color(int.parse(tag!.color!.replaceFirst('#', '0xFF')))
+        : Theme.of(context).colorScheme.primary;
+    final currentBalance = balance ?? Decimal.zero;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -214,83 +213,54 @@ class _SavingsCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tag name and balance
-              FutureBuilder(
-                future: Future.wait([
-                  tagRepository.getTagById(savings.tagId),
-                  savingsBalanceService.calculateTotalBalance(savings),
-                ]),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const SizedBox(
-                      height: 24,
-                      child: Center(
-                        child: SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+              Row(
+                children: [
+                  // Tag indicator
+                  Container(
+                    width: 4,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: tagColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Tag name and balance
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tagName,
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                      ),
-                    );
-                  }
-
-                  final tag = snapshot.data![0] as Tag?;
-                  final balance = snapshot.data![1] as Decimal;
-                  final tagName = tag?.name ?? 'Unknown';
-                  final tagColor = tag?.color != null
-                      ? Color(int.parse(tag!.color!.replaceFirst('#', '0xFF')))
-                      : Theme.of(context).colorScheme.primary;
-
-                  return Row(
-                    children: [
-                      // Tag indicator
-                      Container(
-                        width: 4,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: tagColor,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Tag name and balance
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              tagName,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              Currency.currencyFrom(
-                                savings.goalUnit ?? Currency.EUR.name,
-                              ).format(balance),
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(
-                                      context,
-                                    ).decimalColor(balance),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Goal progress (if set)
-                      if (savings.goalValue != null) ...[
-                        const SizedBox(width: 8),
-                        _GoalProgressIndicator(
-                          balance: balance,
-                          goalValue: savings.goalValue!,
+                        const SizedBox(height: 4),
+                        Text(
+                          Currency.currencyFrom(
+                            savings.goalUnit ?? Currency.EUR.name,
+                          ).format(currentBalance),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(
+                                  context,
+                                ).decimalColor(currentBalance),
+                              ),
                         ),
                       ],
-                    ],
-                  );
-                },
+                    ),
+                  ),
+
+                  // Goal progress (if set)
+                  if (savings.goalValue != null) ...[
+                    const SizedBox(width: 8),
+                    _GoalProgressIndicator(
+                      balance: currentBalance,
+                      goalValue: savings.goalValue!,
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
