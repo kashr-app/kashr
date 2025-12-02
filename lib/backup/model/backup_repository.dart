@@ -25,7 +25,7 @@ class BackupRepository {
       for (final file in backupFiles) {
         try {
           final metadata = await _readMetadataFromArchive(file);
-          metadataList.add(metadata);
+          metadataList.add(metadata.copyWith(fileSizeBytes: file.lengthSync()));
         } catch (e) {
           log.w('Failed to read metadata from ${file.path}: $e');
           // Continue with other files

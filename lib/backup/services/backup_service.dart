@@ -4,13 +4,13 @@ import 'package:finanalyzer/backup/model/backup_config.dart';
 import 'package:finanalyzer/backup/model/backup_metadata.dart';
 import 'package:finanalyzer/backup/model/backup_repository.dart';
 import 'package:finanalyzer/backup/services/archive_service.dart';
+import 'package:finanalyzer/backup/services/encryption_service.dart';
 import 'package:finanalyzer/backup/services/local_storage_service.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:uuid/uuid.dart';
 
@@ -23,6 +23,7 @@ class BackupService {
   final BackupRepository _backupRepository;
   final ArchiveService _archiveService;
   final LocalStorageService _localStorageService;
+  final EncryptionService _encryptionService;
 
   final log = Logger();
   final _uuid = const Uuid();
@@ -32,10 +33,12 @@ class BackupService {
     required BackupRepository backupRepository,
     required ArchiveService archiveService,
     required LocalStorageService localStorageService,
+    required EncryptionService encryptionService,
   }) : _dbHelper = dbHelper,
        _backupRepository = backupRepository,
        _archiveService = archiveService,
-       _localStorageService = localStorageService;
+       _localStorageService = localStorageService,
+       _encryptionService = encryptionService;
 
   Future<File> _createDBBackup(String backupId, Directory tempDir) async {
     // Close database to ensure consistency
@@ -77,8 +80,31 @@ class BackupService {
       final tempDbFile = await _createDBBackup(backupId, tempDir);
       onProgress?.call(0.4);
 
-      // TODO Phase 2: Encrypt if password provided
-      final encrypted = false;
+      // Encrypt if password provided
+      File dbFileToArchive = tempDbFile;
+      final encrypted = password != null && password.isNotEmpty;
+      String? checksum;
+
+      if (encrypted) {
+        log.i('Encrypting database...');
+        final dbBytes = await tempDbFile.readAsBytes();
+
+        // Calculate checksum before encryption
+        checksum = _encryptionService.calculateChecksum(dbBytes);
+
+        // Encrypt
+        final encryptedBytes = await _encryptionService.encrypt(
+          dbBytes,
+          password,
+        );
+
+        // Write encrypted data to a new temp file
+        final encryptedDbFile = File('${tempDir.path}/db_encrypted_$backupId.db');
+        await encryptedDbFile.writeAsBytes(encryptedBytes);
+        dbFileToArchive = encryptedDbFile;
+
+        log.i('Database encrypted successfully');
+      }
 
       // Create metadata
       // Get app version
@@ -94,7 +120,7 @@ class BackupService {
         appVersion: appVersion,
         encrypted: encrypted,
         fileSizeBytes: null, // will be set later
-        checksum: null, // TODO: Calculate checksum
+        checksum: checksum,
       );
 
       onProgress?.call(0.5);
@@ -104,7 +130,7 @@ class BackupService {
 
       final tempArchiveFile = File('${tempDir.path}/$filename');
       await _archiveService.createBackup(
-        database: tempDbFile,
+        database: dbFileToArchive,
         metadata: metadata,
         output: tempArchiveFile,
       );
@@ -133,6 +159,9 @@ class BackupService {
 
       // Clean up temp files
       await tempDbFile.delete();
+      if (encrypted && dbFileToArchive.path != tempDbFile.path) {
+        await dbFileToArchive.delete();
+      }
       await tempArchiveFile.delete();
 
       log.i('Backup created successfully: $backupId');
@@ -205,21 +234,49 @@ class BackupService {
         throw Exception('Backup metadata mismatch');
       }
 
+      File restoredDbFile = contents.database;
+
       if (backup.encrypted) {
-        if (password == null) {
+        if (password == null || password.isEmpty) {
           throw Exception('Password required for encrypted backup');
         }
-        // TODO Phase 2: Decrypt if encrypted
-      }
 
-      final restoredDbFile = contents.database;
+        log.i('Decrypting database...');
+        final encryptedBytes = await contents.database.readAsBytes();
+
+        // Decrypt
+        final decryptedBytes = await _encryptionService.decrypt(
+          encryptedBytes,
+          password,
+        );
+
+        // Verify checksum if available
+        if (backup.checksum != null) {
+          final actualChecksum = _encryptionService.calculateChecksum(
+            decryptedBytes,
+          );
+          if (actualChecksum != backup.checksum) {
+            throw Exception('Checksum verification failed');
+          }
+          log.i('Checksum verified successfully');
+        }
+
+        // Write decrypted data to a new temp file
+        final decryptedDbFile = File(
+          '${extractDir.path}/database_decrypted.db',
+        );
+        await decryptedDbFile.writeAsBytes(decryptedBytes);
+        restoredDbFile = decryptedDbFile;
+
+        log.i('Database decrypted successfully');
+      }
 
       onProgress?.call(0.5);
 
       // Verify database file is valid SQLite
       // TODO: Add database validation
+      // log.i('Database file validated');
 
-      log.i('Database file validated');
       onProgress?.call(0.6);
 
       // Close current database

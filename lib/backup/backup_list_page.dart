@@ -1,6 +1,8 @@
 import 'package:finanalyzer/backup/cubit/backup_cubit.dart';
 import 'package:finanalyzer/backup/cubit/backup_state.dart';
 import 'package:finanalyzer/backup/model/backup_metadata.dart';
+import 'package:finanalyzer/backup/widgets/backup_settings_dialog.dart';
+import 'package:finanalyzer/backup/widgets/encryption_password_dialog.dart';
 import 'package:finanalyzer/backup/widgets/nextcloud_settings_page.dart';
 import 'package:finanalyzer/backup/widgets/restore_confirmation_dialog.dart';
 import 'package:finanalyzer/home/home_page.dart';
@@ -50,6 +52,11 @@ class _BackupListPageState extends State<BackupListPage> {
       appBar: AppBar(
         title: const Text('Backups'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Backup Settings',
+            onPressed: () => _showBackupSettings(context),
+          ),
           IconButton(
             icon: const Icon(Icons.cloud_sync),
             tooltip: 'Nextcloud Settings',
@@ -148,8 +155,29 @@ class _BackupListPageState extends State<BackupListPage> {
   }
 
   void _createBackup(BuildContext context) async {
-    // For Phase 1, always create local, unencrypted backup
-    await context.read<BackupCubit>().createBackup(password: null);
+    final cubit = context.read<BackupCubit>();
+    final currentState = cubit.state;
+
+    // Get encryption setting from config
+    String? password;
+    if (currentState is BackupLoaded && currentState.config.encryptionEnabled) {
+      password = await EncryptionPasswordDialog.show(
+        context,
+        isRestore: false,
+      );
+
+      // User cancelled
+      if (password == null) return;
+    }
+
+    await cubit.createBackup(password: password);
+  }
+
+  void _showBackupSettings(BuildContext context) {
+    final state = context.read<BackupCubit>().state;
+    if (state is BackupLoaded) {
+      BackupSettingsDialog.show(context, state.config);
+    }
   }
 }
 
@@ -433,6 +461,25 @@ class _BackupCard extends StatelessWidget {
                 Text('DB v${backup.dbVersion} • App v${backup.appVersion}'),
               ],
             ),
+              Row(
+                children: [
+                  Icon(
+                    backup.encrypted ? Icons.lock : Icons.lock_open,
+                    size: 14,
+                    color: backup.encrypted
+                          ? Colors.green
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(backup.encrypted ? 'Encrypted' : 'Not encrypted',
+                  style: TextStyle(
+                      color: backup.encrypted
+                          ? Colors.green
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),),
+                ],
+              ),
             if (nextcloudConfigured)
               Row(
                 children: [
@@ -523,11 +570,21 @@ class _BackupCard extends StatelessWidget {
     final confirmed = await RestoreConfirmationDialog.show(context, backup);
     if (!confirmed) return;
 
+    String? password;
+    if (backup.encrypted) {
+      if (context.mounted) {
+        password = await EncryptionPasswordDialog.show(
+          context,
+          isRestore: true,
+        );
+
+        // User cancelled
+        if (password == null) return;
+      }
+    }
+
     if (context.mounted) {
-      await context.read<BackupCubit>().restoreBackup(
-        backup,
-        null, // No password for Phase 1
-      );
+      await context.read<BackupCubit>().restoreBackup(backup, password);
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:finanalyzer/backup/cubit/backup_cubit.dart';
 import 'package:finanalyzer/backup/model/backup_repository.dart';
 import 'package:finanalyzer/backup/services/archive_service.dart';
 import 'package:finanalyzer/backup/services/backup_service.dart';
+import 'package:finanalyzer/backup/services/encryption_service.dart';
 import 'package:finanalyzer/backup/services/local_storage_service.dart';
 import 'package:finanalyzer/core/secure_storage.dart';
 import 'package:finanalyzer/db/db_helper.dart';
@@ -54,6 +55,7 @@ final turnoverMatchingService = TurnoverMatchingService(tagTurnoverRepository);
 // Backup services
 final archiveService = ArchiveService();
 final localStorageService = LocalStorageService();
+final encryptionService = EncryptionService();
 final backupRepository = BackupRepository(
   localStorageService: localStorageService,
 );
@@ -62,6 +64,7 @@ final backupService = BackupService(
   backupRepository: backupRepository,
   archiveService: archiveService,
   localStorageService: localStorageService,
+  encryptionService: encryptionService,
 );
 
 class MyApp extends StatelessWidget {
