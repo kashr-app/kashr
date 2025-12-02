@@ -246,6 +246,7 @@ class _AccountListItemState extends State<_AccountListItem> {
         Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ListTile(
                 leading: CircleAvatar(
@@ -263,27 +264,7 @@ class _AccountListItemState extends State<_AccountListItem> {
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.account.accountType.label()),
-                    if (widget.account.syncSource != null &&
-                        widget.account.syncSource != SyncSource.manual)
-                      Text(
-                        'Synced with ${widget.account.syncSource!.label()}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    if (widget.account.syncSource != null &&
-                        widget.account.syncSource != SyncSource.manual)
-                      Text(
-                        'Last sync: Not yet available',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                  ],
+                  children: [Text(widget.account.accountType.label())],
                 ),
                 trailing: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -327,6 +308,34 @@ class _AccountListItemState extends State<_AccountListItem> {
                 ),
                 onTap: widget.onTap,
               ),
+              if (widget.account.syncSource != null &&
+                  widget.account.syncSource != SyncSource.manual)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Synced with ${widget.account.syncSource!.label()}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      if (widget.account.syncSource != null &&
+                          widget.account.syncSource != SyncSource.manual)
+                        Text(
+                          'Last sync: Not yet available',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               if (_savingsBreakdown != null &&
                   _savingsBreakdown!.isNotEmpty) ...[
                 // spendable money
