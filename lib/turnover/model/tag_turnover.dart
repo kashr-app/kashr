@@ -13,7 +13,7 @@ abstract class TagTurnover with _$TagTurnover {
   const TagTurnover._();
 
   const factory TagTurnover({
-    @UUIDNullableJsonConverter() UuidValue? id,
+    @UUIDJsonConverter() required UuidValue id,
     // Can be null for immediate/planned expenses that have not yet been associated with a turnover
     @UUIDNullableJsonConverter() UuidValue? turnoverId,
     @UUIDJsonConverter() required UuidValue tagId,
@@ -22,7 +22,9 @@ abstract class TagTurnover with _$TagTurnover {
     String? note,
     required DateTime createdAt,
     @JsonKey(name: 'booking_date') required DateTime bookingDate,
-    @JsonKey(name: 'account_id') @UUIDJsonConverter() required UuidValue accountId,
+    @JsonKey(name: 'account_id')
+    @UUIDJsonConverter()
+    required UuidValue accountId,
     @JsonKey(name: 'recurring_rule_id')
     @UUIDNullableJsonConverter()
     UuidValue? recurringRuleId,

@@ -1,4 +1,4 @@
-import 'package:finanalyzer/core/extensions/associate_by.dart';
+import 'package:finanalyzer/core/associate_by.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';

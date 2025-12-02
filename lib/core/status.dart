@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 enum Status {
   initial,
   loading,
@@ -32,5 +34,43 @@ enum Status {
       return Status.initial;
     }
     return Status.success;
+  }
+
+  void snack(BuildContext context, String msg) {
+    snack2(ScaffoldMessenger.of(context), Theme.of(context), msg);
+  }
+
+  void snack2(
+    ScaffoldMessengerState scaffoldMessenger,
+    ThemeData theme,
+    String msg,
+  ) {
+    final [colorBg, color] = switch (this) {
+      Status.initial => [
+        theme.colorScheme.surfaceContainer,
+        theme.colorScheme.onSurface,
+      ],
+      Status.loading => [
+        theme.colorScheme.surfaceContainer,
+        theme.colorScheme.onSurface,
+      ],
+      Status.success => [
+        theme.colorScheme.primaryContainer,
+        theme.colorScheme.onPrimaryContainer,
+      ],
+      Status.error => [
+        theme.colorScheme.errorContainer,
+        theme.colorScheme.onErrorContainer,
+      ],
+    };
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          msg,
+          style: theme.textTheme.bodyMedium?.copyWith(color: color),
+        ),
+        backgroundColor: colorBg,
+      ),
+    );
   }
 }

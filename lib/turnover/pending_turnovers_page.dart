@@ -110,7 +110,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
 
     try {
       final tagTurnoverRepository = context.read<TagTurnoverRepository>();
-      await tagTurnoverRepository.deleteTagTurnover(tagTurnover.id!);
+      await tagTurnoverRepository.deleteTagTurnover(tagTurnover.id);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,7 +154,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
 
     try {
       final matchingService = context.read<TurnoverMatchingService>();
-      final success = await matchingService.unmatch(tagTurnover.id!);
+      final success = await matchingService.unmatch(tagTurnover.id);
 
       if (mounted) {
         if (success) {
@@ -224,8 +224,8 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
 
       // Link the tag turnover to the new turnover
       await tagTurnoverRepository.linkToTurnover(
-        tagTurnover.id!,
-        newTurnover.id!,
+        tagTurnover.id,
+        newTurnover.id,
       );
 
       if (mounted) {
@@ -251,41 +251,18 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
     });
 
     try {
-      final turnoverRepository = context.read<TurnoverRepository>();
       final matchingService = context.read<TurnoverMatchingService>();
-
-      // Get all turnovers for this account
-      final turnovers = await turnoverRepository.getTurnoversForAccount(
-        accountId: account.id!,
+      final matches = await matchingService.findMatchesForTagTurnover(
+        tagTurnover,
       );
-
-      // Find best match for each turnover
-      Turnover? bestMatchTurnover;
-      double bestConfidence = 0.0;
-
-      for (final turnover in turnovers) {
-        // Skip if turnover has no ID
-        if (turnover.id == null) continue;
-
-        // Create a temporary synced turnover to find matches
-        final matches = await matchingService.findMatches(turnover);
-
-        for (final match in matches) {
-          if (match.tagTurnoverId == tagTurnover.id &&
-              match.confidence > bestConfidence) {
-            bestMatchTurnover = turnover;
-            bestConfidence = match.confidence;
-          }
-        }
-      }
+      if (!mounted) return;
 
       setState(() {
         _isLoading = false;
       });
 
-      if (!mounted) return;
-
-      if (bestMatchTurnover != null) {
+      final bestMatch = matches.firstOrNull;
+      if (bestMatch != null) {
         // Show match found dialog with option to confirm or open
         final action = await showDialog<String>(
           context: context,
@@ -296,11 +273,11 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Found a match with ${(bestConfidence * 100).toStringAsFixed(0)}% confidence:',
+                  'Found a match with ${(bestMatch.confidence * 100).toStringAsFixed(0)}% confidence:',
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 16),
-                _TurnoverMatchDetails(turnover: bestMatchTurnover!),
+                _TurnoverMatchDetails(turnover: bestMatch.turnover),
                 const SizedBox(height: 16),
                 const Text(
                   'Would you like to confirm this match?',
@@ -329,13 +306,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
 
         if (action == 'confirm') {
           // Confirm the match
-          await matchingService.confirmMatch(
-            TagTurnoverMatch(
-              tagTurnoverId: tagTurnover.id!,
-              turnoverId: bestMatchTurnover.id!,
-              confidence: bestConfidence,
-            ),
-          );
+          await matchingService.confirmMatch(bestMatch);
 
           if (mounted) {
             ScaffoldMessenger.of(
@@ -348,7 +319,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
           if (mounted) {
             context.push(
               TurnoverTagsRoute(
-                turnoverId: bestMatchTurnover.id!.uuid,
+                turnoverId: bestMatch.turnover.id.uuid,
               ).location,
             );
             _loadPendingTurnovers();

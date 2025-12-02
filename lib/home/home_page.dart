@@ -9,7 +9,9 @@ import 'package:finanalyzer/analytics/analytics_page.dart';
 import 'package:finanalyzer/backup/backup_list_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_page.dart';
+import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
+import 'package:finanalyzer/home/widgets/dual_account_selector.dart';
 import 'package:finanalyzer/savings/savings_detail_page.dart';
 import 'package:finanalyzer/savings/savings_overview_page.dart';
 import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
@@ -24,6 +26,7 @@ import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
 import 'package:finanalyzer/home/widgets/transfer_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
+import 'package:finanalyzer/turnover/widgets/quick_transfer_entry_sheet.dart';
 import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
@@ -186,7 +189,9 @@ class HomePage extends StatelessWidget {
               child: RefreshIndicator(
                 onRefresh: () => context.read<DashboardCubit>().loadMonthData(),
                 child: ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(
+                    16,
+                  ).copyWith(bottom: 80), // let fab not hide the bottom
                   children: [
                     PeriodSelector(
                       selectedPeriod: state.selectedPeriod,
@@ -194,9 +199,8 @@ class HomePage extends StatelessWidget {
                           context.read<DashboardCubit>().previousMonth(),
                       onNextMonth: () =>
                           context.read<DashboardCubit>().nextMonth(),
-                      onMonthSelected: (yearMonth) => context
-                          .read<DashboardCubit>()
-                          .selectMonth(yearMonth),
+                      onMonthSelected: (yearMonth) =>
+                          context.read<DashboardCubit>().selectMonth(yearMonth),
                     ),
                     const SizedBox(height: 8),
                     const PendingTurnoversHint(),
@@ -242,10 +246,25 @@ class HomePage extends StatelessWidget {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showQuickExpenseEntry(context),
-        tooltip: 'Log Expense',
-        child: const Icon(Icons.add),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            FloatingActionButton(
+              heroTag: null,
+              onPressed: () => _showTransferDialog(context),
+              tooltip: 'Log Expense',
+              child: const Icon(Icons.swap_horiz),
+            ),
+            Spacer(),
+            FloatingActionButton(
+              onPressed: () => _showQuickExpenseEntry(context),
+              tooltip: 'Log Expense',
+              child: const Icon(Icons.add),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -254,19 +273,14 @@ class HomePage extends StatelessWidget {
     final accountCubit = context.read<AccountCubit>();
     final accounts = accountCubit.state.accounts;
     if (accountCubit.state.status.isLoading) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Accounts still loading, please try again in a second.',
-          ),
-        ),
+      Status.error.snack(
+        context,
+        'Accounts still loading, please try again in a second.',
       );
       return;
     }
     if (accounts.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please create an account first')),
-      );
+      Status.error.snack(context, 'Please create an account first');
       return;
     }
 
@@ -320,6 +334,46 @@ class HomePage extends StatelessWidget {
     // Refresh dashboard if turnover was saved
     if (result == true && context.mounted) {
       context.read<DashboardCubit>().loadMonthData();
+    }
+  }
+
+  void _showTransferDialog(BuildContext context) async {
+    final accountCubit = context.read<AccountCubit>();
+    final accounts = accountCubit.state.accounts;
+    if (accountCubit.state.status.isLoading) {
+      Status.error.snack(
+        context,
+        'Accounts still loading, please try again in a second.',
+      );
+      return;
+    }
+    if (accounts.length < 2) {
+      Status.error.snack(context, 'Please create at least two accounts');
+      return;
+    }
+
+    // Show account selector
+    final result = await showDialog<TransferAccountSelection>(
+      context: context,
+      builder: (context) => DualAccountSelectorDialog(accounts: accounts),
+    );
+
+    if (result != null && context.mounted) {
+      final fromAccount = result.from;
+      final toAccount = result.to;
+      final wasAdded = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => QuickTransferEntrySheet(
+          fromAccount: fromAccount,
+          toAccount: toAccount,
+        ),
+      );
+
+      // Refresh dashboard if turnover was saved
+      if (wasAdded == true && context.mounted) {
+        context.read<DashboardCubit>().loadMonthData();
+      }
     }
   }
 }

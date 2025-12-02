@@ -152,13 +152,16 @@ class ComdirectService {
       final unmatchedTurnovers = <Turnover>[];
       if (matchingService != null) {
         for (final turnover in turnovers) {
-          final matched = await matchingService!.autoMatchPerfect(turnover);
+          final matches = await matchingService!.findMatchesForTurnover(
+            turnover,
+          );
+          final matched = await matchingService!.autoConfirmPerfectMatch(
+            matches,
+          );
           if (matched) {
             autoMatchedCount++;
             log.i('Auto-matched turnover: ${turnover.purpose}');
           } else {
-            // Check if there are any pending matches for this turnover
-            final matches = await matchingService!.findMatches(turnover);
             if (matches.isNotEmpty) {
               unmatchedTurnovers.add(turnover);
             }
@@ -172,9 +175,7 @@ class ComdirectService {
         final apiId = account.apiId;
         if (apiId != null && apiBalancesByApiId.containsKey(apiId)) {
           final apiBalance = apiBalancesByApiId[apiId]!;
-          log.i(
-            'Updating balance for account ${account.name} to $apiBalance',
-          );
+          log.i('Updating balance for account ${account.name} to $apiBalance');
           await accountCubit.updateBalanceFromReal(account, apiBalance);
         }
       }

@@ -114,7 +114,7 @@ class TurnoverRepository {
         'turnover',
         turnover.toJson(),
         where: 'id = ?',
-        whereArgs: [turnover.id!.uuid],
+        whereArgs: [turnover.id.uuid],
       );
     }
     await batch.commit();
@@ -126,7 +126,7 @@ class TurnoverRepository {
       'turnover',
       turnover.toJson(),
       where: 'id = ?',
-      whereArgs: [turnover.id!.uuid],
+      whereArgs: [turnover.id.uuid],
     );
   }
 
@@ -228,10 +228,7 @@ class TurnoverRepository {
     final turnovers = turnoverMaps
         .map((map) => Turnover.fromJson(map))
         .toList();
-    final turnoverIds = turnovers
-        .where((t) => t.id != null)
-        .map((t) => t.id!.uuid)
-        .toList();
+    final turnoverIds = turnovers.map((t) => t.id.uuid).toList();
 
     if (turnoverIds.isEmpty) {
       return turnovers
@@ -272,9 +269,7 @@ class TurnoverRepository {
       if (turnoverId == null) continue;
 
       final tagTurnover = TagTurnover(
-        id: map['tt_id'] != null
-            ? UuidValue.fromString(map['tt_id'] as String)
-            : null,
+        id: UuidValue.fromString(map['tt_id'] as String),
         turnoverId: UuidValue.fromString(turnoverId),
         tagId: UuidValue.fromString(map['tt_tagId'] as String),
         amountValue:
@@ -311,11 +306,12 @@ class TurnoverRepository {
 
     // Combine turnovers with their tag turnovers
     return turnovers.map((turnover) {
-      final turnoverId = turnover.id?.uuid;
-      final tagTurnovers = turnoverId != null
-          ? (tagTurnoversByTurnoverId[turnoverId] ?? <TagTurnoverWithTag>[])
-          : <TagTurnoverWithTag>[];
-      return TurnoverWithTags(turnover: turnover, tagTurnovers: tagTurnovers);
+      final turnoverId = turnover.id.uuid;
+      return TurnoverWithTags(
+        turnover: turnover,
+        tagTurnovers:
+            tagTurnoversByTurnoverId[turnoverId] ?? <TagTurnoverWithTag>[],
+      );
     }).toList();
   }
 
@@ -470,10 +466,7 @@ class TurnoverRepository {
     final turnovers = turnoverMaps
         .map((map) => Turnover.fromJson(map))
         .toList();
-    final turnoverIds = turnovers
-        .where((t) => t.id != null)
-        .map((t) => t.id!.uuid)
-        .toList();
+    final turnoverIds = turnovers.map((t) => t.id.uuid).toList();
 
     if (turnoverIds.isEmpty) {
       // Return turnovers without tags if no valid IDs
@@ -515,9 +508,7 @@ class TurnoverRepository {
       if (turnoverId == null) continue;
 
       final tagTurnover = TagTurnover(
-        id: map['tt_id'] != null
-            ? UuidValue.fromString(map['tt_id'] as String)
-            : null,
+        id: UuidValue.fromString(map['tt_id'] as String),
         turnoverId: UuidValue.fromString(turnoverId),
         tagId: UuidValue.fromString(map['tt_tagId'] as String),
         amountValue:
@@ -554,11 +545,11 @@ class TurnoverRepository {
 
     // Combine turnovers with their tag turnovers
     return turnovers.map((turnover) {
-      final turnoverId = turnover.id?.uuid;
-      final tagTurnovers = turnoverId != null
-          ? (tagTurnoversByTurnoverId[turnoverId] ?? <TagTurnoverWithTag>[])
-          : <TagTurnoverWithTag>[];
-      return TurnoverWithTags(turnover: turnover, tagTurnovers: tagTurnovers);
+      final turnoverId = turnover.id.uuid;
+      return TurnoverWithTags(
+        turnover: turnover,
+        tagTurnovers: tagTurnoversByTurnoverId[turnoverId] ?? [],
+      );
     }).toList();
   }
 }

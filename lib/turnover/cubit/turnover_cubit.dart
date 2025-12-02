@@ -91,13 +91,12 @@ class TurnoverCubit extends Cubit<TurnoverState> {
             // Existing turnover - check if it needs updating by normalizing
             // metadata fields and using freezed's generated equality
             final normalizedExisting = existing.copyWith(
-              id: null,
               createdAt: DateTime(2000),
               accountId: turnover.accountId,
               apiId: turnover.apiId,
             );
             final normalizedTurnover = turnover.copyWith(
-              id: null,
+              id: existing.id,
               createdAt: DateTime(2000),
             );
 

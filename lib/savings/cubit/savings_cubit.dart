@@ -1,5 +1,5 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/extensions/associate_by.dart';
+import 'package:finanalyzer/core/associate_by.dart';
 import 'package:finanalyzer/core/extensions/map_extensios.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/savings/cubit/savings_state.dart';

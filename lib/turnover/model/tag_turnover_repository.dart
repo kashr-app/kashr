@@ -1,6 +1,5 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
-import 'package:finanalyzer/turnover/model/tag_semantic_converter.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
@@ -12,6 +11,16 @@ class TagTurnoverRepository {
   Future<int> createTagTurnover(TagTurnover tagTurnover) async {
     final db = await DatabaseHelper().database;
     return await db.insert('tag_turnover', tagTurnover.toJson());
+  }
+
+  Future<void> createTagTurnoversBatch(List<TagTurnover> tagTurnovers) async {
+    final db = await DatabaseHelper().database;
+
+    final batch = db.batch();
+    for (var tag in tagTurnovers) {
+      batch.insert('tag_turnover', tag.toJson());
+    }
+    await batch.commit(noResult: true);
   }
 
   /// Batch adds a tag to multiple turnovers.

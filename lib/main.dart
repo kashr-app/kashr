@@ -51,7 +51,7 @@ final savingsBalanceService = SavingsBalanceService(
   savingsVirtualBookingRepository,
   savingsRepository,
 );
-final turnoverMatchingService = TurnoverMatchingService(tagTurnoverRepository);
+final turnoverMatchingService = TurnoverMatchingService(tagTurnoverRepository, turnoverRepository);
 
 // Backup services
 final archiveService = ArchiveService();

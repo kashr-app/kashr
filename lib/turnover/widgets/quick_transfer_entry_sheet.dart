@@ -11,22 +11,28 @@ import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
+import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
-class QuickTurnoverEntrySheet extends StatefulWidget {
-  final Account account;
+class QuickTransferEntrySheet extends StatefulWidget {
+  final Account fromAccount;
+  final Account toAccount;
 
-  const QuickTurnoverEntrySheet({required this.account, super.key});
+  const QuickTransferEntrySheet({
+    required this.fromAccount,
+    required this.toAccount,
+    super.key,
+  });
 
   @override
-  State<QuickTurnoverEntrySheet> createState() =>
-      _QuickTurnoverEntrySheetState();
+  State<QuickTransferEntrySheet> createState() =>
+      _QuickTransferEntrySheetState();
 }
 
-class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
+class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
   final _formKey = GlobalKey<FormState>();
   final _noteController = TextEditingController();
   final _counterpartController = TextEditingController();
@@ -47,10 +53,10 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
   Future<void> _selectAmount() async {
     final result = await AmountDialog.show(
       context,
-      currencyUnit: widget.account.currency,
+      currencyUnit: widget.fromAccount.currency,
       initialAmountScaled: _amountScaled?.abs() ?? 0,
-      showSignSwitch: true,
-      initialIsNegative: true,
+      showSignSwitch: false,
+      initialIsNegative: false,
     );
 
     if (result != null) {
@@ -95,18 +101,32 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
     });
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final theme = Theme.of(context);
     try {
-      final amount = decimalUnscale(_amountScaled)!;
+      final Decimal amount = decimalUnscale(_amountScaled)!;
       final note = _noteController.text.trim();
       final counterpart = _counterpartController.text.trim();
 
       final tagTurnoverRepository = context.read<TagTurnoverRepository>();
       final turnoverRepository = context.read<TurnoverRepository>();
       final matchingService = context.read<TurnoverMatchingService>();
-      final theme = Theme.of(context);
 
-      createTurnoverAndTagTurnoverOnAccount(
-        widget.account,
+      await createTurnoverAndTagTurnoverOnAccount(
+        widget.fromAccount,
+        -amount,
+        note,
+        counterpart,
+        _selectedDate,
+        _selectedTag!,
+        turnoverRepository,
+        tagTurnoverRepository,
+        scaffoldMessenger,
+        theme,
+        matchingService,
+      );
+
+      await createTurnoverAndTagTurnoverOnAccount(
+        widget.toAccount,
         amount,
         note,
         counterpart,
@@ -123,7 +143,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
         Navigator.of(context).pop(true);
       }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      Status.error.snack2(scaffoldMessenger, theme, 'Error: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -134,15 +154,16 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
   }
 
   String _formatAmount(int scaledAmount) {
-    final decimal = decimalUnscale(scaledAmount)!;
-    final currency = Currency.currencyFrom(widget.account.currency);
+    final decimal = (Decimal.fromInt(scaledAmount) / Decimal.fromInt(100))
+        .toDecimal(scaleOnInfinitePrecision: 2);
+    final currency = Currency.currencyFrom(widget.fromAccount.currency);
     return currency.format(decimal);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isManual = widget.account.syncSource == SyncSource.manual;
+    final isManual = widget.fromAccount.syncSource == SyncSource.manual;
 
     return SafeArea(
       child: Padding(
@@ -158,10 +179,16 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Log Turnover', style: theme.textTheme.titleLarge),
+              Text('Log Transfer', style: theme.textTheme.titleLarge),
               const SizedBox(height: 8),
               Text(
-                'Account: ${widget.account.name}',
+                'From ${widget.fromAccount.name}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              Text(
+                'To ${widget.toAccount.name}',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -270,92 +297,4 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
       ),
     );
   }
-}
-
-Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
-  Account account,
-  Decimal amount,
-  String note,
-  String counterpart,
-  DateTime bookingDate,
-  Tag tag,
-  TurnoverRepository turnoverRepository,
-  TagTurnoverRepository tagTurnoverRepository,
-  ScaffoldMessengerState scaffoldMessenger,
-  ThemeData theme,
-  TurnoverMatchingService matchingService,
-) async {
-  final isManual = account.syncSource == SyncSource.manual;
-  final turnoverId = isManual
-      ? Uuid().v4obj()
-      : null; // UNMATCHED for linked accounts
-
-  Turnover? turnover;
-  if (isManual) {
-    // For manual accounts materialize the turnover
-    turnover = Turnover(
-      id: turnoverId!,
-      accountId: account.id!,
-      bookingDate: bookingDate,
-      amountValue: amount,
-      amountUnit: account.currency,
-      purpose: note.isEmpty ? tag.name : note,
-      counterPart: counterpart.isEmpty ? null : counterpart,
-      createdAt: DateTime.now(),
-    );
-
-    await turnoverRepository.createTurnover(turnover);
-    Status.success.snack2(
-      scaffoldMessenger,
-      theme,
-      amount < Decimal.zero
-          ? 'From turnover materialized'
-          : 'To turnover materialized',
-    );
-  }
-
-  final tagTurnover = TagTurnover(
-    id: const Uuid().v4obj(),
-    turnoverId: isManual ? turnoverId : null, // unmatched for linked accounts
-    tagId: tag.id!,
-    amountValue: amount,
-    amountUnit: account.currency,
-    bookingDate: bookingDate,
-    accountId: account.id!,
-    note: note.isEmpty ? null : note,
-    createdAt: DateTime.now(),
-  );
-
-  await tagTurnoverRepository.createTagTurnover(tagTurnover);
-
-  if (isManual) {
-    Status.success.snack2(
-      scaffoldMessenger,
-      theme,
-      amount < Decimal.zero
-          ? 'From tagTurnover logged'
-          : 'To tagTurnover logged',
-    );
-  } else {
-    bool matched = await matchingService.autoMatchPerfectTurnover(tagTurnover);
-
-    if (matched) {
-      Status.success.snack2(
-        scaffoldMessenger,
-        theme,
-        amount < Decimal.zero
-            ? 'From tagTurnover matched automatically!'
-            : 'To tagTurnover matched automatically!',
-      );
-    } else {
-      Status.success.snack2(
-        scaffoldMessenger,
-        theme,
-        amount < Decimal.zero
-            ? 'From tagTurnover logged, pending confirmation'
-            : 'To tagTurnover logged, pending confirmation',
-      );
-    }
-  }
-  return (turnover, tagTurnover);
 }
