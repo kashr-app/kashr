@@ -8,7 +8,6 @@ import 'package:finanalyzer/account/edit_account_page.dart';
 import 'package:finanalyzer/analytics/analytics_page.dart';
 import 'package:finanalyzer/backup/backup_list_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
-import 'package:finanalyzer/comdirect/comdirect_page.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
 import 'package:finanalyzer/home/widgets/dual_account_selector.dart';
@@ -72,10 +71,7 @@ part '../_gen/home/home_page.g.dart';
       path: 'turnovers',
       routes: [TypedGoRoute<TurnoverTagsRoute>(path: ':turnoverId/tags')],
     ),
-    TypedGoRoute<ComdirectRoute>(
-      path: 'comdirect',
-      routes: [TypedGoRoute<ComdirectLoginRoute>(path: 'login')],
-    ),
+    TypedGoRoute<ComdirectLoginRoute>(path: 'comdirect'),
     TypedGoRoute<SavingsRoute>(
       path: 'savings',
       routes: [TypedGoRoute<SavingsDetailRoute>(path: ':savingsId')],
@@ -112,7 +108,7 @@ class HomePage extends StatelessWidget {
             tooltip: 'Accounts',
           ),
           IconButton(
-            onPressed: () => const ComdirectRoute().go(context),
+            onPressed: () => const ComdirectLoginRoute().go(context),
             icon: const Icon(Icons.sync),
             tooltip: 'Comdirect Sync',
           ),
