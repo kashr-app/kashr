@@ -23,21 +23,21 @@ class Credentials {
     required this.password,
   });
 
-  static Future<Credentials?> load() async {
-    Future<bool> authenticate() async {
-      try {
-        return await LocalAuthentication().authenticate(
-          localizedReason: 'Access credentials',
-          persistAcrossBackgrounding: true,
-        );
-      } catch (e) {
-        final log = Logger();
-        log.i("Authentication failed: $e");
-        return false;
-      }
+  static Future<bool> _authenticate() async {
+    try {
+      return await LocalAuthentication().authenticate(
+        localizedReason: 'Access credentials',
+        persistAcrossBackgrounding: true,
+      );
+    } catch (e) {
+      final log = Logger();
+      log.i("Authentication failed: $e");
+      return false;
     }
+  }
 
-    bool authenticated = await authenticate();
+  static Future<Credentials?> load() async {
+    bool authenticated = await _authenticate();
     if (!authenticated) {
       return null;
     }
@@ -54,20 +54,30 @@ class Credentials {
     );
   }
 
-  Future<void> store() async {
+  Future<bool> store() async {
+    bool authenticated = await _authenticate();
+    if (!authenticated) {
+      return false;
+    }
     final storage = secureStorage();
     await storage.write(key: 'comdirectClientId', value: clientId);
     await storage.write(key: 'comdirectClientSecret', value: clientSecret);
     await storage.write(key: 'comdirectUsername', value: username);
     await storage.write(key: 'comdirectPasssword', value: password);
+    return true;
   }
 
-  Future<void> delete() async {
+  Future<bool> delete() async {
+    bool authenticated = await _authenticate();
+    if (!authenticated) {
+      return false;
+    }
     final storage = secureStorage();
     await storage.delete(key: 'comdirectClientId');
     await storage.delete(key: 'comdirectClientSecret');
     await storage.delete(key: 'comdirectUsername');
     await storage.delete(key: 'comdirectPasssword');
+    return true;
   }
 
   factory Credentials.fromJson(Map<String, dynamic> json) =>
