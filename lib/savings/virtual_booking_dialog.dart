@@ -51,11 +51,7 @@ class VirtualBookingDialog extends StatefulWidget {
   /// The booking to edit. If null, creates a new booking.
   final SavingsVirtualBooking? booking;
 
-  const VirtualBookingDialog({
-    required this.savings,
-    this.booking,
-    super.key,
-  });
+  const VirtualBookingDialog({required this.savings, this.booking, super.key});
 
   @override
   State<VirtualBookingDialog> createState() => _VirtualBookingDialogState();
@@ -67,7 +63,8 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
   Account? _selectedAccount;
   int? _amountScaled;
-  bool _isAllocating = true; // true = add to savings, false = remove from savings
+  bool _isAllocating =
+      true; // true = add to savings, false = remove from savings
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -119,8 +116,8 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
   String _formatAmount(int scaledAmount) {
     final decimal = decimalUnscale(scaledAmount)!;
-    final currencyUnit = widget.booking?.amountUnit ??
-                         _selectedAccount?.currency;
+    final currencyUnit =
+        widget.booking?.amountUnit ?? _selectedAccount?.currency;
     if (currencyUnit == null) {
       return decimal.toString();
     }
@@ -205,7 +202,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
       final booking = SavingsVirtualBooking(
         id: widget.booking?.id ?? const Uuid().v4obj(),
         savingsId: widget.savings.id,
-        accountId: _selectedAccount!.id!,
+        accountId: _selectedAccount!.id,
         amountValue: adjustedAmount,
         amountUnit: _selectedAccount!.currency,
         note: _noteController.text.trim().isEmpty
@@ -327,10 +324,10 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                           : 'Tap to enter amount',
                       style: _amountScaled == null
                           ? Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                              )
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            )
                           : null,
                     ),
                   ),
@@ -364,8 +361,8 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                       ? 'Move money from spendable to savings'
                       : 'Move money from savings to spendable',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
                 ),
                 const SizedBox(height: 16),
 

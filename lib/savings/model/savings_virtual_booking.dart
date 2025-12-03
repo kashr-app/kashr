@@ -19,18 +19,24 @@ abstract class SavingsVirtualBooking with _$SavingsVirtualBooking {
 
   const factory SavingsVirtualBooking({
     @UUIDNullableJsonConverter() UuidValue? id,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'savings_id')
     @UUIDJsonConverter()
     required UuidValue savingsId,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'account_id')
     @UUIDJsonConverter()
     required UuidValue accountId,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'amount_value')
     @DecimalJsonConverter()
     required Decimal amountValue,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'amount_unit') required String amountUnit,
     String? note,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'booking_date') required DateTime bookingDate,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'created_at') required DateTime createdAt,
   }) = _SavingsVirtualBooking;
 

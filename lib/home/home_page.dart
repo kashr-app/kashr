@@ -4,6 +4,7 @@ import 'package:finanalyzer/account/account_all_turnovers_page.dart';
 import 'package:finanalyzer/account/account_details_page.dart';
 import 'package:finanalyzer/account/accounts_page.dart';
 import 'package:finanalyzer/account/create_account_page.dart';
+import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/edit_account_page.dart';
 import 'package:finanalyzer/analytics/analytics_page.dart';
 import 'package:finanalyzer/backup/backup_list_page.dart';
@@ -267,7 +268,6 @@ class HomePage extends StatelessWidget {
 
   void _showQuickExpenseEntry(BuildContext context) async {
     final accountCubit = context.read<AccountCubit>();
-    final accounts = accountCubit.state.accounts;
     if (accountCubit.state.status.isLoading) {
       Status.error.snack(
         context,
@@ -275,6 +275,7 @@ class HomePage extends StatelessWidget {
       );
       return;
     }
+    final accounts = accountCubit.state.accountById;
     if (accounts.isEmpty) {
       Status.error.snack(context, 'Please create an account first');
       return;
@@ -282,31 +283,43 @@ class HomePage extends StatelessWidget {
 
     // If only one account, use it directly
     if (accounts.length == 1) {
-      await _showEntrySheetAndRefresh(context, accounts.first);
+      await _showEntrySheetAndRefresh(context, accounts.values.first);
       return;
     }
 
     // Show account selector
     final selectedAccount = await showDialog<Account>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Account'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: accounts.length,
-            itemBuilder: (context, index) {
-              final account = accounts[index];
-              return ListTile(
-                leading: Icon(account.accountType.icon),
-                title: Text(account.name),
-                subtitle: Text(account.accountType.label()),
-                onTap: () => Navigator.of(context).pop(account),
-              );
-            },
-          ),
-        ),
+      builder: (context) => BlocBuilder<AccountCubit, AccountState>(
+        builder: (context, state) {
+          return AlertDialog(
+            title: const Text('Select Account'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: state.visibleAccounts.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return SwitchListTile(
+                      title: Text('Show hidden'),
+                      value: state.showHiddenAccounts,
+                      onChanged: (_) =>
+                          context.read<AccountCubit>().toggleHiddenAccounts(),
+                    );
+                  }
+                  final account = state.visibleAccounts[index - 1];
+                  return ListTile(
+                    leading: Icon(account.accountType.icon),
+                    title: Text(account.name),
+                    subtitle: Text(account.accountType.label()),
+                    onTap: () => Navigator.of(context).pop(account),
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
 
@@ -335,7 +348,6 @@ class HomePage extends StatelessWidget {
 
   void _showTransferDialog(BuildContext context) async {
     final accountCubit = context.read<AccountCubit>();
-    final accounts = accountCubit.state.accounts;
     if (accountCubit.state.status.isLoading) {
       Status.error.snack(
         context,
@@ -343,6 +355,7 @@ class HomePage extends StatelessWidget {
       );
       return;
     }
+    final accounts = accountCubit.state.accountById;
     if (accounts.length < 2) {
       Status.error.snack(context, 'Please create at least two accounts');
       return;
@@ -351,7 +364,7 @@ class HomePage extends StatelessWidget {
     // Show account selector
     final result = await showDialog<TransferAccountSelection>(
       context: context,
-      builder: (context) => DualAccountSelectorDialog(accounts: accounts),
+      builder: (context) => DualAccountSelectorDialog(),
     );
 
     if (result != null && context.mounted) {

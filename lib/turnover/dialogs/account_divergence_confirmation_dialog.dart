@@ -1,39 +1,39 @@
+import 'package:finanalyzer/account/cubit/account_cubit.dart';
+import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/model/account.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 
 class AccountDivergenceConfirmationDialog extends StatelessWidget {
-  final List<TagTurnoverWithTagAndAccounts> divergingTagTurnovers;
+  final List<TagTurnover> divergingTagTurnovers;
+  final UuidValue targetAccountId;
 
-  const AccountDivergenceConfirmationDialog({
-    required this.divergingTagTurnovers,
+  const AccountDivergenceConfirmationDialog(
+    this.divergingTagTurnovers,
+    this.targetAccountId, {
     super.key,
   });
 
   static Future<bool?> show(
     BuildContext context, {
     required List<TagTurnover> divergingTagTurnovers,
-    required Map<String, Tag> tagMap,
-    required Map<String, Account> accountMap,
-    required Account targetAccount,
+    required UuidValue targetAccountId,
   }) {
-    final items = divergingTagTurnovers.map((tt) {
-      final tag = tagMap[tt.tagId.uuid];
-      final currentAccount = accountMap[tt.accountId.uuid];
-      return TagTurnoverWithTagAndAccounts(
-        tagTurnover: tt,
-        tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
-        currentAccount: currentAccount,
-        targetAccount: targetAccount,
-      );
-    }).toList();
-
     return showDialog<bool>(
       context: context,
-      builder: (context) => AccountDivergenceConfirmationDialog(
-        divergingTagTurnovers: items,
+      builder: (context) => BlocBuilder<AccountCubit, AccountState>(
+        builder: (context, state) {
+          return AccountDivergenceConfirmationDialog(
+            divergingTagTurnovers,
+            targetAccountId,
+          );
+        },
       ),
     );
   }
@@ -45,10 +45,7 @@ class AccountDivergenceConfirmationDialog extends StatelessWidget {
     return AlertDialog(
       title: Row(
         children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            color: theme.colorScheme.error,
-          ),
+          Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
           const SizedBox(width: 8),
           const Expanded(child: Text('Account Mismatch')),
         ],
@@ -66,12 +63,32 @@ class AccountDivergenceConfirmationDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: divergingTagTurnovers.length,
-                itemBuilder: (context, index) {
-                  final item = divergingTagTurnovers[index];
-                  return _DivergingAccountItem(item: item);
+              child: BlocBuilder<TagCubit, TagState>(
+                builder: (context, tagState) {
+                  return BlocBuilder<AccountCubit, AccountState>(
+                    builder: (context, accountState) {
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: divergingTagTurnovers.length,
+                        itemBuilder: (context, index) {
+                          final item = divergingTagTurnovers[index];
+                          final tag =
+                              tagState.tagById[item.tagId] ??
+                              Tag(name: 'Unkown');
+                          final currentAccount =
+                              accountState.accountById[item.accountId];
+                          final targetAccount =
+                              accountState.accountById[targetAccountId];
+                          return _DivergingAccountItem(
+                            item: item,
+                            tag: tag,
+                            currentAccount: currentAccount,
+                            targetAccount: targetAccount,
+                          );
+                        },
+                      );
+                    },
+                  );
                 },
               ),
             ),
@@ -93,15 +110,22 @@ class AccountDivergenceConfirmationDialog extends StatelessWidget {
 }
 
 class _DivergingAccountItem extends StatelessWidget {
-  final TagTurnoverWithTagAndAccounts item;
+  final TagTurnover item;
+  final Tag tag;
+  final Account? currentAccount;
+  final Account? targetAccount;
 
-  const _DivergingAccountItem({required this.item});
+  const _DivergingAccountItem({
+    required this.item,
+    required this.tag,
+    required this.currentAccount,
+    required this.targetAccount,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tt = item.tagTurnover;
-    final tag = item.tag;
+    final tt = item;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -139,7 +163,7 @@ class _DivergingAccountItem extends StatelessWidget {
               children: [
                 Expanded(
                   child: _AccountChip(
-                    account: item.currentAccount,
+                    account: currentAccount,
                     label: 'From',
                     color: theme.colorScheme.errorContainer,
                   ),
@@ -154,7 +178,7 @@ class _DivergingAccountItem extends StatelessWidget {
                 ),
                 Expanded(
                   child: _AccountChip(
-                    account: item.targetAccount,
+                    account: targetAccount,
                     label: 'To',
                     color: theme.colorScheme.primaryContainer,
                   ),
@@ -202,10 +226,7 @@ class _AccountChip extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             account?.name ?? 'Unknown',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -213,18 +234,4 @@ class _AccountChip extends StatelessWidget {
       ),
     );
   }
-}
-
-class TagTurnoverWithTagAndAccounts {
-  final TagTurnover tagTurnover;
-  final Tag tag;
-  final Account? currentAccount;
-  final Account targetAccount;
-
-  TagTurnoverWithTagAndAccounts({
-    required this.tagTurnover,
-    required this.tag,
-    this.currentAccount,
-    required this.targetAccount,
-  });
 }

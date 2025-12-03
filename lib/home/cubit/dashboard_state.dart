@@ -19,15 +19,19 @@ abstract class DashboardState with _$DashboardState {
     required Decimal totalTransfers,
     required Decimal unallocatedIncome,
     required Decimal unallocatedExpenses,
+    // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TagSummary> incomeTagSummaries,
+    // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TagSummary> expenseTagSummaries,
+    // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TagSummary> transferTagSummaries,
+    // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TurnoverWithTags> unallocatedTurnovers,

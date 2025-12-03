@@ -1,6 +1,6 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/account/model/account.dart';
-import 'package:finanalyzer/account/model/account_repository.dart';
+import 'package:finanalyzer/account/cubit/account_cubit.dart';
+import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
 import 'package:finanalyzer/turnover/dialogs/account_divergence_confirmation_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/amount_exceeding_confirmation_dialog.dart';
@@ -13,7 +13,6 @@ import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_info_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 class SelectPendingTagTurnoversPage extends StatefulWidget {
@@ -53,7 +52,6 @@ class _SelectPendingTagTurnoversPageState
     try {
       final tagTurnoverRepository = context.read<TagTurnoverRepository>();
       final tagRepository = context.read<TagRepository>();
-      final accountRepository = context.read<AccountRepository>();
 
       final unmatched = await tagTurnoverRepository.getUnmatched();
 
@@ -83,16 +81,12 @@ class _SelectPendingTagTurnoversPageState
       final allTags = await tagRepository.getAllTags();
       final tagMap = {for (final tag in allTags) tag.id!: tag};
 
-      final allAccounts = await accountRepository.findAll();
-      final accountMap = {for (final acc in allAccounts) acc.id!: acc};
-
       final withTagsAndAccounts = allAvailable.map((tt) {
         final tag = tagMap[tt.tagId];
-        final account = accountMap[tt.accountId];
         return _TagTurnoverWithTagAndAccount(
           tagTurnover: tt,
           tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
-          account: account,
+          accountId: tt.accountId,
         );
       }).toList();
 
@@ -121,9 +115,6 @@ class _SelectPendingTagTurnoversPageState
   Future<void> _confirmSelection() async {
     if (_selectedIds.isEmpty) return;
 
-    final accountRepository = context.read<AccountRepository>();
-    final tagRepository = context.read<TagRepository>();
-
     final selectedTurnovers = _pendingTurnovers!
         .where((tt) => _selectedIds.contains(tt.tagTurnover.id.uuid))
         .toList();
@@ -138,25 +129,10 @@ class _SelectPendingTagTurnoversPageState
         .toList();
 
     if (divergingTagTurnovers.isNotEmpty) {
-      // Load all accounts and tags for the dialog
-      final allAccounts = await accountRepository.findAll();
-      final accountMap = {for (final acc in allAccounts) acc.id!.uuid: acc};
-
-      final allTags = await tagRepository.getAllTags();
-      final tagMap = {for (final tag in allTags) tag.id!.uuid: tag};
-
-      final targetAccount = allAccounts.firstWhere(
-        (acc) => acc.id == widget.turnover.accountId,
-      );
-
-      if (!mounted) return;
-
       final confirmed = await AccountDivergenceConfirmationDialog.show(
         context,
         divergingTagTurnovers: divergingTagTurnovers,
-        tagMap: tagMap,
-        accountMap: accountMap,
-        targetAccount: targetAccount,
+        targetAccountId: widget.turnover.accountId,
       );
 
       if (confirmed != true) return;
@@ -284,7 +260,7 @@ class _SelectPendingTagTurnoversPageState
                           item.tagTurnover.id.uuid,
                         );
                         final accountDiverges =
-                            item.account?.id != widget.turnover.accountId;
+                            item.accountId != widget.turnover.accountId;
 
                         return _SelectablePendingTurnoverItem(
                           tagTurnoverWithTagAndAccount: item,
@@ -321,7 +297,7 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
     final theme = Theme.of(context);
     final tt = tagTurnoverWithTagAndAccount.tagTurnover;
     final tag = tagTurnoverWithTagAndAccount.tag;
-    final account = tagTurnoverWithTagAndAccount.account;
+    final accountId = tagTurnoverWithTagAndAccount.accountId;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -391,43 +367,48 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 12,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${tt.bookingDate.day.toString().padLeft(2, '0')}.${tt.bookingDate.month.toString().padLeft(2, '0')}.${tt.bookingDate.year}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Icon(
-                    account?.syncSource?.icon ?? Icons.account_balance,
-                    size: 12,
-                    color: accountDiverges
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    account?.name ?? 'Unknown Account',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: accountDiverges
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.onSurfaceVariant,
-                      fontWeight: accountDiverges
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ],
+              BlocBuilder<AccountCubit, AccountState>(
+                builder: (context, state) {
+                  final account = state.accountById[accountId];
+                  return Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${tt.bookingDate.day.toString().padLeft(2, '0')}.${tt.bookingDate.month.toString().padLeft(2, '0')}.${tt.bookingDate.year}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        account?.syncSource?.icon ?? Icons.account_balance,
+                        size: 12,
+                        color: accountDiverges
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        account?.name ?? 'Unknown Account',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: accountDiverges
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.onSurfaceVariant,
+                          fontWeight: accountDiverges
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  );
+                }
               ),
             ],
           ),
@@ -440,11 +421,11 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
 class _TagTurnoverWithTagAndAccount {
   final TagTurnover tagTurnover;
   final Tag tag;
-  final Account? account;
+  final UuidValue accountId;
 
   _TagTurnoverWithTagAndAccount({
     required this.tagTurnover,
     required this.tag,
-    this.account,
+    required this.accountId,
   });
 }

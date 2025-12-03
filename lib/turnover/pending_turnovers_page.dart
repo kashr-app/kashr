@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/account/cubit/account_cubit.dart';
+import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/model/account.dart';
-import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
@@ -12,8 +13,8 @@ import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 class PendingTurnoversRoute extends GoRouteData with $PendingTurnoversRoute {
@@ -52,22 +53,17 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
     try {
       final tagTurnoverRepository = context.read<TagTurnoverRepository>();
       final tagRepository = context.read<TagRepository>();
-      final accountRepository = context.read<AccountRepository>();
 
       final unmatched = await tagTurnoverRepository.getUnmatched();
       final allTags = await tagRepository.getAllTags();
       final tagMap = {for (final tag in allTags) tag.id!: tag};
 
-      final allAccounts = await accountRepository.findAll();
-      final accountMap = {for (final acc in allAccounts) acc.id!: acc};
-
       final withTagsAndAccounts = unmatched.map((tt) {
         final tag = tagMap[tt.tagId];
-        final account = accountMap[tt.accountId];
         return TagTurnoverWithTagAndAccount(
           tagTurnover: tt,
           tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
-          account: account,
+          accountId: tt.accountId,
         );
       }).toList();
 
@@ -212,7 +208,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
       // Create a new turnover
       final newTurnover = Turnover(
         id: const Uuid().v4obj(),
-        accountId: account.id!,
+        accountId: account.id,
         amountValue: tagTurnover.amountValue,
         amountUnit: tagTurnover.amountUnit,
         bookingDate: tagTurnover.bookingDate,
@@ -401,36 +397,42 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
                   ],
                 ),
               )
-            : RefreshIndicator(
-                onRefresh: _loadPendingTurnovers,
-                child: ListView.builder(
-                  itemCount: _pendingTurnovers!.length,
-                  itemBuilder: (context, index) {
-                    final item = _pendingTurnovers![index];
-                    return _PendingTurnoverItem(
-                      tagTurnoverWithTagAndAccount: item,
-                      onDelete: () => _deletePendingTurnover(item.tagTurnover),
-                      onUnmatch: item.tagTurnover.isMatched
-                          ? () => _unmatchTurnover(item.tagTurnover)
-                          : null,
-                      onMaterialize:
-                          item.account != null &&
-                              item.account!.syncSource == SyncSource.manual &&
-                              !item.tagTurnover.isMatched
-                          ? () => _materializeTurnover(
-                              item.tagTurnover,
-                              item.account!,
-                            )
-                          : null,
-                      onFindMatch:
-                          item.account != null &&
-                              item.account!.syncSource != SyncSource.manual &&
-                              !item.tagTurnover.isMatched
-                          ? () => _findMatch(item.tagTurnover, item.account!)
-                          : null,
-                    );
-                  },
-                ),
+            : BlocBuilder<AccountCubit, AccountState>(
+                builder: (context, state) {
+                  return RefreshIndicator(
+                    onRefresh: _loadPendingTurnovers,
+                    child: ListView.builder(
+                      itemCount: _pendingTurnovers!.length,
+                      itemBuilder: (context, index) {
+                        final item = _pendingTurnovers![index];
+                        final account = state.accountById[item.accountId];
+                        return _PendingTurnoverItem(
+                          tagTurnoverWithTagAndAccount: item,
+                          onDelete: () =>
+                              _deletePendingTurnover(item.tagTurnover),
+                          onUnmatch: item.tagTurnover.isMatched
+                              ? () => _unmatchTurnover(item.tagTurnover)
+                              : null,
+                          onMaterialize:
+                              account != null &&
+                                  account.syncSource == SyncSource.manual &&
+                                  !item.tagTurnover.isMatched
+                              ? () => _materializeTurnover(
+                                  item.tagTurnover,
+                                  account,
+                                )
+                              : null,
+                          onFindMatch:
+                              account != null &&
+                                  account.syncSource != SyncSource.manual &&
+                                  !item.tagTurnover.isMatched
+                              ? () => _findMatch(item.tagTurnover, account)
+                              : null,
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
       ),
     );
@@ -457,7 +459,7 @@ class _PendingTurnoverItem extends StatelessWidget {
     final theme = Theme.of(context);
     final tt = tagTurnoverWithTagAndAccount.tagTurnover;
     final tag = tagTurnoverWithTagAndAccount.tag;
-    final account = tagTurnoverWithTagAndAccount.account;
+    final accountId = tagTurnoverWithTagAndAccount.accountId;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -502,56 +504,61 @@ class _PendingTurnoverItem extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: 12,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${tt.bookingDate.day.toString().padLeft(2, '0')}.${tt.bookingDate.month.toString().padLeft(2, '0')}.${tt.bookingDate.year}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  account?.syncSource?.icon ?? Icons.account_balance,
-                  size: 12,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  account?.name ?? 'Unknown Account',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  tt.isMatched
-                      ? Icons.check_circle_outline
-                      : Icons.pending_outlined,
-                  size: 12,
-                  color: tt.isMatched
-                      ? Colors.green
-                      : theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  tt.isMatched ? 'Matched' : 'Pending',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: tt.isMatched
-                        ? Colors.green
-                        : theme.colorScheme.primary,
-                  ),
-                ),
-              ],
+            BlocBuilder<AccountCubit, AccountState>(
+              builder: (context, state) {
+                final account = state.accountById[accountId];
+                return Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      dateFormat.format(tt.bookingDate),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(
+                      account?.syncSource?.icon ?? Icons.account_balance,
+                      size: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      account?.name ?? 'Unknown Account',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      tt.isMatched
+                          ? Icons.check_circle_outline
+                          : Icons.pending_outlined,
+                      size: 12,
+                      color: tt.isMatched
+                          ? Colors.green
+                          : theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      tt.isMatched ? 'Matched' : 'Pending',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tt.isMatched
+                            ? Colors.green
+                            : theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             if (onMaterialize != null ||
                 onFindMatch != null ||
@@ -720,11 +727,11 @@ class _TurnoverMatchDetails extends StatelessWidget {
 class TagTurnoverWithTagAndAccount {
   final TagTurnover tagTurnover;
   final Tag tag;
-  final Account? account;
+  final UuidValue accountId;
 
   TagTurnoverWithTagAndAccount({
     required this.tagTurnover,
     required this.tag,
-    this.account,
+    required this.accountId,
   });
 }

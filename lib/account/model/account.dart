@@ -73,19 +73,31 @@ enum SyncSource {
 @freezed
 abstract class Account with _$Account {
   const factory Account({
-    @UUIDNullableJsonConverter() UuidValue? id,
+    @UUIDJsonConverter() required UuidValue id,
     required DateTime createdAt,
     required String name,
     String? identifier, // IBAN or account number
     String? apiId,
+
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'account_type') required AccountType accountType,
+
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'sync_source') SyncSource? syncSource,
     required String currency,
-    @JsonKey(name: 'opening_balance')
+
     @DecimalJsonConverter()
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'opening_balance')
     required Decimal openingBalance,
+
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'opening_balance_date') required DateTime openingBalanceDate,
-    @BoolNullableJsonConverter() @JsonKey(name: 'is_hidden') bool? isHidden,
+
+    @BoolJsonConverter()
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'is_hidden')
+    required bool isHidden,
   }) = _Account;
 
   factory Account.fromJson(Map<String, dynamic> json) =>

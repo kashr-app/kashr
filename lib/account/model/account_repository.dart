@@ -22,9 +22,6 @@ class AccountRepository {
 
   Future<Account> updateAccount(Account account) async {
     final id = account.id;
-    if (id == null) {
-      throw 'Cannot update non-persisted account (id = null)';
-    }
     final db = await DatabaseHelper().database;
     final count = await db.update('account', account.toJson(),
         where: 'id = ?', whereArgs: [id.uuid]);

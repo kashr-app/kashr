@@ -5,6 +5,7 @@ import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
 import 'turnover.dart';
 import 'package:uuid/uuid.dart';
@@ -53,13 +54,10 @@ class TurnoverRepository {
   }
 
   /// Fetches turnovers for a specific month and year.
-  Future<List<Turnover>> getTurnoversForMonth({
-    required int year,
-    required int month,
-  }) async {
+  Future<List<Turnover>> getTurnoversForMonth(YearMonth yearMonth) async {
     final db = await DatabaseHelper().database;
 
-    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
     final endDate = startDate.add(months: 1);
 
     final maps = await db.query(
@@ -156,13 +154,10 @@ class TurnoverRepository {
   /// A turnover is considered unallocated if:
   /// - It has no tag_turnover entries, OR
   /// - The sum of tag_turnover amounts doesn't equal the turnover amount
-  Future<int> countUnallocatedTurnoversForMonth({
-    required int year,
-    required int month,
-  }) async {
+  Future<int> countUnallocatedTurnoversForMonth(YearMonth yearMonth) async {
     final db = await DatabaseHelper().database;
 
-    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
     final endDate = startDate.add(months: 1);
 
     final result = await db.rawQuery(
@@ -189,14 +184,12 @@ class TurnoverRepository {
   /// A turnover is considered unallocated if:
   /// - It has no tag_turnover entries, OR
   /// - The sum of tag_turnover amounts doesn't equal the turnover amount
-  Future<List<TurnoverWithTags>> getUnallocatedTurnoversForMonth({
-    required int year,
-    required int month,
+  Future<List<TurnoverWithTags>> getUnallocatedTurnoversForMonth(YearMonth yearMonth, {
     int limit = 5,
   }) async {
     final db = await DatabaseHelper().database;
 
-    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
     final endDate = startDate.add(months: 1);
 
     // Query to find turnovers that are not fully allocated

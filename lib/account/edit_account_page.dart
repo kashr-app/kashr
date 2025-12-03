@@ -10,6 +10,7 @@ import 'package:finanalyzer/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 class EditAccountRoute extends GoRouteData with $EditAccountRoute {
   final String accountId;
@@ -20,12 +21,12 @@ class EditAccountRoute extends GoRouteData with $EditAccountRoute {
   Widget build(BuildContext context, GoRouterState state) {
     // Uses the global AccountCubit from the app-level providers
     // This ensures all pages share the same account state
-    return EditAccountPage(accountId: accountId);
+    return EditAccountPage(accountId: UuidValue.fromString(accountId));
   }
 }
 
 class EditAccountPage extends StatelessWidget {
-  final String accountId;
+  final UuidValue accountId;
 
   const EditAccountPage({super.key, required this.accountId});
 
@@ -33,18 +34,14 @@ class EditAccountPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AccountCubit, AccountState>(
       builder: (context, state) {
-        if (state.status.isLoading && state.accounts.isEmpty) {
+        if (state.status.isLoading && state.accountById.isEmpty) {
           return Scaffold(
             appBar: AppBar(title: const Text('Edit Account')),
             body: const Center(child: CircularProgressIndicator()),
           );
         }
 
-        final allAccounts = [...state.accounts, ...state.hiddenAccounts];
-        final account = allAccounts.cast<Account?>().firstWhere(
-          (a) => a?.id?.uuid == accountId,
-          orElse: () => null,
-        );
+        final account = state.accountById[accountId];
 
         if (account == null) {
           return Scaffold(
@@ -100,7 +97,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
     _originalAccount = widget.account;
     _originalBalance = widget.balance;
     _nameController = TextEditingController(text: widget.account.name);
-    _isHidden = widget.account.isHidden ?? false;
+    _isHidden = widget.account.isHidden ;
     _currentBalanceScaled = widget.balance != null
         ? (widget.balance! * Decimal.fromInt(100)).toBigInt().toInt()
         : 0;
@@ -108,7 +105,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
 
   bool get _isDirty {
     final nameChanged = _nameController.text != _originalAccount.name;
-    final isHiddenChanged = _isHidden != (_originalAccount.isHidden ?? false);
+    final isHiddenChanged = _isHidden != (_originalAccount.isHidden);
 
     final balanceChanged = switch (_originalAccount.syncSource) {
       SyncSource.comdirect => false,
@@ -349,7 +346,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
 
     try {
       final nameChanged = _nameController.text != _originalAccount.name;
-      final isHiddenChanged = _isHidden != (_originalAccount.isHidden ?? false);
+      final isHiddenChanged = _isHidden != (_originalAccount.isHidden);
       final accountRepository = context.read<AccountRepository>();
       final accountCubit = context.read<AccountCubit>();
 

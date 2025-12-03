@@ -1,71 +1,86 @@
+import 'package:finanalyzer/account/cubit/account_cubit.dart';
+import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:flutter/material.dart';
-class DualAccountSelectorDialog extends StatefulWidget {
-  final List<Account> accounts;
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-  const DualAccountSelectorDialog({super.key, required this.accounts});
+class DualAccountSelectorDialog extends StatefulWidget {
+  const DualAccountSelectorDialog({super.key});
 
   @override
   State<DualAccountSelectorDialog> createState() =>
       _DualAccountSelectorDialogState();
 }
 
-class _DualAccountSelectorDialogState
-    extends State<DualAccountSelectorDialog> {
+class _DualAccountSelectorDialogState extends State<DualAccountSelectorDialog> {
   Account? from;
   Account? to;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Transfer Between Accounts"),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSection(
-              context: context,
-              label: "From",
-              selected: from,
-              onSelected: (account) => setState(() {
-                from = account;
-                if (to == account) to = null;
-              }),
+    return BlocBuilder<AccountCubit, AccountState>(
+      builder: (context, state) {
+        return AlertDialog(
+          title: const Text("Transfer Between Accounts"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Show hidden'),
+                  value: state.showHiddenAccounts,
+                  onChanged: (_) =>
+                      context.read<AccountCubit>().toggleHiddenAccounts(),
+                ),
+                _buildSection(
+                  context: context,
+                  accounts: state.visibleAccounts,
+                  label: "From",
+                  selected: from,
+                  onSelected: (account) => setState(() {
+                    from = account;
+                    if (to == account) to = null;
+                  }),
+                ),
+                const SizedBox(height: 16),
+                _buildSection(
+                  context: context,
+                  accounts: state.visibleAccounts,
+                  label: "To",
+                  selected: to,
+                  onSelected: (account) => setState(() {
+                    to = account;
+                    if (from == account) from = null;
+                  }),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            _buildSection(
-              context: context,
-              label: "To",
-              selected: to,
-              onSelected: (account) => setState(() {
-                to = account;
-                if (from == account) from = null;
-              }),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            FilledButton(
+              onPressed: (from != null && to != null)
+                  ? () => Navigator.pop(
+                      context,
+                      TransferAccountSelection(from: from!, to: to!),
+                    )
+                  : null,
+              child: const Text("Continue"),
             ),
           ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
-        ),
-        FilledButton(
-          onPressed: (from != null && to != null)
-              ? () => Navigator.pop(
-                    context,
-                    TransferAccountSelection(from: from!, to: to!),
-                  )
-              : null,
-          child: const Text("Continue"),
-        ),
-      ],
+        );
+      },
     );
   }
 
   Widget _buildSection({
     required BuildContext context,
+    required List<Account> accounts,
     required String label,
     required Account? selected,
     required ValueChanged<Account> onSelected,
@@ -85,9 +100,7 @@ class _DualAccountSelectorDialogState
         const SizedBox(height: 8),
 
         ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxHeight: 150,
-          ),
+          constraints: const BoxConstraints(maxHeight: 150),
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border.all(color: theme.dividerColor),
@@ -97,12 +110,12 @@ class _DualAccountSelectorDialogState
               child: ListView.builder(
                 primary: false,
                 shrinkWrap: true,
-                itemCount: widget.accounts.length,
+                itemCount: accounts.length,
                 itemBuilder: (context, index) {
-                  final account = widget.accounts[index];
+                  final account = accounts[index];
                   final isSelected = account == selected;
                   final cs = theme.colorScheme;
-              
+
                   return ListTile(
                     leading: Icon(
                       account.accountType.icon,
@@ -127,7 +140,6 @@ class _DualAccountSelectorDialogState
     );
   }
 }
-
 
 class TransferAccountSelection {
   final Account from;

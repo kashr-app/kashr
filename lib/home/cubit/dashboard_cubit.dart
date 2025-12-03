@@ -2,7 +2,9 @@ import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/comdirect/comdirect_service.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:flutter/material.dart';
@@ -86,40 +88,27 @@ class DashboardCubit extends Cubit<DashboardState> {
     emit(state.copyWith(status: Status.loading));
     try {
       final turnovers = await _turnoverRepository.getTurnoversForMonth(
-        year: state.selectedPeriod.year,
-        month: state.selectedPeriod.month,
+        state.selectedPeriod,
       );
 
       final incomeTagSummaries = await _tagTurnoverRepository
-          .getIncomeTagSummariesForMonth(
-            year: state.selectedPeriod.year,
-            month: state.selectedPeriod.month,
-          );
+          .getIncomeTagSummariesForMonth(state.selectedPeriod);
 
       final expenseTagSummaries = await _tagTurnoverRepository
-          .getExpenseTagSummariesForMonth(
-            year: state.selectedPeriod.year,
-            month: state.selectedPeriod.month,
-          );
+          .getExpenseTagSummariesForMonth(state.selectedPeriod);
 
-      final transferTagSummaries = await _tagTurnoverRepository
-          .getTransferTagSummariesForMonth(
-            year: state.selectedPeriod.year,
-            month: state.selectedPeriod.month,
-          );
+      final (
+        transferTagSummaries,
+        totalTransfers,
+        totalTransferIncome,
+        totalTransferExpenses,
+      ) = await _loadTransfersSummary();
 
       final unallocatedTurnovers = await _turnoverRepository
-          .getUnallocatedTurnoversForMonth(
-            year: state.selectedPeriod.year,
-            month: state.selectedPeriod.month,
-            limit: 1,
-          );
+          .getUnallocatedTurnoversForMonth(state.selectedPeriod, limit: 1);
 
       final unallocatedCount = await _turnoverRepository
-          .countUnallocatedTurnoversForMonth(
-            year: state.selectedPeriod.year,
-            month: state.selectedPeriod.month,
-          );
+          .countUnallocatedTurnoversForMonth(state.selectedPeriod);
 
       // Calculate total from all turnovers (including transfers)
       final totalAllIncome = turnovers
@@ -149,16 +138,6 @@ class DashboardCubit extends Cubit<DashboardState> {
         (sum, summary) => sum + summary.totalAmount.abs(),
       );
 
-      // Sum of all transfer tags (inflow)
-      final totalTransferIncome = transferTagSummaries
-          .where((s) => s.totalAmount > Decimal.zero)
-          .fold<Decimal>(Decimal.zero, (sum, s) => sum + s.totalAmount);
-
-      // Sum of all transfer tags (outflow)
-      final totalTransferExpenses = transferTagSummaries
-          .where((s) => s.totalAmount < Decimal.zero)
-          .fold<Decimal>(Decimal.zero, (sum, s) => sum + s.totalAmount.abs());
-
       // Unallocated = total - allocated income/expense - transfers
       final unallocatedIncome =
           totalAllIncome - totalAllocatedIncome - totalTransferIncome;
@@ -169,26 +148,6 @@ class DashboardCubit extends Cubit<DashboardState> {
       // (excludes transfers)
       final totalIncome = totalAllocatedIncome + unallocatedIncome;
       final totalExpenses = totalAllocatedExpenses + unallocatedExpenses;
-
-      // Calculate total transfers accounting for internal vs external transfers
-      // For internal transfers (between tracked accounts), the amount appears
-      // twice (once negative, once positive), but we sum in abs() so we divide by 2.
-      // For external transfers (to/from untracked accounts), they appear once.
-      final sumWithSign = transferTagSummaries.fold<Decimal>(
-        Decimal.zero,
-        (sum, summary) => sum + summary.totalAmount,
-      );
-      final sumOfAbs = transferTagSummaries.fold<Decimal>(
-        Decimal.zero,
-        (sum, summary) => sum + summary.totalAmount.abs(),
-      );
-      // External amount = abs(sumWithSign) (net that doesn't cancel)
-      // Internal amount = (sumOfAbs - abs(sumWithSign)) / 2 (counted twice)
-      // Total amount: internal / 2 + external = (sumOfAbs + abs(sumWithSign)) / 2
-      final totalTransfers =
-          ((sumOfAbs + sumWithSign.abs()) / Decimal.fromInt(2)).toDecimal(
-            scaleOnInfinitePrecision: 2,
-          );
 
       emit(
         state.copyWith(
@@ -214,6 +173,108 @@ class DashboardCubit extends Cubit<DashboardState> {
         ),
       );
     }
+  }
+
+  Future<(List<TagSummary>, Decimal, Decimal, Decimal)>
+  _loadTransfersSummary() async {
+    final transferTagSummariesBySign = await _tagTurnoverRepository
+        .getTransferTagSummariesForMonth(state.selectedPeriod);
+
+    // Sum of all transfer tags (inflow)
+    final totalTransferIncome = transferTagSummariesBySign[TurnoverSign.income]!
+        .fold<Decimal>(Decimal.zero, (sum, s) => sum + s.totalAmount);
+
+    // Sum of all transfer tags (outflow)
+    final totalTransferExpenses =
+        transferTagSummariesBySign[TurnoverSign.expense]!.fold<Decimal>(
+          Decimal.zero,
+          (sum, s) => sum + s.totalAmount.abs(),
+        );
+
+    /// TODO introduce transfer entity
+    /// ... because THE CURRENT IMPLEMENTATION DOES NOT WORK in case there are external turnovers with different sign on a single tag
+    ///   example:
+    ///     investment +10
+    ///     investment -600
+    ///     => should be 610, but is (610+590)/2 = 600
+    ///
+    /// SOLUTION: only allow internal transfers
+    /// * users can easily create an virtual account for the counterpart
+    /// * we could also enforce that there is a counter part transaction
+    ///     * store the transfer as entity that matches the in and out tag turnovers
+    ///     * only allow transfer tags when creating transfers
+    ///     * only allow non-transfer tags when creating normal transactions (or ask if user wants to switch to transfer mode)
+    ///     * can end up with tag turnvoers tagged with transfer tag but not being associated to a transfer entity:
+    ///       * user manually tags the turnover
+    ///       * when toggling a tags "isTransfer" attribute, we could end up with tagTurnovers marked as transfer but without Transfer entity => we could ask the user to match them and support it with tooling for good UX
+    ///     * Display only the "positive" sign tag turnover in turnovers list
+    ///
+    /// ALTERNATE SOLUTION: we must know for every transfer tagTurnover if it is internal or external
+    /// i.e. we need for each transfer tagTurnover an entity to track that information.
+    ///     e.g. as fromAccount and toAccount, where one can be null (external) or both are set (internal)
+    ///
+    ///
+    /// BUGGY BEST EFFORTS SOLUTION THAT IS CURRENTLY IMPLEMENTED
+    /// * supports internal turnovers
+    /// * partially supports external turnovers (in case there are not multiple ones that cancel out each other)
+    ///     example:
+    ///       investment +10
+    ///       investment -600
+    ///       => should be 610, but is (610+590)/2 = 600
+
+    // Transfers can be external (one side tracked only) or internal (between tracked accounts)
+    //
+    // For internal transfers (between tracked accounts), the amount appears
+    // twice (once negative, once positive).
+    // For external transfers (to/from untracked accounts), they appear once.
+    //
+    // => total amount of transfers = externals.sumAbs() + internals.sumAbs()/2
+    //
+    // Which we can calculate as:
+    // sumWithSign = sum of all tagTurnovers amounts = net sum that doesn't canacel (ie. some external)
+    // sumOfAbs = sum of all tagTurnovers absolute amounts
+    // External amount = abs(sumWithSign) = net sum (of values with sign) that doesn cancel
+    // Internal amount = (sumOfAbs - abs(sumWithSign)) / 2
+    // Total amount: external + internal/2 = (sumOfAbs + abs(sumWithSign)) / 2
+    //
+    // We apply that logic per tag
+    final transferTagSummaries = transferTagSummariesBySign.values
+        .expand((it) => it)
+        .fold(<Tag, TagSummary>{}, (all, it) {
+          final ts1 = all[it.tag];
+          if (ts1 == null) {
+            // a tag can either occur once or twice (income, expense)
+            // if it occurs only once, we just keep it with sign and later ensure to .abs() all values
+            all[it.tag] = it; // keep sign initially
+            return all;
+          }
+          // if tha tag occurs twice, we calculate the total abs value according to the above formula.
+          final ts2 = it;
+
+          final sumWithSign = ts1.totalAmount + ts2.totalAmount;
+          final sumOfAbs = ts1.totalAmount.abs() + ts2.totalAmount.abs();
+          final totalAmount =
+              ((sumOfAbs + sumWithSign.abs()) / Decimal.fromInt(2)).toDecimal(
+                scaleOnInfinitePrecision: 2,
+              );
+
+          all[it.tag] = it.copyWith(totalAmount: totalAmount);
+          return all;
+        })
+        .values
+        .map((it) => it.copyWith(totalAmount: it.totalAmount.abs()))
+        .toList();
+
+    final totalTransfers = transferTagSummaries.fold<Decimal>(
+      Decimal.zero,
+      (sum, it) => sum + it.totalAmount.abs(),
+    );
+    return (
+      transferTagSummaries,
+      totalTransfers,
+      totalTransferIncome,
+      totalTransferExpenses,
+    );
   }
 
   /// Navigates to the previous month.
@@ -245,11 +306,7 @@ class DashboardCubit extends Cubit<DashboardState> {
 
   /// Sets a specific month and year.
   Future<void> selectMonth(YearMonth yearMonth) async {
-    emit(
-      state.copyWith(
-        selectedPeriod: yearMonth,
-      ),
-    );
+    emit(state.copyWith(selectedPeriod: yearMonth));
     await loadMonthData();
   }
 }

@@ -2,7 +2,6 @@ import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/accounts_page.dart';
 import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/cubit/account_state.dart';
-import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/theme.dart';
@@ -27,12 +26,12 @@ class AccountAllTurnoversRoute extends GoRouteData
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return AccountAllTurnoversPage(accountId: accountId);
+    return AccountAllTurnoversPage(accountId: UuidValue.fromString(accountId));
   }
 }
 
 class AccountAllTurnoversPage extends StatefulWidget {
-  final String accountId;
+  final UuidValue accountId;
 
   const AccountAllTurnoversPage({super.key, required this.accountId});
 
@@ -78,14 +77,7 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
 
   Future<void> _loadAccountInfo() async {
     final accountState = context.read<AccountCubit>().state;
-    final allAccounts = [
-      ...accountState.accounts,
-      ...accountState.hiddenAccounts,
-    ];
-    final account = allAccounts.cast<Account?>().firstWhere(
-      (a) => a?.id?.uuid == widget.accountId,
-      orElse: () => null,
-    );
+    final account = accountState.accountById[widget.accountId];
 
     if (account != null) {
       setState(() {
@@ -120,7 +112,7 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
 
     try {
       final turnovers = await _turnoverRepository.getTurnoversForAccount(
-        accountId: UuidValue.fromString(widget.accountId),
+        accountId: widget.accountId,
       );
 
       // Paginate in memory
@@ -211,11 +203,7 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
   Widget build(BuildContext context) {
     return BlocBuilder<AccountCubit, AccountState>(
       builder: (context, state) {
-        final allAccounts = [...state.accounts, ...state.hiddenAccounts];
-        final account = allAccounts.cast<Account?>().firstWhere(
-          (a) => a?.id?.uuid == widget.accountId,
-          orElse: () => null,
-        );
+        final account = state.accountById[widget.accountId];
 
         if (account == null) {
           return Scaffold(

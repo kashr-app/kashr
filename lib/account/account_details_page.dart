@@ -32,12 +32,12 @@ class AccountDetailsRoute extends GoRouteData with $AccountDetailsRoute {
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return AccountDetailsPage(accountId: accountId);
+    return AccountDetailsPage(accountId: UuidValue.fromString(accountId));
   }
 }
 
 class AccountDetailsPage extends StatefulWidget {
-  final String accountId;
+  final UuidValue accountId;
 
   const AccountDetailsPage({super.key, required this.accountId});
 
@@ -67,7 +67,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     try {
       final savingsService = context.read<SavingsBalanceService>();
       final breakdown = await savingsService.getSavingsBreakdownForAccount(
-        UuidValue.fromString(widget.accountId),
+        widget.accountId,
       );
       if (mounted) {
         setState(() {
@@ -90,7 +90,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       final tagCubit = context.read<TagCubit>();
 
       final recentTurnovers = (await turnoverRepository.getTurnoversForAccount(
-        accountId: UuidValue.fromString(widget.accountId),
+        accountId: widget.accountId,
         limit: 5,
         direction: SortDirection.desc,
       )).toList();
@@ -140,11 +140,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   Widget build(BuildContext context) {
     return BlocBuilder<AccountCubit, AccountState>(
       builder: (context, state) {
-        final allAccounts = [...state.accounts, ...state.hiddenAccounts];
-        final account = allAccounts.cast<Account?>().firstWhere(
-          (a) => a?.id?.uuid == widget.accountId,
-          orElse: () => null,
-        );
+        final account = state.accountById[widget.accountId];
 
         if (account == null) {
           return Scaffold(
@@ -174,8 +170,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit),
-                onPressed: () =>
-                    EditAccountRoute(accountId: widget.accountId).go(context),
+                onPressed: () => EditAccountRoute(
+                  accountId: widget.accountId.uuid,
+                ).go(context),
                 tooltip: 'Edit Account',
               ),
             ],
@@ -434,7 +431,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
             ),
             TextButton(
               onPressed: () => AccountAllTurnoversRoute(
-                accountId: widget.accountId,
+                accountId: widget.accountId.uuid,
               ).go(context),
               child: const Text('View All'),
             ),

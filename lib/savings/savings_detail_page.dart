@@ -344,10 +344,7 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
 
     return BlocBuilder<AccountCubit, AccountState>(
       builder: (context, accountState) {
-        final accountById = {
-          for (final a in accountState.accounts)
-            if (a.id != null) a.id!: a,
-        };
+        final accountById = accountState.accountById;
         return RefreshIndicator(
           onRefresh: _loadDetails,
           child: ListView(

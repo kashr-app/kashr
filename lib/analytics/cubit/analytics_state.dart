@@ -11,17 +11,25 @@ part '../../_gen/analytics/cubit/analytics_state.g.dart';
 abstract class AnalyticsState with _$AnalyticsState {
   const factory AnalyticsState({
     @Default(Status.initial) Status status,
+
+    // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<Tag> allTags,
+
+    // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<UuidValue> selectedTagIds,
+
+    // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default({})
     Map<String, List<TagSummary>> dataSummaries,
+
     required DateTime startDate,
     required DateTime endDate,
+
     String? errorMessage,
   }) = _AnalyticsState;
 

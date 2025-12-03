@@ -21,7 +21,7 @@ class BalanceCalculationService {
   }) async {
     // Get all turnovers up to cutoff date
     final turnovers = await _turnoverRepository.getTurnoversForAccount(
-      accountId: account.id!,
+      accountId: account.id,
       endDateInclusive: asOf,
     );
 
@@ -43,7 +43,7 @@ class BalanceCalculationService {
 
     // Get unmatched TagTurnovers (pending expenses) up to the asOf date
     final unmatched = await _tagTurnoverRepository.getUnmatched(
-      accountId: account.id!,
+      accountId: account.id,
       endDate: asOf,
     );
 

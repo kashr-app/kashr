@@ -60,7 +60,7 @@ class AccountsPage extends StatelessWidget {
               );
             }
 
-            if (state.accounts.isEmpty && state.hiddenAccounts.isEmpty) {
+            if (state.accountById.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -77,15 +77,11 @@ class AccountsPage extends StatelessWidget {
               );
             }
 
-            final visibleAccounts = state.accounts;
-            final hiddenAccounts = state.hiddenAccounts;
             final showHidden = state.showHiddenAccounts;
+            final displayedAccounts = state.visibleAccounts;
+            final hiddenAccounts = (state.accountsByIsHidden[true] ?? []);
             final hasHiddenAccounts = hiddenAccounts.isNotEmpty;
 
-            final displayedAccounts = [
-              ...visibleAccounts,
-              if (showHidden) ...hiddenAccounts,
-            ];
 
             final itemCount =
                 displayedAccounts.length + (hasHiddenAccounts ? 1 : 0);
@@ -115,12 +111,8 @@ class AccountsPage extends StatelessWidget {
                 itemBuilder: (context, index) {
                   if (index < displayedAccounts.length) {
                     final account = displayedAccounts[index];
-                    final balance = account.id != null
-                        ? state.balances[account.id!.uuid]
-                        : null;
-                    final projectedBalance = account.id != null
-                        ? state.projectedBalances[account.id!.uuid]
-                        : null;
+                    final balance =  state.balances[account.id];
+                    final projectedBalance =state.projectedBalances[account.id];
 
                     return _AccountListItem(
                       account: account,
@@ -155,9 +147,7 @@ class AccountsPage extends StatelessWidget {
   }
 
   void _navigateToAccountDetails(BuildContext context, Account account) {
-    if (account.id != null) {
-      AccountDetailsRoute(accountId: account.id!.uuid).go(context);
-    }
+    AccountDetailsRoute(accountId: account.id.uuid).go(context);
   }
 }
 
@@ -190,12 +180,10 @@ class _AccountListItemState extends State<_AccountListItem> {
   }
 
   Future<void> _loadSavingsBreakdown() async {
-    if (widget.account.id == null) return;
-
     try {
       final savingsService = context.read<SavingsBalanceService>();
       final breakdown = await savingsService.getSavingsBreakdownForAccount(
-        widget.account.id!,
+        widget.account.id,
       );
       if (mounted) {
         setState(() {

@@ -295,7 +295,7 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
     // For manual accounts materialize the turnover
     turnover = Turnover(
       id: turnoverId!,
-      accountId: account.id!,
+      accountId: account.id,
       bookingDate: bookingDate,
       amountValue: amount,
       amountUnit: account.currency,
@@ -321,7 +321,7 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
     amountValue: amount,
     amountUnit: account.currency,
     bookingDate: bookingDate,
-    accountId: account.id!,
+    accountId: account.id,
     note: note.isEmpty ? null : note,
     createdAt: DateTime.now(),
   );

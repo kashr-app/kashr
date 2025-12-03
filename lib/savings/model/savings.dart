@@ -17,11 +17,15 @@ abstract class Savings with _$Savings {
 
   const factory Savings({
     @UUIDJsonConverter() required UuidValue id,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'tag_id') @UUIDJsonConverter() required UuidValue tagId,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'goal_value')
     @DecimalNullableJsonConverter()
     Decimal? goalValue,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'goal_unit') String? goalUnit,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'created_at') required DateTime createdAt,
   }) = _Savings;
 

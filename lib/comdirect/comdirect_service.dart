@@ -53,10 +53,8 @@ class ComdirectService {
       final accountsPage = await comdirectAPI.getBalances();
       log.i('Accounts fetched successfully');
       await accountCubit.loadAccounts();
-      final allAccounts = [
-        ...accountCubit.state.accounts,
-        ...accountCubit.state.hiddenAccounts,
-      ];
+      final allAccounts = accountCubit.state.accountById.values;
+
       final existingAccountsByApiId = {
         for (final a in allAccounts)
           if (a.apiId != null) a.apiId: a,
@@ -96,10 +94,8 @@ class ComdirectService {
 
       // For each account, fetch turnovers (transactions)
       final turnovers = <Turnover>[];
-      final accounts = [
-        ...accountCubit.state.accounts,
-        ...accountCubit.state.hiddenAccounts,
-      ];
+      final accounts = accountCubit.state.accountById.values;
+
       for (final account in accounts) {
         final apiId = account.apiId;
         if (apiId == null) {
@@ -128,7 +124,7 @@ class ComdirectService {
             final turnover = Turnover(
               id: uuid.v4obj(),
               createdAt: DateTime.now(),
-              accountId: account.id!,
+              accountId: account.id,
               bookingDate: transaction.bookingDate,
               amountValue: transaction.amount.value,
               amountUnit: transaction.amount.unit,

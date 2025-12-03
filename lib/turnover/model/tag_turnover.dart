@@ -21,10 +21,13 @@ abstract class TagTurnover with _$TagTurnover {
     required String amountUnit,
     String? note,
     required DateTime createdAt,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'booking_date') required DateTime bookingDate,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'account_id')
     @UUIDJsonConverter()
     required UuidValue accountId,
+    // ignore: invalid_annotation_target
     @JsonKey(name: 'recurring_rule_id')
     @UUIDNullableJsonConverter()
     UuidValue? recurringRuleId,

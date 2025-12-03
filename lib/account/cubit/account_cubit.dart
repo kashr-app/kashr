@@ -1,11 +1,13 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/services/balance_calculation_service.dart';
+import 'package:finanalyzer/core/associate_by.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:collection/collection.dart';
 import 'package:jiffy/jiffy.dart';
+import 'package:uuid/uuid.dart';
 import '../model/account_repository.dart';
 import '../model/account.dart';
 
@@ -36,30 +38,31 @@ class AccountCubit extends Cubit<AccountState> {
       ).endOf(Unit.month).dateTime;
 
       // Calculate balances for all accounts
-      final balances = <String, Decimal>{};
-      final projectedBalances = <String, Decimal>{};
+      final balances = <UuidValue, Decimal>{};
+      final projectedBalances = <UuidValue, Decimal>{};
       for (final account in accounts) {
-        if (account.id != null) {
-          final balance = await _balanceService.calculateCurrentBalance(
-            account,
-          );
-          balances[account.id!.uuid] = balance;
+        final balance = await _balanceService.calculateCurrentBalance(account);
+        balances[account.id] = balance;
 
-          final projected = await _balanceService.calculateProjectedBalance(
-            account,
-            asOf: endOfMonth,
-          );
-          projectedBalances[account.id!.uuid] = projected;
-        }
+        final projected = await _balanceService.calculateProjectedBalance(
+          account,
+          asOf: endOfMonth,
+        );
+        projectedBalances[account.id] = projected;
       }
 
-      final accountsByIsHidden = groupBy(accounts, (a) => a.isHidden);
+      // non-hidden first
+      final orderedAccounts = accounts.sorted((a, b) => a.isHidden ? 1 : -1);
+      final accountsByIsHidden = groupBy(orderedAccounts, (a) => a.isHidden);
 
       emit(
         state.copyWith(
           status: Status.success,
-          accounts: accountsByIsHidden[false] ?? [],
-          hiddenAccounts: accountsByIsHidden[true] ?? [],
+          accountById: orderedAccounts.associateBy((it) => it.id),
+          accountsByIsHidden: accountsByIsHidden,
+          visibleAccounts: state.showHiddenAccounts
+              ? orderedAccounts
+              : (accountsByIsHidden[false] ?? []),
           balances: balances,
           projectedBalances: projectedBalances,
           projectionDate: endOfMonth,
@@ -83,9 +86,7 @@ class AccountCubit extends Cubit<AccountState> {
 
   Future<void> deleteAccount(Account account) async {
     try {
-      if (account.id == null) return;
-
-      await _accountRepository.deleteAccount(account.id!);
+      await _accountRepository.deleteAccount(account.id);
       await loadAccounts();
     } catch (e, stackTrace) {
       log.e('Failed to delete account', error: e, stackTrace: stackTrace);
@@ -107,8 +108,6 @@ class AccountCubit extends Cubit<AccountState> {
     Decimal currentRealBalance,
   ) async {
     try {
-      if (account.id == null) return;
-
       // Get current calculated balance (opening + turnovers)
       final calculatedBalance = await _balanceService.calculateCurrentBalance(
         account,
@@ -139,6 +138,14 @@ class AccountCubit extends Cubit<AccountState> {
   }
 
   void toggleHiddenAccounts() {
-    emit(state.copyWith(showHiddenAccounts: !state.showHiddenAccounts));
+    final showHidden = !state.showHiddenAccounts;
+    emit(
+      state.copyWith(
+        showHiddenAccounts: showHidden,
+        visibleAccounts: showHidden
+            ? state.accountById.values.toList()
+            : (state.accountsByIsHidden[false] ?? []),
+      ),
+    );
   }
 }

@@ -7,16 +7,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 class BackupSettingsDialog extends StatefulWidget {
   final BackupConfig initialConfig;
 
-  const BackupSettingsDialog({
-    super.key,
-    required this.initialConfig,
-  });
+  const BackupSettingsDialog({super.key, required this.initialConfig});
 
   /// Show the backup settings dialog
-  static Future<void> show(
-    BuildContext context,
-    BackupConfig config,
-  ) async {
+  static Future<void> show(BuildContext context, BackupConfig config) async {
     return showDialog(
       context: context,
       builder: (context) => BackupSettingsDialog(initialConfig: config),
@@ -49,9 +43,7 @@ class _BackupSettingsDialogState extends State<BackupSettingsDialog> {
           children: [
             SwitchListTile(
               title: const Text('Enable Encryption'),
-              subtitle: const Text(
-                'Protect backups with a password',
-              ),
+              subtitle: const Text('Protect backups with a password'),
               value: _config.encryptionEnabled,
               onChanged: (value) {
                 setState(() {
@@ -76,9 +68,7 @@ class _BackupSettingsDialogState extends State<BackupSettingsDialog> {
             const Divider(),
             ListTile(
               title: const Text('Max Local Backups'),
-              subtitle: Text(
-                'Keep up to ${_config.maxLocalBackups} backups',
-              ),
+              subtitle: Text('Keep up to ${_config.maxLocalBackups} backups'),
               trailing: SizedBox(
                 width: 100,
                 child: TextField(
@@ -114,11 +104,14 @@ class _BackupSettingsDialogState extends State<BackupSettingsDialog> {
                     : 'Create backups manually',
               ),
               value: _config.autoBackupEnabled,
-              onChanged: true ? null : (value) { // TODO enable once auto backups suported
-                setState(() {
-                  _config = _config.copyWith(autoBackupEnabled: value);
-                });
-              },
+              onChanged: true
+                  ? null
+                  : (value) {
+                      // TODO enable once auto backups suported
+                      setState(() {
+                        _config = _config.copyWith(autoBackupEnabled: value);
+                      });
+                    },
             ),
             if (_config.autoBackupEnabled)
               Padding(

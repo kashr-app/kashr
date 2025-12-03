@@ -4,6 +4,8 @@ import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover_filter.dart';
+import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:uuid/uuid.dart';
 
@@ -32,9 +34,7 @@ class TagTurnoverRepository {
     final db = await DatabaseHelper().database;
 
     // Get all turnover IDs
-    final turnoverIds = turnovers
-        .map((t) => t.id.uuid)
-        .toList();
+    final turnoverIds = turnovers.map((t) => t.id.uuid).toList();
 
     if (turnoverIds.isEmpty) return;
 
@@ -99,9 +99,7 @@ class TagTurnoverRepository {
     final db = await DatabaseHelper().database;
 
     // Get all turnover IDs
-    final turnoverIds = turnovers
-        .map((t) => t.id.uuid)
-        .toList();
+    final turnoverIds = turnovers.map((t) => t.id.uuid).toList();
 
     if (turnoverIds.isEmpty) return;
 
@@ -344,13 +342,12 @@ class TagTurnoverRepository {
 
   /// Fetches income tag summaries (positive turnovers only) for a month.
   /// Excludes transfer tags (semantic = 'transfer').
-  Future<List<TagSummary>> getIncomeTagSummariesForMonth({
-    required int year,
-    required int month,
-  }) async {
+  Future<List<TagSummary>> getIncomeTagSummariesForMonth(
+    YearMonth yearMonth,
+  ) async {
     final db = await DatabaseHelper().database;
 
-    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
     final endDate = startDate.add(months: 1);
 
     final result = await db.rawQuery(
@@ -391,13 +388,12 @@ class TagTurnoverRepository {
 
   /// Fetches expense tag summaries (negative turnovers only) for a month.
   /// Excludes transfer tags (semantic = 'transfer').
-  Future<List<TagSummary>> getExpenseTagSummariesForMonth({
-    required int year,
-    required int month,
-  }) async {
+  Future<List<TagSummary>> getExpenseTagSummariesForMonth(
+    YearMonth yearMonth,
+  ) async {
     final db = await DatabaseHelper().database;
 
-    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
     final endDate = startDate.add(months: 1);
 
     final result = await db.rawQuery(
@@ -438,14 +434,36 @@ class TagTurnoverRepository {
 
   /// Fetches transfer tag summaries for a month.
   /// Only includes tags with semantic = 'transfer'.
-  Future<List<TagSummary>> getTransferTagSummariesForMonth({
-    required int year,
-    required int month,
-  }) async {
+  Future<Map<TurnoverSign, List<TagSummary>>> getTransferTagSummariesForMonth(
+    YearMonth yearMonth,
+  ) async {
+    return {
+      TurnoverSign.income: await _getTransferTagSummariesForMonth(
+        yearMonth,
+        TurnoverSign.income,
+      ),
+      TurnoverSign.expense: await _getTransferTagSummariesForMonth(
+        yearMonth,
+        TurnoverSign.expense,
+      ),
+    };
+  }
+
+  /// Fetches transfer tag summaries for a month.
+  /// Only includes tags with semantic = 'transfer' and with the provided sign.
+  Future<List<TagSummary>> _getTransferTagSummariesForMonth(
+    YearMonth yearMonth,
+    TurnoverSign sign,
+  ) async {
     final db = await DatabaseHelper().database;
 
-    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
+    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
     final endDate = startDate.add(months: 1);
+
+    final amountWhere = switch (sign) {
+      TurnoverSign.income => 'AND tt.amountValue >= 0',
+      TurnoverSign.expense => 'AND tt.amountValue < 0',
+    };
 
     final result = await db.rawQuery(
       '''
@@ -460,6 +478,7 @@ class TagTurnoverRepository {
       WHERE tt.booking_date >= ? AND tt.booking_date < ?
         AND tt.turnoverId IS NOT NULL
         AND t.semantic = 'transfer'
+        $amountWhere
       GROUP BY t.id, t.name, t.color, t.semantic
       ORDER BY total_amount DESC
       ''',
@@ -572,4 +591,11 @@ class TagSummary {
   final Decimal totalAmount;
 
   TagSummary({required this.tag, required this.totalAmount});
+
+  TagSummary copyWith({Tag? tag, Decimal? totalAmount}) {
+    return TagSummary(
+      tag: tag ?? this.tag,
+      totalAmount: totalAmount ?? this.totalAmount,
+    );
+  }
 }
