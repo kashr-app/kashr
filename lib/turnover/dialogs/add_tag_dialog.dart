@@ -70,10 +70,7 @@ class _AddTagDialogState extends State<AddTagDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Select Tag',
-                  style: theme.textTheme.titleLarge,
-                ),
+                Text('Select Tag', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _searchController,
@@ -89,9 +86,7 @@ class _AddTagDialogState extends State<AddTagDialog> {
                 const SizedBox(height: 16),
                 if (searchQuery.isNotEmpty && !exactMatch)
                   ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.add),
-                    ),
+                    leading: const CircleAvatar(child: Icon(Icons.add)),
                     title: Text('Create "$searchQuery"'),
                     onTap: () async {
                       final newTag = await TagEditBottomSheet.show(
@@ -116,6 +111,9 @@ class _AddTagDialogState extends State<AddTagDialog> {
                             return ListTile(
                               leading: TagAvatar(tag: tag),
                               title: Text(tag.name),
+                              subtitle: tag.isTransfer
+                                  ? Text('Transfer')
+                                  : null,
                               onTap: () {
                                 Navigator.of(context).pop(tag);
                               },
