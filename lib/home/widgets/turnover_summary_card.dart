@@ -2,11 +2,15 @@ import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/widgets/tag_summary_row.dart';
 import 'package:finanalyzer/theme.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 
 /// A reusable card widget that displays turnover summary with total and
 /// per-tag breakdown.
@@ -77,7 +81,8 @@ class TurnoverSummaryCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (tagSummaries.isNotEmpty || unallocatedAmount != Decimal.zero) ...[
+            if (tagSummaries.isNotEmpty ||
+                unallocatedAmount != Decimal.zero) ...[
               const SizedBox(height: 24),
               Text(
                 subtitle,
@@ -111,6 +116,8 @@ class TurnoverSummaryCard extends StatelessWidget {
     Currency currency,
     ThemeData theme,
   ) {
+    final tagById = context.read<TagCubit>().state.tagById;
+
     // Create a list of items with their amounts for sorting
     final items = <({Decimal amount, Widget widget})>[];
 
@@ -118,7 +125,7 @@ class TurnoverSummaryCard extends StatelessWidget {
     for (final summary in tagSummaries) {
       items.add((
         amount: summary.totalAmount.abs(),
-        widget: _buildTagRow(context, summary, currency, theme),
+        widget: _buildTagRow(context, summary, tagById, currency, theme),
       ));
     }
 
@@ -140,26 +147,25 @@ class TurnoverSummaryCard extends StatelessWidget {
   Widget _buildTagRow(
     BuildContext context,
     TagSummary summary,
+    Map<UuidValue, Tag> tagById,
     Currency currency,
     ThemeData theme,
   ) {
-    final tagId = summary.tag.id;
+    final tagId = summary.tagId;
     return TagSummaryRow(
-      tag: summary.tag,
+      tag: tagById[tagId],
       amount: summary.totalAmount,
       totalAmount: totalAmount,
       currency: currency,
-      onTap: tagId != null
-          ? () {
-              TurnoversRoute(
-                filter: TurnoverFilter(
-                  tagIds: [tagId.uuid],
-                  sign: turnoverSign,
-                  period: selectedPeriod,
-                ),
-              ).go(context);
-            }
-          : null,
+      onTap: () {
+        TurnoversRoute(
+          filter: TurnoverFilter(
+            tagIds: [tagId.uuid],
+            sign: turnoverSign,
+            period: selectedPeriod,
+          ),
+        ).go(context);
+      },
     );
   }
 

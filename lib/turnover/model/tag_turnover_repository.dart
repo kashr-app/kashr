@@ -295,166 +295,32 @@ class TagTurnoverRepository {
     return _unscale(result.first['total']);
   }
 
-  /// Fetches tag summaries for a specific month and year.
-  /// Returns a list of TagSummary objects containing tag info and total amount.
-  Future<List<TagSummary>> getTagSummariesForMonth({
-    required int year,
-    required int month,
-  }) async {
-    final db = await DatabaseHelper().database;
-
-    final startDate = Jiffy.parseFromDateTime(DateTime(year, month));
-    final endDate = startDate.add(months: 1);
-
-    final result = await db.rawQuery(
-      '''
-      SELECT
-        t.id as tag_id,
-        t.name as tag_name,
-        t.color as tag_color,
-        SUM(tt.amountValue) as total_amount
-      FROM tag_turnover tt
-      INNER JOIN tag t ON tt.tagId = t.id
-      INNER JOIN turnover tv ON tt.turnoverId = tv.id
-      WHERE tt.booking_date >= ? AND tt.booking_date < ?
-        AND tt.turnoverId IS NOT NULL
-      GROUP BY t.id, t.name, t.color
-      ORDER BY total_amount DESC
-      ''',
-      [
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
-      ],
-    );
-
-    return result.map((map) {
-      final tag = Tag(
-        id: UuidValue.fromString(map['tag_id'] as String),
-        name: map['tag_name'] as String,
-        color: map['tag_color'] as String?,
-      );
-
-      final totalAmount = _unscale(map['total_amount']);
-
-      return TagSummary(tag: tag, totalAmount: totalAmount);
-    }).toList();
-  }
-
-  /// Fetches income tag summaries (positive turnovers only) for a month.
-  /// Excludes transfer tags (semantic = 'transfer').
-  Future<List<TagSummary>> getIncomeTagSummariesForMonth(
-    YearMonth yearMonth,
-  ) async {
-    final db = await DatabaseHelper().database;
-
-    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
-    final endDate = startDate.add(months: 1);
-
-    final result = await db.rawQuery(
-      '''
-      SELECT
-        t.id as tag_id,
-        t.name as tag_name,
-        t.color as tag_color,
-        SUM(tt.amountValue) as total_amount
-      FROM tag_turnover tt
-      INNER JOIN tag t ON tt.tagId = t.id
-      INNER JOIN turnover tv ON tt.turnoverId = tv.id
-      WHERE tt.booking_date >= ? AND tt.booking_date < ?
-        AND tt.turnoverId IS NOT NULL
-        AND tv.amountValue > 0
-        AND t.semantic IS NULL
-      GROUP BY t.id, t.name, t.color
-      ORDER BY total_amount DESC
-      ''',
-      [
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
-      ],
-    );
-
-    return result.map((map) {
-      final tag = Tag(
-        id: UuidValue.fromString(map['tag_id'] as String),
-        name: map['tag_name'] as String,
-        color: map['tag_color'] as String?,
-      );
-
-      final totalAmount = _unscale(map['total_amount']);
-
-      return TagSummary(tag: tag, totalAmount: totalAmount);
-    }).toList();
-  }
-
-  /// Fetches expense tag summaries (negative turnovers only) for a month.
-  /// Excludes transfer tags (semantic = 'transfer').
-  Future<List<TagSummary>> getExpenseTagSummariesForMonth(
-    YearMonth yearMonth,
-  ) async {
-    final db = await DatabaseHelper().database;
-
-    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
-    final endDate = startDate.add(months: 1);
-
-    final result = await db.rawQuery(
-      '''
-      SELECT
-        t.id as tag_id,
-        t.name as tag_name,
-        t.color as tag_color,
-        SUM(tt.amountValue) as total_amount
-      FROM tag_turnover tt
-      INNER JOIN tag t ON tt.tagId = t.id
-      INNER JOIN turnover tv ON tt.turnoverId = tv.id
-      WHERE tt.booking_date >= ? AND tt.booking_date < ?
-        AND tt.turnoverId IS NOT NULL
-        AND tv.amountValue < 0
-        AND t.semantic IS NULL
-      GROUP BY t.id, t.name, t.color
-      ORDER BY total_amount ASC
-      ''',
-      [
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
-      ],
-    );
-
-    return result.map((map) {
-      final tag = Tag(
-        id: UuidValue.fromString(map['tag_id'] as String),
-        name: map['tag_name'] as String,
-        color: map['tag_color'] as String?,
-      );
-
-      final totalAmount = _unscale(map['total_amount']);
-
-      return TagSummary(tag: tag, totalAmount: totalAmount);
-    }).toList();
-  }
-
   /// Fetches transfer tag summaries for a month.
   /// Only includes tags with semantic = 'transfer'.
   Future<Map<TurnoverSign, List<TagSummary>>> getTransferTagSummariesForMonth(
     YearMonth yearMonth,
   ) async {
     return {
-      TurnoverSign.income: await _getTransferTagSummariesForMonth(
+      TurnoverSign.income: await getTagSummariesForMonth(
         yearMonth,
         TurnoverSign.income,
+        semantic: TagSemantic.transfer,
       ),
-      TurnoverSign.expense: await _getTransferTagSummariesForMonth(
+      TurnoverSign.expense: await getTagSummariesForMonth(
         yearMonth,
         TurnoverSign.expense,
+        semantic: TagSemantic.transfer,
       ),
     };
   }
 
-  /// Fetches transfer tag summaries for a month.
-  /// Only includes tags with semantic = 'transfer' and with the provided sign.
-  Future<List<TagSummary>> _getTransferTagSummariesForMonth(
+  /// Fetches tag summaries for a month and sign.
+  /// Excludes transfer tags (semantic = 'transfer').
+  Future<List<TagSummary>> getTagSummariesForMonth(
     YearMonth yearMonth,
-    TurnoverSign sign,
-  ) async {
+    TurnoverSign sign, {
+    required TagSemantic? semantic,
+  }) async {
     final db = await DatabaseHelper().database;
 
     final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
@@ -464,6 +330,9 @@ class TagTurnoverRepository {
       TurnoverSign.income => 'AND tt.amountValue >= 0',
       TurnoverSign.expense => 'AND tt.amountValue < 0',
     };
+
+    final semanticWhere =
+        "AND t.semantic ${(semantic == null) ? 'IS NULL' : "= '${semantic.name}'"}";
 
     final result = await db.rawQuery(
       '''
@@ -477,7 +346,7 @@ class TagTurnoverRepository {
       INNER JOIN tag t ON tt.tagId = t.id
       WHERE tt.booking_date >= ? AND tt.booking_date < ?
         AND tt.turnoverId IS NOT NULL
-        AND t.semantic = 'transfer'
+        $semanticWhere
         $amountWhere
       GROUP BY t.id, t.name, t.color, t.semantic
       ORDER BY total_amount DESC
@@ -489,18 +358,10 @@ class TagTurnoverRepository {
     );
 
     return result.map((map) {
-      final tag = Tag(
-        id: UuidValue.fromString(map['tag_id'] as String),
-        name: map['tag_name'] as String,
-        color: map['tag_color'] as String?,
-        semantic: map['tag_semantic'] == 'transfer'
-            ? TagSemantic.transfer
-            : null,
-      );
-
+      final tagId =  UuidValue.fromString(map['tag_id'] as String);
       final totalAmount = _unscale(map['total_amount']);
 
-      return TagSummary(tag: tag, totalAmount: totalAmount);
+      return TagSummary(tagId: tagId, totalAmount: totalAmount);
     }).toList();
   }
 
@@ -548,17 +409,11 @@ class TagTurnoverRepository {
     final summariesByMonth = <String, List<TagSummary>>{};
 
     for (final map in result) {
-      final month = map['month'] as String;
-      final tag = Tag(
-        id: UuidValue.fromString(map['tag_id'] as String),
-        name: map['tag_name'] as String,
-        color: map['tag_color'] as String?,
-      );
-
+      final tagId = UuidValue.fromString(map['tag_id'] as String);
       final totalAmount = _unscale(map['total_amount']);
+      final summary = TagSummary(tagId: tagId, totalAmount: totalAmount);
 
-      final summary = TagSummary(tag: tag, totalAmount: totalAmount);
-
+      final month = map['month'] as String;
       summariesByMonth.putIfAbsent(month, () => []).add(summary);
     }
 
@@ -587,14 +442,14 @@ class TagTurnoverRepository {
 
 /// A summary of spending for a specific tag.
 class TagSummary {
-  final Tag tag;
+  final UuidValue tagId;
   final Decimal totalAmount;
 
-  TagSummary({required this.tag, required this.totalAmount});
+  TagSummary({required this.tagId, required this.totalAmount});
 
-  TagSummary copyWith({Tag? tag, Decimal? totalAmount}) {
+  TagSummary copyWith({UuidValue? tagId, Decimal? totalAmount}) {
     return TagSummary(
-      tag: tag ?? this.tag,
+      tagId: tagId ?? this.tagId,
       totalAmount: totalAmount ?? this.totalAmount,
     );
   }

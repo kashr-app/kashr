@@ -1,11 +1,13 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/widgets/tag_summary_row.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// A card widget that displays transfer summary with per-tag breakdown.
 class TransferSummaryCard extends StatelessWidget {
@@ -83,29 +85,29 @@ class TransferSummaryCard extends StatelessWidget {
   }
 
   List<Widget> _buildSortedRows(BuildContext context, Currency currency) {
+    final tagById = context.read<TagCubit>().state.tagById;
+
     // Create a list of items with their amounts for sorting
     final items = <({Decimal amount, Widget widget})>[];
 
     // Add all tag items
     for (final summary in tagSummaries) {
-      final tagId = summary.tag.id;
+      final tagId = summary.tagId;
       items.add((
         amount: summary.totalAmount.abs(),
         widget: TagSummaryRow(
-          tag: summary.tag,
+          tag: tagById[tagId],
           amount: summary.totalAmount,
           totalAmount: totalTransfers,
           currency: currency,
-            onTap: tagId != null
-          ? () {
-              TurnoversRoute(
-                filter: TurnoverFilter(
-                  tagIds: [tagId.uuid],
-                  period: selectedPeriod,
-                ),
-              ).go(context);
-            }
-          : null,
+          onTap: () {
+            TurnoversRoute(
+              filter: TurnoverFilter(
+                tagIds: [tagId.uuid],
+                period: selectedPeriod,
+              ),
+            ).go(context);
+          },
           // No onTap for transfers - they're not filtered in turnovers
         ),
       ));

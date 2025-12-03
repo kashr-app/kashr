@@ -2,7 +2,6 @@ import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/comdirect/comdirect_service.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
@@ -11,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:logger/logger.dart';
+import 'package:uuid/uuid.dart';
 
 /// Cubit for managing the dashboard state.
 class DashboardCubit extends Cubit<DashboardState> {
@@ -92,10 +92,18 @@ class DashboardCubit extends Cubit<DashboardState> {
       );
 
       final incomeTagSummaries = await _tagTurnoverRepository
-          .getIncomeTagSummariesForMonth(state.selectedPeriod);
+          .getTagSummariesForMonth(
+            state.selectedPeriod,
+            TurnoverSign.income,
+            semantic: null, // excludes transfers
+          );
 
       final expenseTagSummaries = await _tagTurnoverRepository
-          .getExpenseTagSummariesForMonth(state.selectedPeriod);
+          .getTagSummariesForMonth(
+            state.selectedPeriod,
+            TurnoverSign.expense,
+            semantic: null, // excludes transfers
+          );
 
       final (
         transferTagSummaries,
@@ -240,12 +248,12 @@ class DashboardCubit extends Cubit<DashboardState> {
     // We apply that logic per tag
     final transferTagSummaries = transferTagSummariesBySign.values
         .expand((it) => it)
-        .fold(<Tag, TagSummary>{}, (all, it) {
-          final ts1 = all[it.tag];
+        .fold(<UuidValue, TagSummary>{}, (all, it) {
+          final ts1 = all[it.tagId];
           if (ts1 == null) {
             // a tag can either occur once or twice (income, expense)
             // if it occurs only once, we just keep it with sign and later ensure to .abs() all values
-            all[it.tag] = it; // keep sign initially
+            all[it.tagId] = it; // keep sign initially
             return all;
           }
           // if tha tag occurs twice, we calculate the total abs value according to the above formula.
@@ -258,7 +266,7 @@ class DashboardCubit extends Cubit<DashboardState> {
                 scaleOnInfinitePrecision: 2,
               );
 
-          all[it.tag] = it.copyWith(totalAmount: totalAmount);
+          all[it.tagId] = it.copyWith(totalAmount: totalAmount);
           return all;
         })
         .values
