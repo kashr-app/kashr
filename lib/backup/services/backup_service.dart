@@ -96,10 +96,14 @@ class BackupService {
         final encryptedBytes = await _encryptionService.encrypt(
           dbBytes,
           password,
+          // 40% to 80%
+          (p) => onProgress?.call(0.4 + p * 0.4),
         );
 
         // Write encrypted data to a new temp file
-        final encryptedDbFile = File('${tempDir.path}/db_encrypted_$backupId.db');
+        final encryptedDbFile = File(
+          '${tempDir.path}/db_encrypted_$backupId.db',
+        );
         await encryptedDbFile.writeAsBytes(encryptedBytes);
         dbFileToArchive = encryptedDbFile;
 
@@ -123,7 +127,7 @@ class BackupService {
         checksum: checksum,
       );
 
-      onProgress?.call(0.5);
+      onProgress?.call(0.8);
 
       // Create ZIP archive
       final filename = createFilename(timestamp);
@@ -135,7 +139,7 @@ class BackupService {
         output: tempArchiveFile,
       );
       log.i('Created archive: ${tempArchiveFile.path}');
-      onProgress?.call(0.7);
+      onProgress?.call(0.85);
 
       // Save to local storage
       final savedFile = await _localStorageService.saveBackup(
@@ -144,7 +148,7 @@ class BackupService {
       );
       final localPath = savedFile.path;
 
-      onProgress?.call(0.8);
+      onProgress?.call(0.9);
 
       // Update metadata with paths
       final finalMetadata = metadata.copyWith(
@@ -155,7 +159,7 @@ class BackupService {
       // Re-open database to ensure it's available
       await _dbHelper.database;
 
-      onProgress?.call(0.9);
+      onProgress?.call(0.95);
 
       // Clean up temp files
       await tempDbFile.delete();
@@ -193,7 +197,7 @@ class BackupService {
   ) async {
     try {
       log.i('Starting restore from backup: ${backup.id}');
-      onProgress?.call(0.1);
+      onProgress?.call(0.05);
 
       // Get backup file
       log.i('Looking for local backup file...');
@@ -210,7 +214,7 @@ class BackupService {
         throw Exception(error);
       }
       log.i('Found backup file: ${backupFile.path}');
-      onProgress?.call(0.2);
+      onProgress?.call(0.08);
 
       // Create temp directory for extraction
       final tempDir = await getTemporaryDirectory();
@@ -219,6 +223,7 @@ class BackupService {
         await extractDir.delete(recursive: true);
       }
       await extractDir.create(recursive: true);
+      onProgress?.call(0.1);
 
       // Extract archive
       log.i('Extracting backup archive...');
@@ -227,7 +232,7 @@ class BackupService {
         extractDir,
       );
 
-      onProgress?.call(0.4);
+      onProgress?.call(0.2);
 
       // Verify metadata matches
       if (contents.metadata.id != backup.id) {
@@ -248,6 +253,8 @@ class BackupService {
         final decryptedBytes = await _encryptionService.decrypt(
           encryptedBytes,
           password,
+          // 20% to 60%
+          (p) => onProgress?.call(0.2 + p * 0.4),
         );
 
         // Verify checksum if available
@@ -271,21 +278,20 @@ class BackupService {
         log.i('Database decrypted successfully');
       }
 
-      onProgress?.call(0.5);
+      onProgress?.call(0.7);
 
       // Verify database file is valid SQLite
       // TODO: Add database validation
       // log.i('Database file validated');
 
-      onProgress?.call(0.6);
+      onProgress?.call(0.8);
 
       // Close current database
       log.i('Closing current database...');
       await _dbHelper.close();
 
-      onProgress?.call(0.7);
+      onProgress?.call(0.81);
 
-      // Get current database path
       log.i('Getting database path...');
       final dbPath = await _getDatabasePath();
       log.i('Database path: $dbPath');
@@ -300,7 +306,7 @@ class BackupService {
         log.i('Backed up current database');
       }
 
-      onProgress?.call(0.8);
+      onProgress?.call(0.85);
 
       try {
         // Replace current database with restored one
@@ -309,7 +315,7 @@ class BackupService {
         await restoredDbFile.copy(dbPath);
         log.i('Database file copied successfully');
 
-        onProgress?.call(0.9);
+        onProgress?.call(0.95);
 
         // Try to open the restored database
         log.i('Opening restored database...');

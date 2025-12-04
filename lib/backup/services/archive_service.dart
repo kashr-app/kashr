@@ -19,7 +19,7 @@ class ArchiveService {
 
   /// Create a ZIP archive
   /// Returns the output file
-  Future<File> createBackup({
+  Future<void> createBackup({
     required File database,
     required BackupMetadata metadata,
     required File output,
@@ -50,7 +50,6 @@ class ArchiveService {
       await output.writeAsBytes(zipBytes);
 
       log.i('Created backup archive: ${output.path}');
-      return output;
     } catch (e, stack) {
       log.e('Failed to create backup archive', error: e, stackTrace: stack);
       rethrow;

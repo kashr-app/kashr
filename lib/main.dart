@@ -5,6 +5,7 @@ import 'package:finanalyzer/backup/services/archive_service.dart';
 import 'package:finanalyzer/backup/services/backup_service.dart';
 import 'package:finanalyzer/backup/services/encryption_service.dart';
 import 'package:finanalyzer/backup/services/local_storage_service.dart';
+import 'package:finanalyzer/core/restart_widget.dart';
 import 'package:finanalyzer/core/secure_storage.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
@@ -33,7 +34,7 @@ const bool isDevelopment = bool.fromEnvironment('dart.vm.product') == false;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  runApp(RestartWidget(child: const MyApp()));
 }
 
 final turnoverRepository = TurnoverRepository();
@@ -51,7 +52,10 @@ final savingsBalanceService = SavingsBalanceService(
   savingsVirtualBookingRepository,
   savingsRepository,
 );
-final turnoverMatchingService = TurnoverMatchingService(tagTurnoverRepository, turnoverRepository);
+final turnoverMatchingService = TurnoverMatchingService(
+  tagTurnoverRepository,
+  turnoverRepository,
+);
 
 // Backup services
 final archiveService = ArchiveService();

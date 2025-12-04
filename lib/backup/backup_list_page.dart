@@ -5,6 +5,8 @@ import 'package:finanalyzer/backup/widgets/backup_settings_dialog.dart';
 import 'package:finanalyzer/backup/widgets/encryption_password_dialog.dart';
 import 'package:finanalyzer/backup/widgets/nextcloud_settings_page.dart';
 import 'package:finanalyzer/backup/widgets/restore_confirmation_dialog.dart';
+import 'package:finanalyzer/core/restart_widget.dart';
+import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -69,17 +71,10 @@ class _BackupListPageState extends State<BackupListPage> {
           listener: (context, state) {
             state.maybeWhen(
               success: (message, backup) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(message)));
+                Status.success.snack(context, message);
               },
               error: (message, exception) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(message),
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                  ),
-                );
+                Status.error.snack(context, message);
               },
               orElse: () {},
             );
@@ -91,9 +86,13 @@ class _BackupListPageState extends State<BackupListPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircularProgressIndicator(
-                      value: progress > 0 ? progress : null,
-                    ),
+                    if (progress > 0)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: LinearProgressIndicator(value: progress),
+                      )
+                    else
+                      CircularProgressIndicator(),
                     const SizedBox(height: 16),
                     Text(operation),
                     if (progress > 0) Text('${(progress * 100).toInt()}%'),
@@ -113,43 +112,68 @@ class _BackupListPageState extends State<BackupListPage> {
                     nextcloudOnly: nextcloudOnly,
                     nextcloudConfigured: nextcloudConfigured,
                   ),
-              success: (message, backup) =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (message, exception) => Center(
+              success: (message, backup) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 24),
                     Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.error,
+                      size: 24,
+                      Icons.done,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
+                    SizedBox(height: 24),
+                    Text(message),
+                  ],
+                ),
+              ),
+              error: (message, exception) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
                         color: Theme.of(context).colorScheme.error,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () {
-                        context.read<BackupCubit>().loadBackups();
-                      },
-                      child: const Text('Retry'),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      Text(
+                        message,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: () {
+                          context.read<BackupCubit>().loadBackups();
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _createBackup(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Create Backup'),
+      floatingActionButton: BlocBuilder<BackupCubit, BackupState>(
+        builder: (context, state) => state.when(
+          initial: () => SizedBox.shrink(),
+          loading: (_, _) => SizedBox.shrink(),
+          loaded: (_, _, _, _, _) => FloatingActionButton.extended(
+            onPressed: () => _createBackup(context),
+            icon: const Icon(Icons.add),
+            label: const Text('Create Backup'),
+          ),
+          success: (_, _) => SizedBox.shrink(),
+          error: (_, _) => SizedBox.shrink(),
+        ),
       ),
     );
   }
@@ -161,10 +185,7 @@ class _BackupListPageState extends State<BackupListPage> {
     // Get encryption setting from config
     String? password;
     if (currentState is BackupLoaded && currentState.config.encryptionEnabled) {
-      password = await EncryptionPasswordDialog.show(
-        context,
-        isRestore: false,
-      );
+      password = await EncryptionPasswordDialog.show(context, isRestore: false);
 
       // User cancelled
       if (password == null) return;
@@ -461,25 +482,27 @@ class _BackupCard extends StatelessWidget {
                 Text('DB v${backup.dbVersion} • App v${backup.appVersion}'),
               ],
             ),
-              Row(
-                children: [
-                  Icon(
-                    backup.encrypted ? Icons.lock : Icons.lock_open,
-                    size: 14,
-                    color: backup.encrypted
-                          ? Colors.green
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(backup.encrypted ? 'Encrypted' : 'Not encrypted',
+            Row(
+              children: [
+                Icon(
+                  backup.encrypted ? Icons.lock : Icons.lock_open,
+                  size: 14,
+                  color: backup.encrypted
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  backup.encrypted ? 'Encrypted' : 'Not encrypted',
                   style: TextStyle(
-                      color: backup.encrypted
-                          ? Colors.green
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 12,
-                    ),),
-                ],
-              ),
+                    color: backup.encrypted
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
             if (nextcloudConfigured)
               Row(
                 children: [
@@ -580,11 +603,27 @@ class _BackupCard extends StatelessWidget {
 
         // User cancelled
         if (password == null) return;
+
+        // Allow dialog dismissal animation to complete
+        await Future.delayed(const Duration(milliseconds: 300));
       }
     }
 
     if (context.mounted) {
-      await context.read<BackupCubit>().restoreBackup(backup, password);
+      final restarter = RestartWidget.getRestarter(context);
+      final goRouter = GoRouter.of(context);
+      final restored = await context.read<BackupCubit>().restoreBackup(
+        backup,
+        password,
+      );
+      if (restored) {
+        // give the user some time to read the success message
+        await Future.delayed(const Duration(seconds: 2));
+        // not really a restart but we re-new widget state etc
+        //but still would like the user to restart the app
+        goRouter.go(HomeRoute().location);
+        restarter?.restart();
+      }
     }
   }
 
@@ -607,8 +646,12 @@ class _BackupCard extends StatelessWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
-      await context.read<BackupCubit>().deleteBackup(backup);
+    if (confirmed == true) {
+      // give the user some time to read the success message
+      await Future.delayed(const Duration(seconds: 3));
+      if (context.mounted) {
+        await context.read<BackupCubit>().deleteBackup(backup);
+      }
     }
   }
 

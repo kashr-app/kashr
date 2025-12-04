@@ -110,7 +110,7 @@ class BackupCubit extends Cubit<BackupState> {
   }
 
   /// Restore from backup
-  Future<void> restoreBackup(BackupMetadata backup, String? password) async {
+  Future<bool> restoreBackup(BackupMetadata backup, String? password) async {
     emit(const BackupState.loading(operation: 'Restoring backup...'));
     try {
       await _backupService.restoreBackup(backup, password, (progress) {
@@ -129,6 +129,7 @@ class BackupCubit extends Cubit<BackupState> {
       );
 
       log.i('Backup restored: ${backup.id}');
+      return true;
     } catch (e, stack) {
       log.e('Failed to restore backup', error: e, stackTrace: stack);
       emit(
@@ -137,6 +138,7 @@ class BackupCubit extends Cubit<BackupState> {
           exception: e as Exception?,
         ),
       );
+      return false;
     }
   }
 
