@@ -17,35 +17,23 @@ abstract class Turnover with _$Turnover {
   // required because of custom methods in the class annotated with @freezed
   const Turnover._();
 
+  // ignore: invalid_annotation_target
+  @JsonSerializable(fieldRename: FieldRename.snake)
   const factory Turnover({
     @UUIDJsonConverter() required UuidValue id,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'created_at') required DateTime createdAt,
+    required DateTime createdAt,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'account_id')
-    @UUIDJsonConverter()
-    required UuidValue accountId,
+    @UUIDJsonConverter() required UuidValue accountId,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'booking_date') DateTime? bookingDate,
+    DateTime? bookingDate,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'amount_value')
-    @DecimalJsonConverter()
-    required Decimal amountValue,
+    @DecimalJsonConverter() required Decimal amountValue,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'amount_unit') required String amountUnit,
-
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'counter_part') String? counterPart,
-
+    required String amountUnit,
+    String? counterPart,
     required String purpose,
-
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'api_id') String? apiId,
+    String? apiId,
   }) = _Turnover;
 
   factory Turnover.fromJson(Map<String, dynamic> json) =>

@@ -17,27 +17,21 @@ part '../../_gen/savings/model/savings_virtual_booking.g.dart';
 abstract class SavingsVirtualBooking with _$SavingsVirtualBooking {
   const SavingsVirtualBooking._();
 
+  // ignore: invalid_annotation_target
+  @JsonSerializable(fieldRename: FieldRename.snake)
   const factory SavingsVirtualBooking({
-    @UUIDNullableJsonConverter() UuidValue? id,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'savings_id')
-    @UUIDJsonConverter()
-    required UuidValue savingsId,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'account_id')
-    @UUIDJsonConverter()
-    required UuidValue accountId,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'amount_value')
-    @DecimalJsonConverter()
-    required Decimal amountValue,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'amount_unit') required String amountUnit,
+    @UUIDJsonConverter() required UuidValue id,
+
+    @UUIDJsonConverter() required UuidValue savingsId,
+
+    @UUIDJsonConverter() required UuidValue accountId,
+
+    @DecimalJsonConverter() required Decimal amountValue,
+
+    required String amountUnit,
     String? note,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'booking_date') required DateTime bookingDate,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'created_at') required DateTime createdAt,
+    required DateTime bookingDate,
+    required DateTime createdAt,
   }) = _SavingsVirtualBooking;
 
   String format() => Currency.currencyFrom(amountUnit).format(amountValue);

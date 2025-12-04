@@ -72,39 +72,30 @@ enum SyncSource {
 
 @freezed
 abstract class Account with _$Account {
+  // ignore: invalid_annotation_target
+  @JsonSerializable(fieldRename: FieldRename.snake)
   const factory Account({
     @UUIDJsonConverter() required UuidValue id,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'created_at') 
     required DateTime createdAt,
 
     required String name,
 
     String? identifier, // IBAN or account number
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'api_id') 
     String? apiId,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'account_type') required AccountType accountType,
+    required AccountType accountType,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'sync_source') SyncSource? syncSource,
+    SyncSource? syncSource,
 
     required String currency,
 
     @DecimalJsonConverter()
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'opening_balance')
     required Decimal openingBalance,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'opening_balance_date') required DateTime openingBalanceDate,
+    required DateTime openingBalanceDate,
 
     @BoolJsonConverter()
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'is_hidden')
     required bool isHidden,
   }) = _Account;
 

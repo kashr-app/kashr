@@ -12,43 +12,26 @@ part '../../_gen/turnover/model/tag_turnover.g.dart';
 abstract class TagTurnover with _$TagTurnover {
   const TagTurnover._();
 
+  // ignore: invalid_annotation_target
+  @JsonSerializable(fieldRename: FieldRename.snake)
   const factory TagTurnover({
     @UUIDJsonConverter() required UuidValue id,
 
     // Can be null for immediate/planned expenses that have not yet been associated with a turnover
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'turnover_id')
-    @UUIDNullableJsonConverter()
-    UuidValue? turnoverId,
+    @UUIDNullableJsonConverter() UuidValue? turnoverId,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'tag_id') @UUIDJsonConverter() required UuidValue tagId,
+    @UUIDJsonConverter() required UuidValue tagId,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'amount_value')
-    @DecimalJsonConverter()
-    required Decimal amountValue,
+    @DecimalJsonConverter() required Decimal amountValue,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'amount_unit') required String amountUnit,
-
+    required String amountUnit,
     String? note,
+    required DateTime createdAt,
+    required DateTime bookingDate,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'created_at') required DateTime createdAt,
+    @UUIDJsonConverter() required UuidValue accountId,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'booking_date') required DateTime bookingDate,
-
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'account_id')
-    @UUIDJsonConverter()
-    required UuidValue accountId,
-
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'recurring_rule_id')
-    @UUIDNullableJsonConverter()
-    UuidValue? recurringRuleId,
+    @UUIDNullableJsonConverter() UuidValue? recurringRuleId,
   }) = _TagTurnover;
 
   String format() => Currency.currencyFrom(amountUnit).format(amountValue);

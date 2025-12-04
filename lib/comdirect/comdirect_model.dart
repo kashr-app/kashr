@@ -7,11 +7,9 @@ import 'package:logger/logger.dart';
 part '../_gen/comdirect/comdirect_model.g.dart';
 part '../_gen/comdirect/comdirect_model.freezed.dart';
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Credentials {
-  @JsonKey(name: 'client_id')
   final String clientId;
-  @JsonKey(name: 'client_secret')
   final String clientSecret;
   final String username;
   final String password;
@@ -85,13 +83,10 @@ class Credentials {
   Map<String, dynamic> toJson() => _$CredentialsToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class CreateLoginAuthTokenReqDTO {
-  @JsonKey(name: 'client_id')
   final String clientId;
-  @JsonKey(name: 'client_secret')
   final String clientSecret;
-  @JsonKey(name: 'grant_type')
   final String grantType;
   final String username;
   final String password;
@@ -109,15 +104,11 @@ class CreateLoginAuthTokenReqDTO {
   Map<String, dynamic> toJson() => _$CreateLoginAuthTokenReqDTOToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class TokenDTO {
-  @JsonKey(name: 'access_token')
   final String accessToken;
-  @JsonKey(name: 'token_type')
   final String tokenType;
-  @JsonKey(name: 'refresh_token')
   final String refreshToken;
-  @JsonKey(name: 'expires_in')
   final int expiresIn;
   final String scope;
   final String kdnr;
@@ -230,13 +221,10 @@ class AuthStatus {
   Map<String, dynamic> toJson() => _$AuthStatusToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ApiAccessTokenReqDTO {
-  @JsonKey(name: 'client_id')
   final String clientId;
-  @JsonKey(name: 'client_secret')
   final String clientSecret;
-  @JsonKey(name: 'grant_type')
   final String grantType;
   final String token;
 

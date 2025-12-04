@@ -15,18 +15,16 @@ part '../../_gen/savings/model/savings.g.dart';
 abstract class Savings with _$Savings {
   const Savings._();
 
+  // ignore: invalid_annotation_target
+  @JsonSerializable(fieldRename: FieldRename.snake)
   const factory Savings({
     @UUIDJsonConverter() required UuidValue id,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'tag_id') @UUIDJsonConverter() required UuidValue tagId,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'goal_value')
-    @DecimalNullableJsonConverter()
-    Decimal? goalValue,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'goal_unit') String? goalUnit,
-    // ignore: invalid_annotation_target
-    @JsonKey(name: 'created_at') required DateTime createdAt,
+
+    @UUIDJsonConverter() required UuidValue tagId,
+
+    @DecimalNullableJsonConverter() Decimal? goalValue,
+    String? goalUnit,
+    required DateTime createdAt,
   }) = _Savings;
 
   factory Savings.fromJson(Map<String, dynamic> json) =>
