@@ -1,13 +1,17 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/currency.dart';
+import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/widgets/tag_summary_row.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 
 /// A card widget that displays transfer summary with per-tag breakdown.
 class TransferSummaryCard extends StatelessWidget {
@@ -64,7 +68,21 @@ class TransferSummaryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._buildSortedRows(context, currency),
+              BlocBuilder<TagCubit, TagState>(
+                builder: (context, tagState) {
+                  return switch (tagState.status) {
+                    Status.initial ||
+                    Status.loading => CircularProgressIndicator(),
+                    Status.error => Text('Could not load tags'),
+                    Status.success => (() {
+                      final tagById = tagState.tagById;
+                      return Column(
+                        children: _buildSortedRows(context, currency, tagById),
+                      );
+                    })(),
+                  };
+                },
+              ),
             ],
             if (tagSummaries.isEmpty)
               Padding(
@@ -84,9 +102,11 @@ class TransferSummaryCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildSortedRows(BuildContext context, Currency currency) {
-    final tagById = context.read<TagCubit>().state.tagById;
-
+  List<Widget> _buildSortedRows(
+    BuildContext context,
+    Currency currency,
+    Map<UuidValue, Tag> tagById,
+  ) {
     // Create a list of items with their amounts for sorting
     final items = <({Decimal amount, Widget widget})>[];
 

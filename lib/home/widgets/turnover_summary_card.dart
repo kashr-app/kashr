@@ -1,8 +1,10 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/currency.dart';
+import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/widgets/tag_summary_row.dart';
 import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
@@ -91,7 +93,26 @@ class TurnoverSummaryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._buildSortedRows(context, currency, theme),
+              BlocBuilder<TagCubit, TagState>(
+                builder: (context, tagState) {
+                  return switch (tagState.status) {
+                    Status.initial ||
+                    Status.loading => CircularProgressIndicator(),
+                    Status.error => Text('Could not load tags'),
+                    Status.success => (() {
+                      final tagById = tagState.tagById;
+                      return Column(
+                        children: _buildSortedRows(
+                          context,
+                          currency,
+                          theme,
+                          tagById,
+                        ),
+                      );
+                    })(),
+                  };
+                },
+              ),
             ],
             if (tagSummaries.isEmpty && unallocatedAmount == Decimal.zero)
               Padding(
@@ -115,9 +136,8 @@ class TurnoverSummaryCard extends StatelessWidget {
     BuildContext context,
     Currency currency,
     ThemeData theme,
+    Map<UuidValue, Tag> tagById,
   ) {
-    final tagById = context.read<TagCubit>().state.tagById;
-
     // Create a list of items with their amounts for sorting
     final items = <({Decimal amount, Widget widget})>[];
 
