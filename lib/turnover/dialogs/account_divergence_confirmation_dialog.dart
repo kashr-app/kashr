@@ -72,9 +72,7 @@ class AccountDivergenceConfirmationDialog extends StatelessWidget {
                         itemCount: divergingTagTurnovers.length,
                         itemBuilder: (context, index) {
                           final item = divergingTagTurnovers[index];
-                          final tag =
-                              tagState.tagById[item.tagId] ??
-                              Tag(name: 'Unkown');
+                          final tag = tagState.tagById[item.tagId];
                           final currentAccount =
                               accountState.accountById[item.accountId];
                           final targetAccount =
@@ -111,7 +109,7 @@ class AccountDivergenceConfirmationDialog extends StatelessWidget {
 
 class _DivergingAccountItem extends StatelessWidget {
   final TagTurnover item;
-  final Tag tag;
+  final Tag? tag;
   final Account? currentAccount;
   final Account? targetAccount;
 
@@ -143,7 +141,7 @@ class _DivergingAccountItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        tt.note ?? tag.name,
+                        tt.note ?? tag?.name ?? '',
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       Text(

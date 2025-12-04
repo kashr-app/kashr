@@ -80,36 +80,15 @@ class BackupRepository {
     final results = await db.query('backup_config', where: 'id = 1');
 
     if (results.isEmpty) {
-      // Return default config if not found
-      return const BackupConfig();
+      return BackupConfig.defaultConfig();
     }
 
-    final map = results.first;
-    return BackupConfig(
-      autoBackupEnabled: map['auto_backup_enabled'] == 1,
-      frequency: BackupFrequency.values.firstWhere(
-        (f) => f.name == map['backup_frequency'],
-        orElse: () => BackupFrequency.weekly,
-      ),
-      lastAutoBackup: map['last_auto_backup'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['last_auto_backup'] as int)
-          : null,
-      encryptionEnabled: map['encryption_enabled'] == 1,
-      maxLocalBackups: map['max_local_backups'] as int,
-      autoBackupToCloud: map['auto_backup_to_cloud'] == 1,
-    );
+    return BackupConfig.fromJson(results.first);
   }
 
   /// Save backup configuration
   Future<void> saveConfig(BackupConfig config) async {
     final db = await DatabaseHelper().database;
-    await db.update('backup_config', {
-      'auto_backup_enabled': config.autoBackupEnabled ? 1 : 0,
-      'backup_frequency': config.frequency.name,
-      'last_auto_backup': config.lastAutoBackup?.millisecondsSinceEpoch,
-      'encryption_enabled': config.encryptionEnabled ? 1 : 0,
-      'max_local_backups': config.maxLocalBackups,
-      'auto_backup_to_cloud': config.autoBackupToCloud ? 1 : 0,
-    }, where: 'id = 1');
+    await db.update('backup_config', config.toJson(), where: 'id = 1');
   }
 }

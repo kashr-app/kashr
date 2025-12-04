@@ -125,7 +125,7 @@ class _TagsPageState extends State<TagsPage> {
           ),
           FilledButton(
             onPressed: () {
-              context.read<TagCubit>().deleteTag(tag.id!);
+              context.read<TagCubit>().deleteTag(tag.id);
               Navigator.of(dialogContext).pop();
             },
             child: const Text('Delete'),
@@ -150,8 +150,8 @@ class _TagsPageState extends State<TagsPage> {
     final savingsRepo = context.read<SavingsRepository>();
     final savingsBalanceService = context.read<SavingsBalanceService>();
 
-    final sourceSavings = await savingsRepo.getByTagId(sourceTag.id!);
-    final targetSavings = await savingsRepo.getByTagId(targetTag.id!);
+    final sourceSavings = await savingsRepo.getByTagId(sourceTag.id);
+    final targetSavings = await savingsRepo.getByTagId(targetTag.id);
 
     // Calculate balances using the SavingsBalanceService
     final sourceBalance = sourceSavings != null
@@ -190,7 +190,7 @@ class _TagsPageState extends State<TagsPage> {
     }
 
     // Step 5: Execute the merge
-    await context.read<TagCubit>().mergeTags(sourceTag.id!, targetTag.id!);
+    await context.read<TagCubit>().mergeTags(sourceTag.id, targetTag.id);
 
     if (!context.mounted) return;
 

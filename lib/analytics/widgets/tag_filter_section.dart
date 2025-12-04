@@ -31,15 +31,13 @@ class TagFilterSection extends StatelessWidget {
                     Row(
                       children: [
                         TextButton(
-                          onPressed: () => context
-                              .read<AnalyticsCubit>()
-                              .selectAllTags(),
+                          onPressed: () =>
+                              context.read<AnalyticsCubit>().selectAllTags(),
                           child: const Text('Select All'),
                         ),
                         TextButton(
-                          onPressed: () => context
-                              .read<AnalyticsCubit>()
-                              .deselectAllTags(),
+                          onPressed: () =>
+                              context.read<AnalyticsCubit>().deselectAllTags(),
                           child: const Text('Clear'),
                         ),
                       ],
@@ -56,28 +54,22 @@ class TagFilterSection extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: state.allTags.map((tag) {
-                    final isSelected = tag.id != null &&
-                        state.selectedTagIds
-                            .any((id) => id.uuid == tag.id!.uuid);
+                    final isSelected = state.selectedTagIds.any(
+                      (id) => id == tag.id,
+                    );
 
                     return FilterChip(
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          TagAvatar(
-                            tag: tag,
-                            radius: 12,
-                          ),
+                          TagAvatar(tag: tag, radius: 12),
                           const SizedBox(width: 8),
                           Text(tag.name),
                         ],
                       ),
                       selected: isSelected,
-                      onSelected: tag.id == null
-                          ? null
-                          : (_) => context
-                              .read<AnalyticsCubit>()
-                              .toggleTag(tag.id!),
+                      onSelected: (_) =>
+                          context.read<AnalyticsCubit>().toggleTag(tag.id),
                     );
                   }).toList(),
                 ),

@@ -28,11 +28,13 @@ class _SettingsPageState extends State<SettingsPage> {
   String packageName = '';
   String version = '?';
   String buildNumber = '?';
+  String sqliteVersion = '?';
 
   @override
   void initState() {
     super.initState();
     _getAppVersion();
+    _getSqlLiteVersion();
   }
 
   // Get the app version
@@ -44,6 +46,16 @@ class _SettingsPageState extends State<SettingsPage> {
       packageName = packageInfo.packageName;
       version = packageInfo.version;
       buildNumber = packageInfo.buildNumber;
+    });
+  }
+
+  Future<void> _getSqlLiteVersion() async {
+    final db = await DatabaseHelper().database;
+    final v =
+        (await db.rawQuery('SELECT sqlite_version()')).first.values.first
+            as String?;
+    setState(() {
+      sqliteVersion = v ?? 'err';
     });
   }
 
@@ -106,6 +118,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 ListTile(
                   title: const Text('Database Version'),
                   subtitle: Text('$dbVersion'),
+                  leading: const Icon(Icons.storage),
+                ),
+                ListTile(
+                  title: const Text('SQLite Version'),
+                  subtitle: Text(sqliteVersion),
                   leading: const Icon(Icons.storage),
                 ),
               ],

@@ -317,7 +317,7 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
   final tagTurnover = TagTurnover(
     id: const Uuid().v4obj(),
     turnoverId: isManual ? turnoverId : null, // unmatched for linked accounts
-    tagId: tag.id!,
+    tagId: tag.id,
     amountValue: amount,
     amountUnit: account.currency,
     bookingDate: bookingDate,

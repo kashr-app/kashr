@@ -278,7 +278,7 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                         runSpacing: 4,
                         children: _availableTags.map((tag) {
                           final isSelected = _selectedTagIds.contains(
-                            tag.id?.uuid,
+                            tag.id.uuid,
                           );
                           final tagColor = tag.color != null
                               ? Color(
@@ -302,9 +302,9 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                             onSelected: (selected) {
                               setState(() {
                                 if (selected) {
-                                  _selectedTagIds.add(tag.id!.uuid);
+                                  _selectedTagIds.add(tag.id.uuid);
                                 } else {
-                                  _selectedTagIds.remove(tag.id?.uuid);
+                                  _selectedTagIds.remove(tag.id.uuid);
                                 }
                               });
                             },

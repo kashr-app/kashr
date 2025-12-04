@@ -70,7 +70,7 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
       // Create savings
       final savings = Savings(
         id: const Uuid().v4obj(),
-        tagId: _selectedTag!.id!,
+        tagId: _selectedTag!.id,
         goalValue: _hasGoal && _goalAmountScaled != null
             ? (Decimal.fromInt(_goalAmountScaled!) / Decimal.fromInt(100))
                 .toDecimal(scaleOnInfinitePrecision: 2)

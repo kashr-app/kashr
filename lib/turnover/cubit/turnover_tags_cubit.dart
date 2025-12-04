@@ -57,11 +57,10 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
         turnoverId,
       );
       await _tagCubit.loadTags();
-      final allTags = _tagCubit.state.tags;
-      final tagMap = {for (final tag in allTags) tag.id!: tag};
+      final tagById = _tagCubit.state.tagById;
 
       final tagTurnoversWithTags = tagTurnovers.map((tt) {
-        final tag = tagMap[tt.tagId];
+        final tag = tagById[tt.tagId];
         return TagTurnoverWithTag(
           tagTurnover: tt,
           tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
@@ -134,7 +133,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
     final newTagTurnover = TagTurnover(
       id: const Uuid().v4obj(),
       turnoverId: t.id,
-      tagId: tag.id!,
+      tagId: tag.id,
       amountValue: remainingAmount,
       amountUnit: t.amountUnit,
       note: null,
@@ -385,12 +384,11 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       }).toList();
 
       // Get all tags for the updated tag turnovers
-      final allTags = _tagCubit.state.tags;
-      final tagMap = {for (final tag in allTags) tag.id!: tag};
+      final tagById = _tagCubit.state.tagById;
 
       // Convert to TagTurnoverWithTag
       var newTagTurnoversWithTags = updatedPendingTagTurnovers.map((tt) {
-        final tag = tagMap[tt.tagId];
+        final tag = tagById[tt.tagId];
         return TagTurnoverWithTag(
           tagTurnover: tt,
           tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),

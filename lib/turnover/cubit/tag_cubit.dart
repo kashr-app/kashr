@@ -23,7 +23,7 @@ class TagCubit extends Cubit<TagState> {
         state.copyWith(
           status: Status.success,
           tags: tags,
-          tagById: tags.associateBy((t) => t.id!),
+          tagById: tags.associateBy((t) => t.id),
         ),
       );
     } catch (e, s) {
@@ -40,7 +40,7 @@ class TagCubit extends Cubit<TagState> {
   /// Creates a new tag.
   Future<void> createTag(Tag tag) async {
     try {
-      final tagWithId = tag.copyWith(id: tag.id ?? const Uuid().v4obj());
+      final tagWithId = tag.copyWith(id: tag.id);
       await _repository.createTag(tagWithId);
       await loadTags();
     } catch (e, s) {

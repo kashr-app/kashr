@@ -19,14 +19,33 @@ abstract class Turnover with _$Turnover {
 
   const factory Turnover({
     @UUIDJsonConverter() required UuidValue id,
-    required DateTime createdAt,
-    @UUIDJsonConverter() required UuidValue accountId,
-    DateTime? bookingDate,
-    @DecimalJsonConverter() required Decimal amountValue,
-    required String amountUnit,
-    String? counterPart,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'account_id')
+    @UUIDJsonConverter()
+    required UuidValue accountId,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'booking_date') DateTime? bookingDate,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'amount_value')
+    @DecimalJsonConverter()
+    required Decimal amountValue,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'amount_unit') required String amountUnit,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'counter_part') String? counterPart,
+
     required String purpose,
-    String? apiId,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'api_id') String? apiId,
   }) = _Turnover;
 
   factory Turnover.fromJson(Map<String, dynamic> json) =>

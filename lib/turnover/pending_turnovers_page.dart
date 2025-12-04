@@ -3,8 +3,8 @@ import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/home/home_page.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
@@ -52,17 +52,13 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
 
     try {
       final tagTurnoverRepository = context.read<TagTurnoverRepository>();
-      final tagRepository = context.read<TagRepository>();
 
       final unmatched = await tagTurnoverRepository.getUnmatched();
-      final allTags = await tagRepository.getAllTags();
-      final tagMap = {for (final tag in allTags) tag.id!: tag};
 
       final withTagsAndAccounts = unmatched.map((tt) {
-        final tag = tagMap[tt.tagId];
         return TagTurnoverWithTagAndAccount(
           tagTurnover: tt,
-          tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
+          tagId: tt.tagId,
           accountId: tt.accountId,
         );
       }).toList();
@@ -458,7 +454,7 @@ class _PendingTurnoverItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tt = tagTurnoverWithTagAndAccount.tagTurnover;
-    final tag = tagTurnoverWithTagAndAccount.tag;
+    final tagId = tagTurnoverWithTagAndAccount.tagId;
     final accountId = tagTurnoverWithTagAndAccount.accountId;
 
     return Card(
@@ -468,40 +464,45 @@ class _PendingTurnoverItem extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                TagAvatar(tag: tag, radius: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tt.note ?? tag.name,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+            BlocBuilder<TagCubit, TagState>(
+              builder: (context, tagState) {
+                final tag = tagState.tagById[tagId];
+                return Row(
+                  children: [
+                    TagAvatar(tag: tag, radius: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tt.note ?? tag?.name ?? 'Unknown',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            tag?.name ?? 'Unknown',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        tag.name,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                    ),
+                    Text(
+                      tt.format(),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: tt.amountValue < Decimal.zero
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.primary,
                       ),
-                    ],
-                  ),
-                ),
-                Text(
-                  tt.format(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: tt.amountValue < Decimal.zero
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.primary,
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 8),
             BlocBuilder<AccountCubit, AccountState>(
@@ -726,12 +727,12 @@ class _TurnoverMatchDetails extends StatelessWidget {
 
 class TagTurnoverWithTagAndAccount {
   final TagTurnover tagTurnover;
-  final Tag tag;
+  final UuidValue tagId;
   final UuidValue accountId;
 
   TagTurnoverWithTagAndAccount({
     required this.tagTurnover,
-    required this.tag,
+    required this.tagId,
     required this.accountId,
   });
 }

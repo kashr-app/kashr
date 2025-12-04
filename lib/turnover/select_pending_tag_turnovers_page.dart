@@ -1,11 +1,11 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/cubit/account_state.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
 import 'package:finanalyzer/turnover/dialogs/account_divergence_confirmation_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/amount_exceeding_confirmation_dialog.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
@@ -51,7 +51,6 @@ class _SelectPendingTagTurnoversPageState
 
     try {
       final tagTurnoverRepository = context.read<TagTurnoverRepository>();
-      final tagRepository = context.read<TagRepository>();
 
       final unmatched = await tagTurnoverRepository.getUnmatched();
 
@@ -78,14 +77,10 @@ class _SelectPendingTagTurnoversPageState
       // Combine unmatched and unlinked tag turnovers
       final allAvailable = [...availableUnmatched, ...unlinkedTagTurnovers];
 
-      final allTags = await tagRepository.getAllTags();
-      final tagMap = {for (final tag in allTags) tag.id!: tag};
-
       final withTagsAndAccounts = allAvailable.map((tt) {
-        final tag = tagMap[tt.tagId];
         return _TagTurnoverWithTagAndAccount(
           tagTurnover: tt,
-          tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
+          tagId: tt.tagId,
           accountId: tt.accountId,
         );
       }).toList();
@@ -296,7 +291,7 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tt = tagTurnoverWithTagAndAccount.tagTurnover;
-    final tag = tagTurnoverWithTagAndAccount.tag;
+    final tagId = tagTurnoverWithTagAndAccount.tagId;
     final accountId = tagTurnoverWithTagAndAccount.accountId;
 
     return Card(
@@ -313,58 +308,65 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  if (isSelected)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Icon(
-                        Icons.check_circle,
-                        color: theme.colorScheme.primary,
-                        size: 24,
-                      ),
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Icon(
-                        Icons.circle_outlined,
-                        color: theme.colorScheme.onSurfaceVariant,
-                        size: 24,
-                      ),
-                    ),
-                  TagAvatar(tag: tag, radius: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tt.note ?? tag.name,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          tag.name,
-                          style: TextStyle(
-                            fontSize: 12,
+              BlocBuilder<TagCubit, TagState>(
+                builder: (context, tagState) {
+                  final tag = tagState.tagById[tagId];
+                  return Row(
+                    children: [
+                      if (isSelected)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(
+                            Icons.check_circle,
+                            color: theme.colorScheme.primary,
+                            size: 24,
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(
+                            Icons.circle_outlined,
                             color: theme.colorScheme.onSurfaceVariant,
+                            size: 24,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    tt.format(),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: tt.amountValue < Decimal.zero
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.primary,
-                    ),
-                  ),
-                ],
+                      TagAvatar(tag: tag, radius: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tt.note ?? tag?.name ?? 'Unknown',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              tag?.name ?? 'Unknown',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        tt.format(),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: tt.amountValue < Decimal.zero
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 8),
               BlocBuilder<AccountCubit, AccountState>(
@@ -408,7 +410,7 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
                       ),
                     ],
                   );
-                }
+                },
               ),
             ],
           ),
@@ -420,12 +422,12 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
 
 class _TagTurnoverWithTagAndAccount {
   final TagTurnover tagTurnover;
-  final Tag tag;
+  final UuidValue tagId;
   final UuidValue accountId;
 
   _TagTurnoverWithTagAndAccount({
     required this.tagTurnover,
-    required this.tag,
+    required this.tagId,
     required this.accountId,
   });
 }

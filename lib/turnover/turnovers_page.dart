@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:uuid/uuid.dart';
 
 class TurnoversRoute extends GoRouteData with $TurnoversRoute {
   const TurnoversRoute({this.filter, this.sort});
@@ -212,13 +213,11 @@ class _TurnoversPageState extends State<TurnoversPage> {
   Future<void> _batchRemoveTag() async {
     if (_selectedTurnoverIds.isEmpty) return;
 
-    final tagsMap = <String, Tag>{};
+    final tagsMap = <UuidValue, Tag>{};
     for (final turnoverWithTags in _selectedTurnovers) {
       for (final tagTurnover in turnoverWithTags.tagTurnovers) {
         final tag = tagTurnover.tag;
-        if (tag.id != null) {
-          tagsMap[tag.id!.uuid] = tag;
-        }
+        tagsMap[tag.id] = tag;
       }
     }
 

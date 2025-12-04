@@ -121,11 +121,7 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
       final paginatedTurnovers = turnovers.sublist(startIndex, endIndex);
 
       // Fetch tags for each turnover
-      final allTags = _tagCubit.state.tags;
-      final tagMap = {
-        for (final tag in allTags)
-          if (tag.id != null) tag.id!: tag,
-      };
+      final tagById = _tagCubit.state.tagById;
 
       final newItems = <TurnoverWithTags>[];
       for (final turnover in paginatedTurnovers.reversed) {
@@ -134,7 +130,7 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
         );
 
         final tagTurnoversWithTags = tagTurnovers.map((tt) {
-          final tag = tagMap[tt.tagId];
+          final tag = tagById[tt.tagId];
           return TagTurnoverWithTag(
             tagTurnover: tt,
             tag: tag ?? Tag(name: 'Unknown', id: tt.tagId, color: null),

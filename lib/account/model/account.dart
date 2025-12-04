@@ -74,9 +74,16 @@ enum SyncSource {
 abstract class Account with _$Account {
   const factory Account({
     @UUIDJsonConverter() required UuidValue id,
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'created_at') 
     required DateTime createdAt,
+
     required String name,
+
     String? identifier, // IBAN or account number
+
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'api_id') 
     String? apiId,
 
     // ignore: invalid_annotation_target
@@ -84,6 +91,7 @@ abstract class Account with _$Account {
 
     // ignore: invalid_annotation_target
     @JsonKey(name: 'sync_source') SyncSource? syncSource,
+
     required String currency,
 
     @DecimalJsonConverter()

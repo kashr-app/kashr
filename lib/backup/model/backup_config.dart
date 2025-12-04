@@ -1,3 +1,4 @@
+import 'package:finanalyzer/core/bool_json_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/backup/model/backup_config.freezed.dart';
@@ -16,24 +17,32 @@ enum BackupFrequency {
 /// Configuration for backup feature
 @freezed
 abstract class BackupConfig with _$BackupConfig {
+  // ignore: invalid_annotation_target
+  @JsonSerializable(fieldRename: FieldRename.snake)
   const factory BackupConfig({
-    // Automatic backup settings
-    @Default(false) bool autoBackupEnabled,
-    @Default(BackupFrequency.weekly) BackupFrequency frequency,
+    @BoolJsonConverter() required bool autoBackupEnabled,
+
+    required BackupFrequency frequency,
+
     DateTime? lastAutoBackup,
 
-    // Encryption settings
-    @Default(false) bool encryptionEnabled,
+    @BoolJsonConverter() required bool encryptionEnabled,
 
-    // Local backup settings
-    @Default(5) int maxLocalBackups,
+    required int maxLocalBackups,
 
-    // Cloud backup settings
-    @Default(false) bool autoBackupToCloud,
+    @BoolJsonConverter() required bool autoBackupToCloud,
   }) = _BackupConfig;
 
   factory BackupConfig.fromJson(Map<String, dynamic> json) =>
       _$BackupConfigFromJson(json);
+
+  static BackupConfig defaultConfig() => const BackupConfig(
+    autoBackupEnabled: false,
+    frequency: BackupFrequency.weekly,
+    encryptionEnabled: false,
+    maxLocalBackups: 5,
+    autoBackupToCloud: false,
+  );
 }
 
 /// Cloud provider configuration

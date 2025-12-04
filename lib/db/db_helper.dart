@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:finanalyzer/db/migrations/v1.dart';
+import 'package:finanalyzer/db/migrations/v10.dart';
 import 'package:finanalyzer/db/migrations/v2.dart';
 import 'package:finanalyzer/db/migrations/v3.dart';
 import 'package:finanalyzer/db/migrations/v4.dart';
@@ -17,7 +18,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 const dbFileName = 'app_database.db';
 
-const dbVersion = 9;
+const dbVersion = 10;
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -33,6 +34,7 @@ class DatabaseHelper {
     if (_database != null) return _database!;
 
     _database = await _initDb();
+    await _database!.execute('PRAGMA foreign_keys = ON');
     return _database!;
   }
 
@@ -72,6 +74,7 @@ class DatabaseHelper {
       7: v7,
       8: v8,
       9: v9,
+      10: v10,
     };
     for (int i = oldVersion + 1; i <= newVersion; i++) {
       final m = migrations[i];

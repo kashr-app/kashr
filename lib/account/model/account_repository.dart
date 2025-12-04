@@ -42,9 +42,9 @@ class AccountRepository {
 
     final placeholders = List.filled(accountApiIds.length, '?').join(',');
     final results = await db.rawQuery('''
-      SELECT id, apiId
+      SELECT id, api_id
       FROM account
-      WHERE apiId IN ($placeholders)
+      WHERE api_id IN ($placeholders)
     ''', accountApiIds);
 
     return results.map((e) => AccountIdAndApiId.fromJson(e)).toList();

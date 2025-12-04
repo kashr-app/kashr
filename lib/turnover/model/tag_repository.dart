@@ -33,7 +33,7 @@ class TagRepository {
       'tag',
       tag.toJson(),
       where: 'id = ?',
-      whereArgs: [tag.id?.uuid],
+      whereArgs: [tag.id.uuid],
     );
   }
 
@@ -59,8 +59,8 @@ class TagRepository {
         final turnoverCount = await txn.rawUpdate(
           '''
           UPDATE tag_turnover
-          SET tagId = ?
-          WHERE tagId = ?
+          SET tag_id = ?
+          WHERE tag_id = ?
           ''',
           [targetTagId.uuid, sourceTagId.uuid],
         );

@@ -95,11 +95,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         direction: SortDirection.desc,
       )).toList();
 
-      final allTags = tagCubit.state.tags;
-      final tagMap = {
-        for (final tag in allTags)
-          if (tag.id != null) tag.id!: tag,
-      };
+      final tagById = tagCubit.state.tagById;
 
       final turnoversWithTags = <TurnoverWithTags>[];
       for (final turnover in recentTurnovers) {
@@ -108,7 +104,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         );
 
         final tagTurnoversWithTags = tagTurnovers.map((tt) {
-          final tag = tagMap[tt.tagId];
+          final tag = tagById[tt.tagId];
           return TagTurnoverWithTag(
             tagTurnover: tt,
             tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),

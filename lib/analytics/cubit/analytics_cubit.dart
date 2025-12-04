@@ -11,23 +11,13 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
   final TagTurnoverRepository _tagTurnoverRepository;
   final TagRepository _tagRepository;
 
-  AnalyticsCubit(
-    this._tagTurnoverRepository,
-    this._tagRepository,
-  ) : super(
-          AnalyticsState(
-            startDate: DateTime(
-              DateTime.now().year,
-              DateTime.now().month - 5,
-              1,
-            ),
-            endDate: DateTime(
-              DateTime.now().year,
-              DateTime.now().month + 1,
-              1,
-            ),
-          ),
-        );
+  AnalyticsCubit(this._tagTurnoverRepository, this._tagRepository)
+    : super(
+        AnalyticsState(
+          startDate: DateTime(DateTime.now().year, DateTime.now().month - 5, 1),
+          endDate: DateTime(DateTime.now().year, DateTime.now().month + 1, 1),
+        ),
+      );
 
   Future<void> loadData() async {
     try {
@@ -39,16 +29,16 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
 
       // If no tags are selected yet, select all tags
       final selectedTagIds = isInitialLoad && state.selectedTagIds.isEmpty
-          ? allTags.where((t) => t.id != null).map((t) => t.id!).toList()
+          ? allTags.map((t) => t.id).toList()
           : state.selectedTagIds;
 
       // Load data summaries for the selected date range
-      final dataSummaries =
-          await _tagTurnoverRepository.getTagSummariesForDateRange(
-        startDate: state.startDate,
-        endDate: state.endDate,
-        tagIds: selectedTagIds.isEmpty ? null : selectedTagIds,
-      );
+      final dataSummaries = await _tagTurnoverRepository
+          .getTagSummariesForDateRange(
+            startDate: state.startDate,
+            endDate: state.endDate,
+            tagIds: selectedTagIds.isEmpty ? null : selectedTagIds,
+          );
 
       emit(
         state.copyWith(
@@ -89,8 +79,7 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
   }
 
   void selectAllTags() {
-    final allTagIds =
-        state.allTags.where((t) => t.id != null).map((t) => t.id!).toList();
+    final allTagIds = state.allTags.map((t) => t.id).toList();
     emit(state.copyWith(selectedTagIds: allTagIds));
     loadData();
   }
@@ -101,12 +90,7 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
   }
 
   void setDateRange(DateTime startDate, DateTime endDate) {
-    emit(
-      state.copyWith(
-        startDate: startDate,
-        endDate: endDate,
-      ),
-    );
+    emit(state.copyWith(startDate: startDate, endDate: endDate));
     loadData();
   }
 }

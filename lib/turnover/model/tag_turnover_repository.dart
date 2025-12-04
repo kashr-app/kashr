@@ -29,7 +29,7 @@ class TagTurnoverRepository {
   /// For each turnover, allocates the remaining unallocated amount to the tag.
   /// This is done efficiently in a single database transaction to avoid N+1.
   Future<void> batchAddTagToTurnovers(List<Turnover> turnovers, Tag tag) async {
-    if (turnovers.isEmpty || tag.id == null) return;
+    if (turnovers.isEmpty) return;
 
     final db = await DatabaseHelper().database;
 
@@ -44,16 +44,16 @@ class TagTurnoverRepository {
       (_) => '?',
     ).join(',');
     final existingTagTurnovers = await db.rawQuery('''
-      SELECT turnoverId, SUM(amountValue) as total
+      SELECT turnover_id, SUM(amount_value) as total
       FROM tag_turnover
-      WHERE turnoverId IN ($placeholders)
-      GROUP BY turnoverId
+      WHERE turnover_id IN ($placeholders)
+      GROUP BY turnover_id
       ''', turnoverIds);
 
     // Build a map of turnover ID to allocated amount
     final allocatedByTurnover = <String, Decimal>{};
     for (final row in existingTagTurnovers) {
-      final turnoverId = row['turnoverId'] as String;
+      final turnoverId = row['turnover_id'] as String;
       allocatedByTurnover[turnoverId] = _unscale(row['total']);
     }
 
@@ -70,7 +70,7 @@ class TagTurnoverRepository {
         final tagTurnover = TagTurnover(
           id: const Uuid().v4obj(),
           turnoverId: turnover.id,
-          tagId: tag.id!,
+          tagId: tag.id,
           amountValue: remainingAmount,
           amountUnit: turnover.amountUnit,
           note: null,
@@ -94,7 +94,7 @@ class TagTurnoverRepository {
     List<Turnover> turnovers,
     Tag tag,
   ) async {
-    if (turnovers.isEmpty || tag.id == null) return;
+    if (turnovers.isEmpty) return;
 
     final db = await DatabaseHelper().database;
 
@@ -113,9 +113,9 @@ class TagTurnoverRepository {
     await db.rawDelete(
       '''
       DELETE FROM tag_turnover
-      WHERE tagId = ? AND turnoverId IN ($placeholders)
+      WHERE tag_id = ? AND turnover_id IN ($placeholders)
       ''',
-      [tag.id!.uuid, ...turnoverIds],
+      [tag.id.uuid, ...turnoverIds],
     );
   }
 
@@ -124,7 +124,7 @@ class TagTurnoverRepository {
 
     final maps = await db.query(
       'tag_turnover',
-      where: 'turnoverId = ?',
+      where: 'turnover_id = ?',
       whereArgs: [turnoverId.uuid],
     );
 
@@ -136,7 +136,7 @@ class TagTurnoverRepository {
 
     final maps = await db.query(
       'tag_turnover',
-      where: 'tagId = ?',
+      where: 'tag_id = ?',
       whereArgs: [tagId.uuid],
     );
 
@@ -152,7 +152,7 @@ class TagTurnoverRepository {
   }) async {
     final db = await DatabaseHelper().database;
 
-    final whereClauses = ['turnoverId IS NULL'];
+    final whereClauses = ['turnover_id IS NULL'];
     final whereArgs = <Object>[];
 
     if (accountId != null) {
@@ -193,7 +193,7 @@ class TagTurnoverRepository {
 
     return await db.update(
       'tag_turnover',
-      {'turnoverId': turnoverId.uuid},
+      {'turnover_id': turnoverId.uuid},
       where: 'id = ?',
       whereArgs: [tagTurnoverId.uuid],
     );
@@ -205,7 +205,7 @@ class TagTurnoverRepository {
 
     return await db.update(
       'tag_turnover',
-      {'turnoverId': null},
+      {'turnover_id': null},
       where: 'id = ?',
       whereArgs: [tagTurnoverId.uuid],
     );
@@ -246,7 +246,7 @@ class TagTurnoverRepository {
 
     return db.delete(
       'tag_turnover',
-      where: 'turnoverId = ?',
+      where: 'turnover_id = ?',
       whereArgs: [turnoverId.uuid],
     );
   }
@@ -256,7 +256,7 @@ class TagTurnoverRepository {
 
     return await db.update(
       'tag_turnover',
-      {'amountValue': amountValue.toString()},
+      {'amount_value': amountValue.toString()},
       where: 'id = ?',
       whereArgs: [id.uuid],
     );
@@ -267,9 +267,9 @@ class TagTurnoverRepository {
 
     final result = await db.rawQuery(
       '''
-      SELECT SUM(amountValue) AS total
+      SELECT SUM(amount_value) AS total
       FROM tag_turnover
-      WHERE tagId = ?
+      WHERE tag_id = ?
     ''',
       [tagId.uuid],
     );
@@ -285,9 +285,9 @@ class TagTurnoverRepository {
 
     final result = await db.rawQuery(
       '''
-      SELECT SUM(amountValue) AS total
+      SELECT SUM(amount_value) AS total
       FROM tag_turnover
-      WHERE tagId = ? AND account_id = ?
+      WHERE tag_id = ? AND account_id = ?
     ''',
       [tagId.uuid, accountId.uuid],
     );
@@ -327,8 +327,8 @@ class TagTurnoverRepository {
     final endDate = startDate.add(months: 1);
 
     final amountWhere = switch (sign) {
-      TurnoverSign.income => 'AND tt.amountValue >= 0',
-      TurnoverSign.expense => 'AND tt.amountValue < 0',
+      TurnoverSign.income => 'AND tt.amount_value >= 0',
+      TurnoverSign.expense => 'AND tt.amount_value < 0',
     };
 
     final semanticWhere =
@@ -341,11 +341,11 @@ class TagTurnoverRepository {
         t.name as tag_name,
         t.color as tag_color,
         t.semantic as tag_semantic,
-        SUM(tt.amountValue) as total_amount
+        SUM(tt.amount_value) as total_amount
       FROM tag_turnover tt
-      INNER JOIN tag t ON tt.tagId = t.id
+      INNER JOIN tag t ON tt.tag_id = t.id
       WHERE tt.booking_date >= ? AND tt.booking_date < ?
-        AND tt.turnoverId IS NOT NULL
+        AND tt.turnover_id IS NOT NULL
         $semanticWhere
         $amountWhere
       GROUP BY t.id, t.name, t.color, t.semantic
@@ -389,12 +389,12 @@ class TagTurnoverRepository {
         t.id as tag_id,
         t.name as tag_name,
         t.color as tag_color,
-        SUM(tt.amountValue) as total_amount
+        SUM(tt.amount_value) as total_amount
       FROM tag_turnover tt
-      INNER JOIN tag t ON tt.tagId = t.id
-      INNER JOIN turnover tv ON tt.turnoverId = tv.id
+      INNER JOIN tag t ON tt.tag_id = t.id
+      INNER JOIN turnover tv ON tt.turnover_id = tv.id
       WHERE tt.booking_date >= ? AND tt.booking_date < ?
-        AND tt.turnoverId IS NOT NULL
+        AND tt.turnover_id IS NOT NULL
       $tagFilter
       GROUP BY month, t.id, t.name, t.color
       ORDER BY month ASC, total_amount DESC
@@ -430,7 +430,7 @@ class TagTurnoverRepository {
       '''
       SELECT DISTINCT account_id
       FROM tag_turnover
-      WHERE tagId = ?
+      WHERE tag_id = ?
       ''',
       [tagId.uuid],
     );

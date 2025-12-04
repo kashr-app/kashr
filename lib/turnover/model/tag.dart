@@ -11,7 +11,7 @@ abstract class Tag with _$Tag {
   const Tag._();
 
   const factory Tag({
-    @UUIDNullableJsonConverter() UuidValue? id,
+    @UUIDJsonConverter() required UuidValue id,
     required String name,
     String? color,
     @TagSemanticConverter() TagSemantic? semantic,
