@@ -159,7 +159,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
       try {
         await context.read<SavingsVirtualBookingRepository>().delete(
-          widget.booking!.id!,
+          widget.booking!.id,
         );
 
         if (mounted) {

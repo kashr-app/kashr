@@ -70,7 +70,7 @@ class SavingsVirtualBookingRepository {
       'savings_virtual_booking',
       booking.toJson(),
       where: 'id = ?',
-      whereArgs: [booking.id?.uuid],
+      whereArgs: [booking.id.uuid],
     );
   }
 
