@@ -1,5 +1,9 @@
+import 'package:finanalyzer/account/cubit/account_cubit.dart';
+import 'package:finanalyzer/account/cubit/account_state.dart';
+import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Displays information about a turnover in a card format.
 ///
@@ -20,15 +24,25 @@ class TurnoverInfoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            BlocBuilder<AccountCubit, AccountState>(
+              builder: (context, state) => Row(
+                children: [
+                  Icon(
+                    state.accountById[turnover.accountId]?.accountType.icon,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(state.accountById[turnover.accountId]?.name ?? ''),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
             Text(
               turnover.counterPart ?? '(Unknown)',
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 4),
-            Text(
-              turnover.purpose,
-              style: theme.textTheme.bodyMedium,
-            ),
+            Text(turnover.purpose, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -41,6 +55,7 @@ class TurnoverInfoCard extends StatelessWidget {
                   turnover.formatAmount(),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: Theme.of(context).decimalColor(turnover.amountValue),
                   ),
                 ),
               ],
