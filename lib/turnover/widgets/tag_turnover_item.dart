@@ -1,6 +1,7 @@
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/widgets/note_field.dart';
 import 'package:finanalyzer/turnover/widgets/tag_amount_controls.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
@@ -77,7 +78,18 @@ class TagTurnoverItem extends StatelessWidget {
       children: [
         TagAvatar(tag: tag),
         const SizedBox(width: 12),
-        Expanded(child: Text(tag.name, style: theme.textTheme.titleMedium)),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(tag.name, style: theme.textTheme.titleMedium),
+              Text(
+                dateFormat.format(tagTurnoverWithTag.tagTurnover.bookingDate),
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
         IconButton(
           icon: const Icon(Icons.link_off),
           tooltip: 'Unlink from turnover',
