@@ -281,7 +281,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                     }
 
                     return DropdownButtonFormField<Account>(
-                      value: _selectedAccount,
+                      initialValue: _selectedAccount,
                       decoration: const InputDecoration(
                         labelText: 'Account',
                         border: OutlineInputBorder(),

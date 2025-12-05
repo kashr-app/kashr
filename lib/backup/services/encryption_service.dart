@@ -4,7 +4,6 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:pointycastle/export.dart';
 
@@ -12,30 +11,6 @@ const String _header = 'FINBAK_ENC_V1\x00\x00\x00';
 const int _saltLength = 32;
 const int _ivLength = 12;
 const int _tagLength = 16;
-
-// Top-level function for isolate-based decryption
-void _decryptInIsolate(SendPort initialReplyTo) async {
-  final port = ReceivePort();
-  initialReplyTo.send(port.sendPort);
-  await for (final message in port) {
-    final transferable = message["data"] as TransferableTypedData;
-    final data = transferable.materialize().asUint8List();
-    final password = message["password"] as String;
-    final replyPort = message["port"] as SendPort;
-    try {
-      final result = await _performDecryption(
-        data,
-        password,
-        (p) => replyPort.send({"progress": p}),
-      );
-      replyPort.send({
-        "result": TransferableTypedData.fromList([result]),
-      });
-    } catch (e, _) {
-      replyPort.send({"error": e.toString()});
-    }
-  }
-}
 
 // Top-level function for isolate-based encryption
 void _encryptInIsolate(SendPort initialReplyTo) async {
@@ -47,7 +22,7 @@ void _encryptInIsolate(SendPort initialReplyTo) async {
     final password = message["password"] as String;
     final replyPort = message["port"] as SendPort;
     try {
-      final result = await _performEncryption(
+      final result = await _enrycpt(
         data,
         password,
         (p) => replyPort.send({"progress": p}),
@@ -61,8 +36,61 @@ void _encryptInIsolate(SendPort initialReplyTo) async {
   }
 }
 
+// Top-level function for isolate-based decryption
+void _decryptInIsolate(SendPort initialReplyTo) async {
+  final port = ReceivePort();
+  initialReplyTo.send(port.sendPort);
+  await for (final message in port) {
+    final transferable = message["data"] as TransferableTypedData;
+    final data = transferable.materialize().asUint8List();
+    final password = message["password"] as String;
+    final replyPort = message["port"] as SendPort;
+    try {
+      final result = await _decrypt(
+        data,
+        password,
+        (p) => replyPort.send({"progress": p}),
+      );
+      replyPort.send({
+        "result": TransferableTypedData.fromList([result]),
+      });
+    } catch (e, _) {
+      replyPort.send({"error": e.toString()});
+    }
+  }
+}
+
+/// Perform the actual encryption (runs in isolate)
+Future<Uint8List> _enrycpt(
+  Uint8List data,
+  String password,
+  Function(double) onProgress,
+) async {
+  // Generate random salt and IV
+  final secureRandom = _createSecureRandom();
+  final salt = _generateRandomBytes(secureRandom, _saltLength);
+  final iv = _generateRandomBytes(secureRandom, _ivLength);
+
+  final encryptedData = await _runCipher(
+    true,
+    data,
+    password,
+    salt,
+    iv,
+    onProgress,
+  );
+  // Build final output: header + salt + IV + encrypted data (with tag)
+  final output = BytesBuilder();
+  output.add(utf8.encode(_header));
+  output.add(salt);
+  output.add(iv);
+  output.add(encryptedData);
+
+  return output.toBytes();
+}
+
 /// Perform the actual decryption (runs in isolate)
-Future<Uint8List> _performDecryption(
+Future<Uint8List> _decrypt(
   Uint8List data,
   String password,
   Function(double) onProgress,
@@ -77,178 +105,17 @@ Future<Uint8List> _performDecryption(
   }
   offset += _header.length;
 
-  // Extract salt
   final salt = data.sublist(offset, offset + _saltLength);
   offset += _saltLength;
 
-  // Extract IV
   final iv = data.sublist(offset, offset + _ivLength);
   offset += _ivLength;
 
   // Extract encrypted data (includes auth tag)
-  final encryptedData = data.sublist(offset);
+  final dataIn = data.sublist(offset);
+  final dataOut = _runCipher(false, dataIn, password, salt, iv, onProgress);
 
-  // Derive key from password
-  final key = _deriveKey(password, salt);
-
-  // Setup cipher using AES-256-GCM
-  final cipher = GCMBlockCipher(AESEngine());
-  final params = AEADParameters(
-    KeyParameter(key),
-    _tagLength * 8,
-    iv,
-    Uint8List(0),
-  );
-
-  cipher.init(false, params); // false = decrypt
-
-  // Allocate output buffer
-  final decryptedData = Uint8List(encryptedData.length - _tagLength);
-
-  // Decrypt in chunks
-  const chunkSize = 64 * 1024; // 64 KB
-  int processed = 0;
-  int outOffset = 0;
-
-  while (processed < encryptedData.length) {
-    final remaining = encryptedData.length - processed;
-    final size = remaining < chunkSize ? remaining : chunkSize;
-
-    outOffset += cipher.processBytes(
-      encryptedData,
-      processed,
-      size,
-      decryptedData,
-      outOffset,
-    );
-
-    processed += size;
-
-    onProgress(processed / encryptedData.length);
-
-    // Let isolate event loop breathe → allows sending updates
-    if (processed % (4 * chunkSize) == 0) {
-      // yield every few chunks
-      await Future.microtask(() {});
-    }
-  }
-  outOffset += cipher.doFinal(decryptedData, outOffset);
-
-  onProgress(1.0);
-
-  return decryptedData;
-}
-
-/// Derive encryption key from password using Argon2id
-Uint8List _deriveKey(String password, Uint8List salt) {
-  final params = Argon2Parameters(
-    Argon2Parameters.ARGON2_id,
-    salt,
-    desiredKeyLength: 32, // 256 bits
-    iterations: 3,
-    memory: 1024 * 64, // Memory cost: 64 MiB
-    lanes: 1, // threads
-    version: Argon2Parameters.ARGON2_VERSION_13, // Use Argon2 version 13
-  );
-
-  // Instantiate the Argon2KeyDerivator
-  final derivator = KeyDerivator("argon2");
-
-  // Initialize the derivator with the parameters
-  derivator.init(params);
-
-  // Derive the key using the password
-  final key = derivator.process(Uint8List.fromList(password.codeUnits));
-
-  return key;
-}
-
-/// Create a secure random number generator
-FortunaRandom _createSecureRandom() {
-  final secureRandom = FortunaRandom();
-  final random = Random.secure();
-  final seeds = <int>[];
-  for (var i = 0; i < 32; i++) {
-    seeds.add(random.nextInt(256));
-  }
-  secureRandom.seed(KeyParameter(Uint8List.fromList(seeds)));
-  return secureRandom;
-}
-
-/// Generate random bytes
-Uint8List _generateRandomBytes(SecureRandom random, int length) {
-  final bytes = Uint8List(length);
-  for (var i = 0; i < length; i++) {
-    bytes[i] = random.nextUint8();
-  }
-  return bytes;
-}
-
-/// Perform the actual encryption (runs in isolate)
-Future<Uint8List> _performEncryption(
-  Uint8List data,
-  String password,
-  Function(double) onProgress,
-) async {
-  // Generate random salt and IV
-  final secureRandom = _createSecureRandom();
-  final salt = _generateRandomBytes(secureRandom, _saltLength);
-  final iv = _generateRandomBytes(secureRandom, _ivLength);
-
-  // Derive key from password
-  final key = _deriveKey(password, salt);
-
-  // Encrypt data using AES-256-GCM
-  final cipher = GCMBlockCipher(AESEngine());
-  final params = AEADParameters(
-    KeyParameter(key),
-    _tagLength * 8, // tag length in bits
-    iv,
-    Uint8List(0), // no additional authenticated data
-  );
-
-  cipher.init(true, params); // true = encrypt
-
-  // Allocate output buffer (data + auth tag)
-  final encryptedData = Uint8List(data.length + _tagLength);
-
-  // Encrypt in chunks
-  const chunkSize = 64 * 1024; // 64 KB
-  int processed = 0;
-  int outOffset = 0;
-
-  while (processed < data.length) {
-    final remaining = data.length - processed;
-    final size = remaining < chunkSize ? remaining : chunkSize;
-
-    outOffset += cipher.processBytes(
-      data,
-      processed,
-      size,
-      encryptedData,
-      outOffset,
-    );
-
-    processed += size;
-
-    onProgress(processed / data.length);
-
-    // Let isolate event loop breathe → allows sending updates
-    if (processed % (4 * chunkSize) == 0) {
-      // yield every few chunks
-      await Future.microtask(() {});
-    }
-  }
-  outOffset += cipher.doFinal(encryptedData, outOffset);
-
-  // Build final output: header + salt + IV + encrypted data (with tag)
-  final output = BytesBuilder();
-  output.add(utf8.encode(_header));
-  output.add(salt);
-  output.add(iv);
-  output.add(encryptedData);
-
-  return output.toBytes();
+  return dataOut;
 }
 
 /// Service for encrypting and decrypting backup files
@@ -357,4 +224,100 @@ class EncryptionService {
     final digest = sha256.convert(data);
     return digest.toString();
   }
+}
+
+/// Create a secure random number generator
+FortunaRandom _createSecureRandom() {
+  final secureRandom = FortunaRandom();
+  final random = Random.secure();
+  final seeds = <int>[];
+  for (var i = 0; i < 32; i++) {
+    seeds.add(random.nextInt(256));
+  }
+  secureRandom.seed(KeyParameter(Uint8List.fromList(seeds)));
+  return secureRandom;
+}
+
+Uint8List _generateRandomBytes(SecureRandom random, int length) {
+  final bytes = Uint8List(length);
+  for (var i = 0; i < length; i++) {
+    bytes[i] = random.nextUint8();
+  }
+  return bytes;
+}
+
+/// Derive encryption key from password using Argon2id
+Uint8List _deriveKey(String password, Uint8List salt) {
+  final params = Argon2Parameters(
+    Argon2Parameters.ARGON2_id,
+    salt,
+    desiredKeyLength: 32, // 256 bits
+    iterations: 3,
+    memory: 1024 * 64, // Memory cost: 64 MiB
+    lanes: 1, // threads
+    version: Argon2Parameters.ARGON2_VERSION_13, // Use Argon2 version 13
+  );
+
+  // Instantiate the Argon2KeyDerivator
+  final derivator = KeyDerivator("argon2");
+
+  // Initialize the derivator with the parameters
+  derivator.init(params);
+
+  // Derive the key using the password
+  final key = derivator.process(Uint8List.fromList(password.codeUnits));
+
+  return key;
+}
+
+Future<Uint8List> _runCipher(
+  bool encrypt,
+  Uint8List dataIn,
+  String password,
+  Uint8List salt,
+  Uint8List iv,
+  Function(double) onProgress,
+) async {
+  final key = _deriveKey(password, salt);
+
+  // Setup cipher using AES-256-GCM
+  final cipher = GCMBlockCipher(AESEngine());
+  final params = AEADParameters(
+    KeyParameter(key),
+    _tagLength * 8, // tag length in bits
+    iv,
+    Uint8List(0), // no additional authenticated data
+  );
+
+  cipher.init(encrypt, params); // true = encrypt
+
+  // Allocate output buffer
+  final dataOut = Uint8List(
+    dataIn.length + (encrypt ? _tagLength : -_tagLength),
+  );
+
+  // Work in chunks
+  const chunkSize = 64 * 1024; // 64 KB
+  int processed = 0;
+  int offset = 0;
+
+  while (processed < dataIn.length) {
+    final remaining = dataIn.length - processed;
+    final size = remaining < chunkSize ? remaining : chunkSize;
+
+    offset += cipher.processBytes(dataIn, processed, size, dataOut, offset);
+
+    processed += size;
+
+    onProgress(processed / dataIn.length);
+
+    // Let isolate event loop breathe to allow sending updates
+    if (processed % (4 * chunkSize) == 0) {
+      await Future.microtask(() {});
+    }
+  }
+  offset += cipher.doFinal(dataOut, offset);
+
+  onProgress(1.0);
+  return dataOut;
 }
