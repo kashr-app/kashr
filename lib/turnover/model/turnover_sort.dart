@@ -42,9 +42,9 @@ abstract class TurnoverSort with _$TurnoverSort {
   /// [tableAlias] is the table alias to use for column references (default: 't')
   String toSqlOrderBy({String tableAlias = 't'}) {
     final fieldName = switch (orderBy) {
-      SortField.bookingDate => '$tableAlias.bookingDate',
-      SortField.amount => 'ABS($tableAlias.amountValue)',
-      SortField.counterPart => '$tableAlias.counterPart',
+      SortField.bookingDate => '$tableAlias.booking_date',
+      SortField.amount => 'ABS($tableAlias.amount_value)',
+      SortField.counterPart => '$tableAlias.counter_part',
     };
 
     final directionStr = switch (direction) {
