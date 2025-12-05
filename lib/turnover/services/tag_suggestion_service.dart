@@ -39,18 +39,18 @@ class TagSuggestionService {
         t.id as tag_id,
         t.name as tag_name,
         t.color as tag_color,
-        tv.counterPart as turnover_counterpart,
+        tv.counter_part as turnover_counterpart,
         tv.purpose as turnover_purpose,
-        tv.amountValue as turnover_amount,
-        tv.bookingDate as turnover_date,
-        tt.amountValue as tag_amount,
-        tt.createdAt as tag_created_at
+        tv.amount_value as turnover_amount,
+        tv.booking_date as turnover_date,
+        tt.amount_value as tag_amount,
+        tt.created_at as tag_created_at
       FROM tag_turnover tt
-      INNER JOIN tag t ON tt.tagId = t.id
-      INNER JOIN turnover tv ON tt.turnoverId = tv.id
+      INNER JOIN tag t ON tt.tag_id = t.id
+      INNER JOIN turnover tv ON tt.turnover_id = tv.id
       WHERE tv.id != ?
-        AND tv.amountValue ${turnover.amountValue >= Decimal.zero ? '>=' : '<'} 0
-      ORDER BY tt.createdAt DESC
+        AND tv.amount_value ${turnover.amountValue >= Decimal.zero ? '>=' : '<'} 0
+      ORDER BY tt.created_at DESC
       LIMIT ?
       ''',
       [turnover.id.uuid, _maxHistoricalRecords],

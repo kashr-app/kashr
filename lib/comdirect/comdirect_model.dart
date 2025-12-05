@@ -113,6 +113,7 @@ class TokenDTO {
   final String scope;
   final String kdnr;
   final int bpid;
+  @JsonKey(name: 'kontaktId')
   final int kontaktId;
 
   TokenDTO({

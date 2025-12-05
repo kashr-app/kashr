@@ -134,7 +134,8 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       final api = ComdirectAPI(dioApi);
 
       emit(AuthSuccess(apiToken, api));
-    } catch (e) {
+    } catch (e, s) {
+      log.e('Faild to authenticate', error: e, stackTrace: s);
       emit(AuthError('Failed to authenticate: $e'));
     }
   }
