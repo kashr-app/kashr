@@ -233,6 +233,8 @@ class _NextcloudSettingsPageState extends State<NextcloudSettingsPage> {
       _testResult = null;
     });
 
+    final s = secureStorage();
+    var prevPassword = await s.read(key: 'nextcloud_password');
     try {
       final config = NextcloudConfig(
         url: _urlController.text,
@@ -241,7 +243,6 @@ class _NextcloudSettingsPageState extends State<NextcloudSettingsPage> {
         backupPath: _backupPathController.text,
       );
 
-      final s = secureStorage();
       await s.write(key: 'nextcloud_password', value: _passwordController.text);
 
       final nextcloudService = NextcloudService(s);
@@ -257,6 +258,8 @@ class _NextcloudSettingsPageState extends State<NextcloudSettingsPage> {
         _testResult = 'Error: ${e.toString()}';
       });
     } finally {
+      await s.write(key: 'nextcloud_password', value: prevPassword);
+      prevPassword = null;
       setState(() {
         _isLoading = false;
       });
