@@ -1,10 +1,13 @@
 import 'package:finanalyzer/backup/cubit/backup_cubit.dart';
 import 'package:finanalyzer/backup/cubit/backup_state.dart';
+import 'package:finanalyzer/backup/cubit/cloud_backup_cubit.dart';
+import 'package:finanalyzer/backup/cubit/cloud_backup_state.dart';
 import 'package:finanalyzer/backup/model/backup_metadata.dart';
 import 'package:finanalyzer/backup/widgets/backup_settings_dialog.dart';
 import 'package:finanalyzer/backup/widgets/encryption_password_dialog.dart';
 import 'package:finanalyzer/backup/widgets/nextcloud_settings_page.dart';
 import 'package:finanalyzer/backup/widgets/restore_confirmation_dialog.dart';
+import 'package:finanalyzer/core/associate_by.dart';
 import 'package:finanalyzer/core/restart_widget.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/home_page.dart';
@@ -45,7 +48,12 @@ class _BackupListPageState extends State<BackupListPage> {
   @override
   void initState() {
     super.initState();
+    _refresh();
+  }
+
+  void _refresh() {
     context.read<BackupCubit>().loadBackups();
+    context.read<CloudBackupCubit>().loadBackups();
   }
 
   @override
@@ -54,6 +62,11 @@ class _BackupListPageState extends State<BackupListPage> {
       appBar: AppBar(
         title: const Text('Backups'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Page',
+            onPressed: () => _refresh(),
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Backup Settings',
@@ -99,19 +112,8 @@ class _BackupListPageState extends State<BackupListPage> {
                   ],
                 ),
               ),
-              loaded:
-                  (
-                    localBackups,
-                    config,
-                    isOnNextcloudById,
-                    nextcloudOnly,
-                    nextcloudConfigured,
-                  ) => _BackupListView(
-                    localBackups: localBackups,
-                    isOnNextcloudById: isOnNextcloudById,
-                    nextcloudOnly: nextcloudOnly,
-                    nextcloudConfigured: nextcloudConfigured,
-                  ),
+              loaded: (localBackups, config) =>
+                  _BackupListView(localBackups: localBackups),
               success: (message, backup) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -152,7 +154,7 @@ class _BackupListPageState extends State<BackupListPage> {
                         onPressed: () {
                           context.read<BackupCubit>().loadBackups();
                         },
-                        child: const Text('Retry'),
+                        child: const Text('Reload page'),
                       ),
                     ],
                   ),
@@ -166,7 +168,7 @@ class _BackupListPageState extends State<BackupListPage> {
         builder: (context, state) => state.when(
           initial: () => SizedBox.shrink(),
           loading: (_, _) => SizedBox.shrink(),
-          loaded: (_, _, _, _, _) => FloatingActionButton.extended(
+          loaded: (_, _) => FloatingActionButton.extended(
             onPressed: () => _createBackup(context),
             icon: const Icon(Icons.add),
             label: const Text('Create Backup'),
@@ -204,63 +206,117 @@ class _BackupListPageState extends State<BackupListPage> {
 
 class _BackupListView extends StatelessWidget {
   final List<BackupMetadata> localBackups;
-  final Map<String, bool> isOnNextcloudById;
-  final List<String> nextcloudOnly;
-  final bool nextcloudConfigured;
 
-  const _BackupListView({
-    required this.localBackups,
-    required this.isOnNextcloudById,
-    required this.nextcloudOnly,
-    required this.nextcloudConfigured,
-  });
+  const _BackupListView({required this.localBackups});
 
   @override
   Widget build(BuildContext context) {
-    if (localBackups.isEmpty && nextcloudOnly.isEmpty) {
-      return _buildNoBackups(context);
-    }
-
-    final missingOnNextcloud = nextcloudConfigured
-        ? localBackups.where((b) => !(isOnNextcloudById[b.id] ?? false)).length
-        : 0;
     return Column(
       children: [
-        if (nextcloudConfigured && missingOnNextcloud > 0)
-          _buildUploadAllMissing(context, missingOnNextcloud),
-        if (nextcloudConfigured) _buildDownloadFromNextcloudCard(context),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Align(
-            alignment: AlignmentGeometry.centerLeft,
-            child: Text(
-              '${localBackups.length} local backups',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+        _buildNextcloudStatus(context, localBackups),
+        if (localBackups.isEmpty)
+          _buildNoBackups(context)
+        else ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Align(
+              alignment: AlignmentGeometry.centerLeft,
+              child: Text(
+                '${localBackups.length} local backups',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: localBackups.length,
-            itemBuilder: (context, index) {
-              final backup = localBackups[index];
-              final onNextcloud = isOnNextcloudById[backup.id] ?? false;
-              return _BackupCard(
-                backup: backup,
-                onNextcloud: onNextcloud,
-                nextcloudConfigured: nextcloudConfigured,
-              );
-            },
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: localBackups.length,
+              itemBuilder: (context, index) {
+                final backup = localBackups[index];
+                return _BackupCard(backup: backup);
+              },
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
 
-  Widget _buildDownloadFromNextcloudCard(BuildContext context) {
+  Widget _buildNextcloudStatus(
+    BuildContext context,
+    List<BackupMetadata> localBackups,
+  ) {
+    return BlocBuilder<CloudBackupCubit, CloudBackupState>(
+      builder: (context, state) {
+        if (!state.nextcloudConfigured) {
+          return SizedBox.shrink();
+        }
+
+        switch (state.status) {
+          case Status.loading:
+            return Card(
+              margin: const EdgeInsets.all(16),
+              color: Theme.of(context).colorScheme.tertiaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    LinearProgressIndicator(value: state.progress),
+                    SizedBox(height: 4),
+                    Text(state.message),
+                  ],
+                ),
+              ),
+            );
+          case Status.error:
+            return Card(
+              margin: const EdgeInsets.all(16),
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text(
+                      state.message,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          case Status.initial:
+          case Status.success:
+            break;
+        }
+
+        final missingOnNextcloud = localBackups
+            .where((b) => !(state.isOnNextcloudByFilename[b.filename] ?? false))
+            .toList();
+
+        return Column(
+          children: [
+            _buildUploadAllMissing(context, missingOnNextcloud),
+            _builNextcloudOnlyCard(state, localBackups, context),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _builNextcloudOnlyCard(
+    CloudBackupState state,
+    List<BackupMetadata> localByFilename,
+    BuildContext context,
+  ) {
+    final localByFilename = localBackups.associateBy((it) => it.filename);
+    final nextcloudOnly = [
+      for (final filename in state.isOnNextcloudByFilename.keys)
+        if (null == localByFilename[filename]) filename,
+    ];
     if (nextcloudOnly.isEmpty) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -296,9 +352,14 @@ class _BackupListView extends StatelessWidget {
                       nextcloudOnly,
                     );
                     if (selectedFilename != null && context.mounted) {
-                      context.read<BackupCubit>().downloadFromToNextcloud(
-                        selectedFilename,
-                      );
+                      final backupCubit = context.read<BackupCubit>();
+                      final success = await context
+                          .read<CloudBackupCubit>()
+                          .downloadFromNextcloud(selectedFilename);
+                      if (success) {
+                        // refresh list to show the downloaded backup
+                        backupCubit.loadBackups();
+                      }
                     }
                   },
                   child: Text('View'),
@@ -311,7 +372,13 @@ class _BackupListView extends StatelessWidget {
     );
   }
 
-  Card _buildUploadAllMissing(BuildContext context, int missingOnNextcloud) {
+  Widget _buildUploadAllMissing(
+    BuildContext context,
+    List<BackupMetadata> missingOnNextcloud,
+  ) {
+    if (missingOnNextcloud.isEmpty) {
+      return SizedBox.shrink();
+    }
     return Card(
       margin: const EdgeInsets.all(16),
       color: Theme.of(context).colorScheme.primaryContainer,
@@ -326,7 +393,7 @@ class _BackupListView extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                '$missingOnNextcloud backup(s) not on Nextcloud',
+                '${missingOnNextcloud.length} backup(s) not on Nextcloud',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.w500,
@@ -335,7 +402,9 @@ class _BackupListView extends StatelessWidget {
             ),
             FilledButton(
               onPressed: () {
-                context.read<BackupCubit>().uploadAllMissingToNextcloud();
+                context.read<CloudBackupCubit>().uploadAllMissingToNextcloud(
+                  missingOnNextcloud,
+                );
               },
               child: const Text('Upload All'),
             ),
@@ -431,14 +500,8 @@ class _BackupListView extends StatelessWidget {
 
 class _BackupCard extends StatelessWidget {
   final BackupMetadata backup;
-  final bool onNextcloud;
-  final bool nextcloudConfigured;
 
-  const _BackupCard({
-    required this.backup,
-    required this.onNextcloud,
-    required this.nextcloudConfigured,
-  });
+  const _BackupCard({required this.backup});
 
   @override
   Widget build(BuildContext context) {
@@ -446,145 +509,182 @@ class _BackupCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Stack(
-          children: [
-            CircleAvatar(
-              child: Icon(backup.encrypted ? Icons.lock : Icons.folder_zip),
-            ),
-            if (nextcloudConfigured)
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: CircleAvatar(
-                  radius: 8,
-                  backgroundColor: onNextcloud
-                      ? Colors.green
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    onNextcloud ? Icons.cloud_done : Icons.cloud_off,
-                    size: 10,
-                    color: onNextcloud
-                        ? Colors.white
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        title: Text(dateFormat.format(backup.createdAt)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${sizeInMB.toStringAsFixed(2)} MB'),
-            Row(
+      child: BlocBuilder<CloudBackupCubit, CloudBackupState>(
+        builder: (context, cloudState) {
+          final isOnNextcloud =
+              cloudState.isOnNextcloudByFilename[backup.filename] ?? false;
+          final cloudStatus =
+              cloudState.statusByFilename[backup.filename] ?? Status.initial;
+          final cloudProgress = cloudState.progressByFilename[backup.filename];
+          final cloudColor = cloudStatus.isSuccess
+              ? Colors.green
+              : cloudStatus.isError
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).colorScheme.onSurfaceVariant;
+          return ListTile(
+            leading: Stack(
               children: [
-                Text('DB v${backup.dbVersion} • App v${backup.appVersion}'),
-              ],
-            ),
-            Row(
-              children: [
-                Icon(
-                  backup.encrypted ? Icons.lock : Icons.lock_open,
-                  size: 14,
-                  color: backup.encrypted
-                      ? Colors.green
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                CircleAvatar(
+                  child: Icon(backup.encrypted ? Icons.lock : Icons.folder_zip),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  backup.encrypted ? 'Encrypted' : 'Not encrypted',
-                  style: TextStyle(
-                    color: backup.encrypted
-                        ? Colors.green
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            if (nextcloudConfigured)
-              Row(
-                children: [
-                  Icon(
-                    onNextcloud ? Icons.cloud_done : Icons.cloud_off,
-                    size: 14,
-                    color: onNextcloud
-                        ? Colors.green
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    onNextcloud ? 'On Nextcloud' : 'Local only',
-                    style: TextStyle(
-                      color: onNextcloud
+                if (cloudState.nextcloudConfigured)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: CircleAvatar(
+                      radius: 8,
+                      backgroundColor: cloudStatus.isSuccess
                           ? Colors.green
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 12,
+                          : Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                      child: Icon(
+                        cloudStatus.isSuccess
+                            ? Icons.cloud_done
+                            : Icons.cloud_off,
+                        size: 10,
+                        color: cloudStatus.isSuccess
+                            ? Colors.white
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                ],
-              ),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'restore') {
-              _restore(context);
-            } else if (value == 'delete') {
-              _delete(context);
-            } else if (value == 'upload') {
-              _uploadToNextcloud(context);
-            } else if (value == 'export') {
-              _export(context);
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'restore',
-              child: Row(
-                children: [
-                  Icon(Icons.restore),
-                  SizedBox(width: 12),
-                  Text('Restore'),
-                ],
-              ),
+              ],
             ),
-            const PopupMenuItem(
-              value: 'export',
-              child: Row(
-                children: [
-                  Icon(Icons.file_download),
-                  SizedBox(width: 12),
-                  Text('Export'),
-                ],
-              ),
-            ),
-            if (nextcloudConfigured)
-              PopupMenuItem(
-                value: 'upload',
-                enabled: !onNextcloud,
-                child: Row(
+            title: Text(dateFormat.format(backup.createdAt)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${sizeInMB.toStringAsFixed(2)} MB'),
+                Row(
                   children: [
-                    Icon(Icons.cloud_upload),
-                    SizedBox(width: 12),
-                    Text('Upload to Nextcloud'),
+                    Text('DB v${backup.dbVersion} • App v${backup.appVersion}'),
                   ],
                 ),
-              ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete),
-                  SizedBox(width: 12),
-                  Text('Delete locally'),
-                ],
-              ),
+                Row(
+                  children: [
+                    Icon(
+                      backup.encrypted ? Icons.lock : Icons.lock_open,
+                      size: 14,
+                      color: backup.encrypted
+                          ? Colors.green
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      backup.encrypted ? 'Encrypted' : 'Not encrypted',
+                      style: TextStyle(
+                        color: backup.encrypted
+                            ? Colors.green
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                if (cloudState.nextcloudConfigured)
+                  Row(
+                    children: [
+                      Icon(
+                        cloudStatus.isSuccess
+                            ? Icons.cloud_done
+                            : cloudStatus.isLoading
+                            ? Icons.cloud_queue
+                            : Icons.cloud_off,
+                        size: 14,
+                        color: cloudColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: cloudStatus.isLoading
+                            ? LinearProgressIndicator(value: cloudProgress)
+                            : Text(
+                                switch (cloudStatus) {
+                                  Status.initial => 'Local only',
+                                  Status.loading => 'Loading',
+                                  Status.success => 'Nextcloud',
+                                  Status.error => 'Error',
+                                },
+                                style: TextStyle(
+                                  color: cloudColor,
+                                  fontSize: 12,
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
-          ],
-        ),
-        isThreeLine: true,
+            trailing: PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'restore') {
+                  _restore(context);
+                } else if (value == 'delete') {
+                  _delete(context);
+                } else if (value == 'upload') {
+                  _uploadToNextcloud(context);
+                } else if (value == 'export') {
+                  _export(context);
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'name',
+                  enabled: false,
+                  child: Text(
+                    backup.filename,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontSize: 10),
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'restore',
+                  child: Row(
+                    children: [
+                      Icon(Icons.restore),
+                      SizedBox(width: 12),
+                      Text('Restore'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'export',
+                  child: Row(
+                    children: [
+                      Icon(Icons.file_download),
+                      SizedBox(width: 12),
+                      Text('Export'),
+                    ],
+                  ),
+                ),
+                if (cloudState.nextcloudConfigured)
+                  PopupMenuItem(
+                    value: 'upload',
+                    enabled: !isOnNextcloud,
+                    child: Row(
+                      children: [
+                        Icon(Icons.cloud_upload),
+                        SizedBox(width: 12),
+                        Text('Upload to Nextcloud'),
+                      ],
+                    ),
+                  ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete),
+                      SizedBox(width: 12),
+                      Text('Delete locally'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            isThreeLine: true,
+          );
+        },
       ),
     );
   }
@@ -656,7 +756,7 @@ class _BackupCard extends StatelessWidget {
   }
 
   Future<void> _uploadToNextcloud(BuildContext context) async {
-    await context.read<BackupCubit>().uploadToNextcloud(backup);
+    await context.read<CloudBackupCubit>().uploadToNextcloud(backup);
   }
 
   Future<void> _export(BuildContext context) async {

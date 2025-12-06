@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import 'package:xml/xml.dart';
 
@@ -33,15 +33,26 @@ class WebDavClient {
   /// Test connection to WebDAV server
   Future<bool> testConnection() async {
     try {
-      final request = http.Request('PROPFIND', Uri.parse(baseUrl))
-        ..headers.addAll(_headers)
-        ..headers['Depth'] = '0';
+      final dio = Dio();
+      await dio.fetch(
+        RequestOptions(
+          path: baseUrl,
+          method: 'PROPFIND',
+          headers: {..._headers, 'Depth': '0'},
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 300,
+        ),
+      );
 
-      final streamedResponse = await request.send();
-      final statusCode = streamedResponse.statusCode;
-
-      log.i('WebDAV test connection status: $statusCode');
-      return statusCode >= 200 && statusCode < 300;
+      log.i('WebDAV test connection successful');
+      return true;
+    } on DioException catch (e, stack) {
+      throw _extractDioErrorMsg(
+        e,
+        baseUrl,
+        stack,
+        operation: 'Connection test',
+      );
     } catch (e, stack) {
       log.e('WebDAV connection test failed', error: e, stackTrace: stack);
       return false;
@@ -49,7 +60,7 @@ class WebDavClient {
   }
 
   /// Create directories recursively if they don't exist
-  Future<void> ensureDirectoryExists(String path) async {
+  Future<void> _ensureDirectoryExists(String path) async {
     try {
       // Remove trailing slash for consistency
       final cleanPath = path.endsWith('/')
@@ -67,30 +78,43 @@ class WebDavClient {
         // Check if directory exists
         final exists = await fileExists(currentPath);
         if (!exists) {
-          // Create directory
-          final url = Uri.parse('$baseUrl$currentPath');
-          final request = http.Request('MKCOL', url)
-            ..headers.addAll({'Authorization': _authHeader});
+          try {
+            // Create directory
+            final dio = Dio();
+            await dio.fetch(
+              RequestOptions(
+                path: '$baseUrl$currentPath',
+                method: 'MKCOL',
+                headers: {'Authorization': _authHeader},
+                validateStatus: (status) =>
+                    // 201 = created, 405 = already exists
+                    status == 201 || status == 405,
+              ),
+            );
 
-          final streamedResponse = await request.send();
-          final statusCode = streamedResponse.statusCode;
-
-          // 201 = created, 405 = already exists
-          if (statusCode != 201 && statusCode != 405) {
-            log.w('Failed to create directory $currentPath: $statusCode');
-          } else {
             log.i('Directory created: $currentPath');
+          } on DioException catch (e, stack) {
+            throw _extractDioErrorMsg(
+              e,
+              currentPath,
+              stack,
+              operation: 'Create directory',
+            );
           }
         }
       }
     } catch (e, stack) {
       log.e('Failed to ensure directory exists', error: e, stackTrace: stack);
-      // Don't rethrow - we'll try to upload anyway
+      rethrow;
     }
   }
 
   /// Upload a file to WebDAV server
-  Future<void> uploadFile(String localPath, String remotePath) async {
+  Future<void> uploadFile(
+    String localPath,
+    String remotePath, {
+    void Function(int sent, int total)? onProgress,
+  }) async {
     try {
       final file = File(localPath);
       if (!await file.exists()) {
@@ -101,28 +125,38 @@ class WebDavClient {
       final lastSlash = remotePath.lastIndexOf('/');
       if (lastSlash > 0) {
         final directory = remotePath.substring(0, lastSlash);
-        await ensureDirectoryExists(directory);
+        try {
+          await _ensureDirectoryExists(directory);
+        } catch (e) {
+          // we will try to upload anyway
+        }
       }
 
-      final bytes = await file.readAsBytes();
-      final url = Uri.parse('$baseUrl$remotePath');
+      final url = '$baseUrl$remotePath';
+      final dio = Dio();
 
-      final response = await http.put(
+      await dio.put(
         url,
-        headers: {
-          'Authorization': _authHeader,
-          'Content-Type': 'application/zip',
+        data: file.openRead(),
+        options: Options(
+          headers: {
+            'Authorization': _authHeader,
+            'Content-Type': 'application/zip',
+            'Content-Length': await file.length(),
+          },
+          validateStatus: (status) {
+            // Accept 200-299 status codes as success
+            return status != null && status >= 200 && status < 300;
+          },
+        ),
+        onSendProgress: (sent, total) {
+          onProgress?.call(sent, total);
         },
-        body: bytes,
       );
 
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception(
-          'Failed to upload file: ${response.statusCode} - ${response.body}',
-        );
-      }
-
       log.i('File uploaded: $remotePath');
+    } on DioException catch (e, stack) {
+      throw _extractDioErrorMsg(e, remotePath, stack, operation: 'Upload');
     } catch (e, stack) {
       log.e('Failed to upload file', error: e, stackTrace: stack);
       rethrow;
@@ -130,32 +164,35 @@ class WebDavClient {
   }
 
   /// Download a file from the WebDAV server
-  Future<void> downloadFile(String remotePath, File file) async {
+  Future<void> downloadFile(
+    String remotePath,
+    File file, {
+    void Function(int received, int total)? onProgress,
+  }) async {
     try {
-      final url = Uri.parse('$baseUrl$remotePath');
-
-      // Send GET request to fetch the file
-      final response = await http.get(
-        url,
-        headers: {'Authorization': _authHeader},
-      );
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception(
-          'Failed to download file: ${response.statusCode} - ${response.body}',
-        );
-      }
-
       // Create the file or fail if it already exists
       await file.create(
         recursive: true,
         exclusive: true, // requires file to not exist before
       );
 
-      // Write the downloaded data to the local file
-      await file.writeAsBytes(response.bodyBytes);
+      final dio = Dio();
+      await dio.download(
+        '$baseUrl$remotePath',
+        file.path,
+        options: Options(
+          headers: {'Authorization': _authHeader},
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 300,
+        ),
+        onReceiveProgress: (received, total) {
+          onProgress?.call(received, total);
+        },
+      );
 
       log.i('File downloaded: $remotePath to ${file.path}');
+    } on DioException catch (e, stack) {
+      throw _extractDioErrorMsg(e, remotePath, stack, operation: 'Download');
     } catch (e, stack) {
       log.e('Failed to download file', error: e, stackTrace: stack);
       rethrow;
@@ -165,15 +202,25 @@ class WebDavClient {
   /// Check if a file exists on WebDAV server
   Future<bool> fileExists(String remotePath) async {
     try {
-      final url = Uri.parse('$baseUrl$remotePath');
-      final request = http.Request('PROPFIND', url)
-        ..headers.addAll(_headers)
-        ..headers['Depth'] = '0';
+      final dio = Dio();
+      await dio.fetch(
+        RequestOptions(
+          path: '$baseUrl$remotePath',
+          method: 'PROPFIND',
+          headers: {..._headers, 'Depth': '0'},
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 300,
+        ),
+      );
 
-      final streamedResponse = await request.send();
-      final statusCode = streamedResponse.statusCode;
-
-      return statusCode >= 200 && statusCode < 300;
+      return true;
+    } on DioException catch (e, stack) {
+      throw _extractDioErrorMsg(
+        e,
+        remotePath,
+        stack,
+        operation: 'File exists check',
+      );
     } catch (e) {
       log.w('File exists check failed: $remotePath', error: e);
       return false;
@@ -183,20 +230,20 @@ class WebDavClient {
   /// List files in a directory
   Future<List<String>> listDirectory(String path) async {
     try {
-      final url = Uri.parse('$baseUrl$path');
-      final request = http.Request('PROPFIND', url)
-        ..headers.addAll(_headers)
-        ..headers['Depth'] = '1';
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('Failed to list directory: ${response.statusCode}');
-      }
+      final dio = Dio();
+      final response = await dio.fetch<String>(
+        RequestOptions(
+          path: '$baseUrl$path',
+          method: 'PROPFIND',
+          headers: {..._headers, 'Depth': '1'},
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 300,
+          responseType: ResponseType.plain,
+        ),
+      );
 
       // Parse XML response
-      final document = XmlDocument.parse(response.body);
+      final document = XmlDocument.parse(response.data!);
       final files = <String>[];
 
       for (final element in document.findAllElements('d:href')) {
@@ -210,9 +257,35 @@ class WebDavClient {
 
       log.i('Listed ${files.length} files in $path');
       return files;
+    } on DioException catch (e, stack) {
+      throw _extractDioErrorMsg(e, path, stack, operation: 'List directory');
     } catch (e, stack) {
       log.e('Failed to list directory', error: e, stackTrace: stack);
-      return [];
+      rethrow;
     }
+  }
+
+  Exception _extractDioErrorMsg(
+    DioException e,
+    String remotePath,
+    StackTrace stack, {
+    String operation = 'operation',
+  }) {
+    final errorMessage = switch (e.type) {
+      DioExceptionType.connectionTimeout =>
+        'Connection timeout during $operation: $remotePath',
+      DioExceptionType.sendTimeout => '$operation timeout: $remotePath',
+      DioExceptionType.receiveTimeout =>
+        'Server response timeout during $operation: $remotePath',
+      DioExceptionType.badResponse =>
+        '$operation failed: ${e.response?.statusCode} - ${e.response?.statusMessage}',
+      DioExceptionType.cancel => '$operation cancelled: $remotePath',
+      DioExceptionType.connectionError =>
+        'Connection error during $operation: $remotePath',
+      _ => '$operation failed: ${e.message}',
+    };
+
+    log.e(errorMessage, error: e, stackTrace: stack);
+    return Exception(errorMessage);
   }
 }

@@ -15,12 +15,11 @@ class NextcloudService {
   NextcloudService(this._secureStorage);
 
   /// Create WebDAV client from config
-  Future<WebDavClient?> _createClient(NextcloudConfig config) async {
+  Future<WebDavClient> _createClient(NextcloudConfig config) async {
     try {
       final password = await _secureStorage.read(key: config.passwordKey);
       if (password == null) {
-        log.w('No password found for Nextcloud config');
-        return null;
+        throw Exception('No password found for Nextcloud config');
       }
 
       return WebDavClient(
@@ -30,41 +29,23 @@ class NextcloudService {
       );
     } catch (e, stack) {
       log.e('Failed to create WebDAV client', error: e, stackTrace: stack);
-      return null;
+      rethrow;
     }
   }
 
   /// Test connection to Nextcloud
   Future<bool> testConnection(NextcloudConfig config) async {
     final client = await _createClient(config);
-    if (client == null) return false;
-
     return await client.testConnection();
-  }
-
-  /// Check if a backup exists on Nextcloud
-  Future<bool> backupExistsOnCloud(
-    NextcloudConfig config,
-    BackupMetadata backup,
-  ) async {
-    final client = await _createClient(config);
-    if (client == null) return false;
-
-    final filename = _getBackupFilename(backup);
-    final remotePath = '${config.backupPath}$filename';
-
-    return await client.fileExists(remotePath);
   }
 
   /// Upload backup to Nextcloud
   Future<void> uploadBackup(
     NextcloudConfig config,
-    BackupMetadata backup,
-  ) async {
+    BackupMetadata backup, {
+    void Function(int sent, int total)? onProgress,
+  }) async {
     final client = await _createClient(config);
-    if (client == null) {
-      throw Exception('Failed to create Nextcloud client');
-    }
 
     if (backup.localPath == null) {
       throw Exception('Backup has no local path');
@@ -73,15 +54,17 @@ class NextcloudService {
     final filename = _getBackupFilename(backup);
     final remotePath = '${config.backupPath}$filename';
 
-    await client.uploadFile(backup.localPath!, remotePath);
+    await client.uploadFile(
+      backup.localPath!,
+      remotePath,
+      onProgress: onProgress,
+    );
     log.i('Uploaded backup to Nextcloud: $filename');
   }
 
   /// List all backup files on Nextcloud
   Future<List<String>> listBackupsOnCloud(NextcloudConfig config) async {
     final client = await _createClient(config);
-    if (client == null) return [];
-
     final files = await client.listDirectory(config.backupPath);
     final backupFiles = files.where((f) => f.endsWith('.$backupFileExt'));
     return backupFiles.toList();
@@ -95,12 +78,10 @@ class NextcloudService {
   Future<File> downloadBackup(
     NextcloudConfig config,
     String filename,
-    Directory backupsDir,
-  ) async {
+    Directory backupsDir, {
+    void Function(int sent, int total)? onProgress,
+  }) async {
     final client = await _createClient(config);
-    if (client == null) {
-      throw Exception('Failed to create Nextcloud client');
-    }
 
     final remotePath = '${config.backupPath}$filename';
 
@@ -113,7 +94,7 @@ class NextcloudService {
       throw Exception('Local file already exists.');
     }
 
-    await client.downloadFile(remotePath, destination);
+    await client.downloadFile(remotePath, destination, onProgress: onProgress);
 
     log.i('Downloaded backup from Nextcloud: $filename');
     return destination;

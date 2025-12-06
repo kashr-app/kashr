@@ -1,5 +1,6 @@
 import 'package:finanalyzer/account/services/balance_calculation_service.dart';
 import 'package:finanalyzer/backup/cubit/backup_cubit.dart';
+import 'package:finanalyzer/backup/cubit/cloud_backup_cubit.dart';
 import 'package:finanalyzer/backup/model/backup_repository.dart';
 import 'package:finanalyzer/backup/services/archive_service.dart';
 import 'package:finanalyzer/backup/services/backup_service.dart';
@@ -112,8 +113,9 @@ class MyApp extends StatelessWidget {
               SavingsCubit(savingsRepository, savingsBalanceService)
                 ..loadAllSavings(),
         ),
+        BlocProvider(create: (_) => BackupCubit(backupService)),
         BlocProvider(
-          create: (_) => BackupCubit(backupService, secureStorage()),
+          create: (_) => CloudBackupCubit(backupService, secureStorage()),
         ),
       ],
       child: BlocListener<LocalAuthCubit, LocalAuthState>(
