@@ -112,8 +112,10 @@ class _BackupListPageState extends State<BackupListPage> {
                   ],
                 ),
               ),
-              loaded: (localBackups, config) =>
-                  _BackupListView(localBackups: localBackups),
+              loaded: (localBackups, config) => _BackupListView(
+                localBackups: localBackups,
+                refresh: _refresh,
+              ),
               success: (message, backup) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -206,14 +208,15 @@ class _BackupListPageState extends State<BackupListPage> {
 
 class _BackupListView extends StatelessWidget {
   final List<BackupMetadata> localBackups;
+  final VoidCallback refresh;
 
-  const _BackupListView({required this.localBackups});
+  const _BackupListView({required this.localBackups, required this.refresh});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildNextcloudStatus(context, localBackups),
+        _buildNextcloudStatus(context, localBackups, refresh),
         if (localBackups.isEmpty)
           _buildNoBackups(context)
         else ...[
@@ -247,6 +250,7 @@ class _BackupListView extends StatelessWidget {
   Widget _buildNextcloudStatus(
     BuildContext context,
     List<BackupMetadata> localBackups,
+    VoidCallback refresh,
   ) {
     return BlocBuilder<CloudBackupCubit, CloudBackupState>(
       builder: (context, state) {
@@ -284,6 +288,7 @@ class _BackupListView extends StatelessWidget {
                         color: Theme.of(context).colorScheme.onErrorContainer,
                       ),
                     ),
+                    TextButton(onPressed: refresh, child: Text('Reload page')),
                   ],
                 ),
               ),

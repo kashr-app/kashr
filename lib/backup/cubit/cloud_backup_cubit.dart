@@ -29,6 +29,13 @@ class CloudBackupCubit extends Cubit<CloudBackupState> {
     try {
       final nextcloudConfig = await _getNextcloudConfig();
       final nextcloudConfigured = nextcloudConfig != null;
+      // emit that nextcloud is configured so related errors get rendered
+      emit(
+        state.copyWith(
+          nextcloudConfigured: nextcloudConfigured,
+        ),
+      );
+
       final List<String> nextcloud = nextcloudConfigured
           ? (await _nextcloudService.listBackupsOnCloud(nextcloudConfig))
           : [];
@@ -151,7 +158,7 @@ class CloudBackupCubit extends Cubit<CloudBackupState> {
   /// returns if upload was successful
   Future<bool> uploadToNextcloud(
     BackupMetadata backup, {
-    bool updateOverallProgress = false,
+    bool updateOverallProgress = true,
   }) async {
     final filename = backup.filename;
     emit(
@@ -271,7 +278,7 @@ class CloudBackupCubit extends Cubit<CloudBackupState> {
     emit(
       state.copyWith(
         status: errorCount > 0 ? Status.error : Status.success,
-        message: 'Uploaded $processedCount backup(s)$errorMsg',
+        message: 'Uploaded $successCount backup(s)$errorMsg',
       ),
     );
 
