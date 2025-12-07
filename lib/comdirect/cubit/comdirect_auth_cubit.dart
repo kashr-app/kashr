@@ -136,9 +136,13 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       final api = ComdirectAPI(dioApi);
 
       emit(AuthSuccess(apiToken, api, dioApi));
+    } on DioException catch (e, s) {
+      log.e('Failed to authenticate', error: e, stackTrace: s);
+      final errorMessage = _handleDioException(e);
+      emit(AuthError(errorMessage));
     } catch (e, s) {
-      log.e('Faild to authenticate', error: e, stackTrace: s);
-      emit(AuthError('Failed to authenticate: $e'));
+      log.e('Failed to authenticate', error: e, stackTrace: s);
+      emit(AuthError('An unexpected error occurred. Please try again. $e'));
     }
   }
 
@@ -186,9 +190,13 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
       emit(AuthSuccess(newToken, s.api, s.dioClient));
       log.i('Token refreshed successfully');
+    } on DioException catch (e, s) {
+      log.e('Failed to refresh token', error: e, stackTrace: s);
+      final errorMessage = _handleDioException(e);
+      emit(AuthError(errorMessage));
     } catch (e, s) {
       log.e('Failed to refresh token', error: e, stackTrace: s);
-      emit(AuthError('Failed to refresh token: $e'));
+      emit(AuthError('Failed to refresh token. Please log in again. $e'));
     }
   }
 
@@ -222,6 +230,34 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
     await TokenDTO.delete();
     emit(AuthInitial());
     log.i('Logged out');
+  }
+
+  /// Converts a DioException into a user-friendly error message.
+  String _handleDioException(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.badResponse:
+        final statusCode = e.response?.statusCode;
+        if (statusCode == 401 || statusCode == 400) {
+          return 'Invalid username or password. Please check your credentials.';
+        } else if (statusCode == 403) {
+          return 'Access denied. Please check your credentials.';
+        } else if (statusCode != null && statusCode >= 500) {
+          return 'Server is currently unavailable. Please try again later.';
+        }
+        return 'Authentication failed. Please try again.';
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Connection timeout. Please check your internet connection.';
+      case DioExceptionType.connectionError:
+        return 'Network error. Please check your internet connection.';
+      case DioExceptionType.cancel:
+        return 'Request was cancelled.';
+      case DioExceptionType.badCertificate:
+        return 'Security certificate error. Please contact support.';
+      case DioExceptionType.unknown:
+        return 'Network error. Please check your internet connection.';
+    }
   }
 
   /// Returns null if the user successfully confirmed the tan or the error string (e.g. timeout);
