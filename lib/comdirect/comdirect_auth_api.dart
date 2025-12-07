@@ -11,12 +11,18 @@ abstract class ComdirectAuthAPI {
   @POST("/oauth/token")
   @FormUrlEncoded()
   Future<TokenDTO> createLoginAuthToken(
-      @Body() CreateLoginAuthTokenReqDTO createLoginAuthTokenReqDTO);
+    @Body() CreateLoginAuthTokenReqDTO createLoginAuthTokenReqDTO,
+  );
 
   @POST("/oauth/token")
   @FormUrlEncoded()
   Future<TokenDTO> createApiToken(
-      @Body() ApiAccessTokenReqDTO apiAccessTokenReqDTO);
+    @Body() ApiAccessTokenReqDTO apiAccessTokenReqDTO,
+  );
+
+  @DELETE("/oauth/revoke")
+  @FormUrlEncoded()
+  Future<HttpResponse<void>> revokeToken();
 
   @GET("/api/session/clients/user/v1/sessions")
   Future<List<SessionDTO>> getSessionStatus();

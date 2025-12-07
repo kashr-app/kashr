@@ -142,9 +142,33 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
   /// Logs out the user by clearing the authentication state and invalidating
   /// the access token. Stored credentials are preserved for future logins.
-  void logout() {
+  Future<void> logout() async {
+    final s = state;
+    if (s is AuthSuccess) {
+      final accessToken = s.apiToken.accessToken;
+      final dio = Dio();
+      dio.options.headers.clear();
+      dio.options.headers["Content-Type"] = "application/json";
+      dio.options.headers["Accept"] = "application/json";
+      dio.options.headers["Authorization"] = "Bearer $accessToken";
+      final authApi = ComdirectAuthAPI(dio);
+      try {
+        final response = await authApi.revokeToken();
+        if (response.response.statusCode == 204) {
+          log.i('Access token successfully revoked');
+        } else {
+          log.w('Unexpected status code: ${response.response.statusCode}');
+        }
+      } on DioException catch (e, s) {
+        log.e('Failed to revoke token', error: e, stackTrace: s);
+      }
+    } else {
+      log.w(
+        'AuthState is not AuthSuccess during logout, so there is not access token to invalidate.',
+      );
+    }
     emit(AuthInitial());
-    log.i('Logged out - access token invalidated');
+    log.i('Logged out');
   }
 
   /// Returns null if the user successfully confirmed the tan or the error string (e.g. timeout);
