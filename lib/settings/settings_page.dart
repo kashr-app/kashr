@@ -1,8 +1,10 @@
 import 'package:finanalyzer/backup/backup_list_page.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/settings/banks_page.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/settings/settings_state.dart';
+import 'package:finanalyzer/turnover/tags_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -99,10 +101,23 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const Divider(),
                 ListTile(
+                  onTap: () => const BanksRoute().go(context),
+                  title: Text('Banks'),
+                  leading: const Icon(Icons.account_balance),
+                  subtitle: const Text('Manage bank synchronization'),
+                ),
+                ListTile(
+                  onTap: () => const TagsRoute().go(context),
+                  title: Text('Tags'),
+                  leading: const Icon(Icons.label),
+                  subtitle: const Text('Manage tags'),
+                ),
+                const Divider(),
+                ListTile(
                   title: const Text('Backup & Restore'),
                   subtitle: const Text('Manage database backups'),
                   leading: const Icon(Icons.backup),
-                  onTap: () => context.push(const BackupListRoute().location),
+                  onTap: () => const BackupListRoute().go(context),
                 ),
                 const Divider(),
                 ListTile(

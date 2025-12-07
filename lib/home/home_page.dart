@@ -25,6 +25,7 @@ import 'package:finanalyzer/home/widgets/pending_turnovers_hint.dart';
 import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
 import 'package:finanalyzer/home/widgets/transfer_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
+import 'package:finanalyzer/settings/banks_page.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/widgets/quick_transfer_entry_sheet.dart';
@@ -46,11 +47,19 @@ part '../_gen/home/home_page.g.dart';
 @TypedGoRoute<HomeRoute>(
   path: '/app',
   routes: <TypedGoRoute<GoRouteData>>[
-    TypedGoRoute<SettingsRoute>(path: 'settings'),
-    TypedGoRoute<BackupListRoute>(
-      path: 'backups',
+    TypedGoRoute<SettingsRoute>(
+      path: 'settings',
       routes: [
-        TypedGoRoute<NextcloudSettingsRoute>(path: 'nextcloud-settings'),
+        TypedGoRoute<BanksRoute>(
+          path: 'banks',
+          routes: [TypedGoRoute<ComdirectLoginRoute>(path: 'comdirect')],
+        ),
+        TypedGoRoute<BackupListRoute>(
+          path: 'backups',
+          routes: [
+            TypedGoRoute<NextcloudSettingsRoute>(path: 'nextcloud-settings'),
+          ],
+        ),
       ],
     ),
     TypedGoRoute<TagsRoute>(path: 'tags'),
@@ -73,7 +82,6 @@ part '../_gen/home/home_page.g.dart';
       path: 'turnovers',
       routes: [TypedGoRoute<TurnoverTagsRoute>(path: ':turnoverId/tags')],
     ),
-    TypedGoRoute<ComdirectLoginRoute>(path: 'comdirect'),
     TypedGoRoute<SavingsRoute>(
       path: 'savings',
       routes: [TypedGoRoute<SavingsDetailRoute>(path: ':savingsId')],
@@ -111,29 +119,19 @@ class HomePage extends StatelessWidget {
             tooltip: 'Accounts',
           ),
           IconButton(
-            onPressed: () => const ComdirectLoginRoute().go(context),
-            icon: const Icon(Icons.sync),
-            tooltip: 'Comdirect Sync',
-          ),
-          IconButton(
             onPressed: () => const TurnoversRoute().go(context),
             icon: const Icon(Icons.list_alt),
             tooltip: 'Turnovers',
           ),
           IconButton(
-            onPressed: () => const TagsRoute().go(context),
-            icon: const Icon(Icons.label),
-            tooltip: 'Tags',
+            onPressed: () => const SavingsRoute().go(context),
+            icon: const Icon(Icons.savings),
+            tooltip: 'Savings',
           ),
           IconButton(
             onPressed: () => const AnalyticsRoute().go(context),
             icon: const Icon(Icons.analytics),
             tooltip: 'Analytics',
-          ),
-          IconButton(
-            onPressed: () => const SavingsRoute().go(context),
-            icon: const Icon(Icons.savings),
-            tooltip: 'Savings',
           ),
           IconButton(
             onPressed: () => const SettingsRoute().go(context),
