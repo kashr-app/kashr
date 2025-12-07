@@ -1,10 +1,10 @@
+import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
-import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:uuid/uuid.dart';
@@ -358,7 +358,7 @@ class TagTurnoverRepository {
     );
 
     return result.map((map) {
-      final tagId =  UuidValue.fromString(map['tag_id'] as String);
+      final tagId = UuidValue.fromString(map['tag_id'] as String);
       final totalAmount = _unscale(map['total_amount']);
 
       return TagSummary(tagId: tagId, totalAmount: totalAmount);
@@ -418,6 +418,70 @@ class TagTurnoverRepository {
     }
 
     return summariesByMonth;
+  }
+
+  /// Fetches tag turnovers needed for dashboard calculations.
+  /// Returns two DISJOINT sets:
+  /// - allocatedInMonth: Tag turnovers with tt.booking_date in the month
+  ///   (used for allocated sums)
+  /// - allocatedOutsideMonthButTurnoverInMonth: Tag turnovers where
+  ///   tv.booking_date is in the month but tt.booking_date is OUTSIDE
+  ///   the month (needed to calculate untagged portions IN the month)
+  Future<
+    ({
+      List<TagTurnover> allocatedInMonth,
+      List<TagTurnover> allocatedOutsideMonthButTurnoverInMonth,
+    })
+  >
+  getTagTurnoversForMonthlyDashboard({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final start = isoDateFormatter.format(startDate);
+    final end = isoDateFormatter.format(endDate);
+
+    final result = await db.rawQuery(
+      '''
+      SELECT DISTINCT tt.*,
+        CASE WHEN tt.booking_date >= ? AND tt.booking_date < ?
+             THEN 1 ELSE 0 END
+               as is_allocated_in_month
+      FROM tag_turnover tt
+      INNER JOIN turnover tv ON tt.turnover_id = tv.id
+      WHERE tt.turnover_id IS NOT NULL
+        AND (
+          (tt.booking_date >= ? AND tt.booking_date < ?)
+          OR (tv.booking_date >= ? AND tv.booking_date < ?)
+        )
+      ''',
+      [
+        // For the CASE statement
+        start, end,
+        // For the WHERE clause
+        start, end,
+        start, end,
+      ],
+    );
+
+    // Group by is_allocated_in_month flag using groupBy for single pass
+    final grouped = result.groupListsBy(
+      (map) => map['is_allocated_in_month'] == 1,
+    );
+
+    final allocatedInMonth = (grouped[true] ?? [])
+        .map((map) => TagTurnover.fromJson(map))
+        .toList();
+
+    final allocatedOutside = (grouped[false] ?? [])
+        .map((map) => TagTurnover.fromJson(map))
+        .toList();
+
+    return (
+      allocatedInMonth: allocatedInMonth,
+      allocatedOutsideMonthButTurnoverInMonth: allocatedOutside,
+    );
   }
 
   Decimal _unscale(Object? result) {

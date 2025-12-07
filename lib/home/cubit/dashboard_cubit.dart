@@ -1,9 +1,13 @@
+import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/comdirect/comdirect_service.dart';
+import 'package:finanalyzer/core/extensions/decimal_extensions.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover_filter.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:flutter/material.dart';
@@ -16,10 +20,14 @@ import 'package:uuid/uuid.dart';
 class DashboardCubit extends Cubit<DashboardState> {
   final TurnoverRepository _turnoverRepository;
   final TagTurnoverRepository _tagTurnoverRepository;
+  final TagCubit _tagCubit;
   final _log = Logger();
 
-  DashboardCubit(this._turnoverRepository, this._tagTurnoverRepository)
-    : super(
+  DashboardCubit(
+    this._turnoverRepository,
+    this._tagTurnoverRepository,
+    this._tagCubit,
+  ) : super(
         DashboardState(
           selectedPeriod: YearMonth.now(),
           totalIncome: Decimal.zero,
@@ -83,9 +91,10 @@ class DashboardCubit extends Cubit<DashboardState> {
     }
   }
 
-  /// Loads spending data for the currently selected month.
+  /// Loads cashflow data for the currently selected month.
   Future<void> loadMonthData() async {
     emit(state.copyWith(status: Status.loading));
+    final Map<UuidValue, Tag> tagById = _tagCubit.state.tagById;
     try {
       final turnovers = await _turnoverRepository.getTurnoversForMonth(
         state.selectedPeriod,
@@ -118,44 +127,74 @@ class DashboardCubit extends Cubit<DashboardState> {
       final unallocatedCount = await _turnoverRepository
           .countUnallocatedTurnoversForMonth(state.selectedPeriod);
 
-      // Calculate total from all turnovers (including transfers)
-      final totalAllIncome = turnovers
-          .where((t) => t.amountValue > Decimal.zero)
-          .fold<Decimal>(
-            Decimal.zero,
-            (sum, turnover) => sum + turnover.amountValue,
+      // Fetch tag turnovers for correct total calculation
+      final startDate = state.selectedPeriod.toDateTime();
+      final endDate = Jiffy.parseFromDateTime(
+        startDate,
+      ).add(months: 1).dateTime;
+
+      final ttData = await _tagTurnoverRepository
+          .getTagTurnoversForMonthlyDashboard(
+            startDate: startDate,
+            endDate: endDate,
           );
 
-      final totalAllExpenses = turnovers
-          .where((t) => t.amountValue < Decimal.zero)
-          .fold<Decimal>(
-            Decimal.zero,
-            (sum, turnover) => sum + turnover.amountValue,
-          )
-          .abs();
+      // Calculate total income/expense using tag booking dates + untagged portions
 
-      // Sum of all tagged income (non-transfer)
-      final totalAllocatedIncome = incomeTagSummaries.fold<Decimal>(
-        Decimal.zero,
-        (sum, summary) => sum + summary.totalAmount.abs(),
-      );
+      // 1. Sum from tag turnovers allocated in this month (by tt.booking_date)
+      final totalAbsTTByType = ttData.allocatedInMonth
+          .groupFoldBy<TurnoverType, Decimal>(
+            (it) => (tagById[it.tagId]?.isTransfer ?? false)
+                ? TurnoverType.transfer
+                : it.amountValue < Decimal.zero
+                ? TurnoverType.expense
+                : TurnoverType.income,
+            (sum, tt) => (sum ?? Decimal.zero) + tt.amountValue.abs(),
+          );
+      // turnovers are counted twice (once per account), so we need to divide the total by 2
+      totalAbsTTByType[TurnoverType.transfer] =
+          ((totalAbsTTByType[TurnoverType.transfer] ?? Decimal.zero) /
+                  Decimal.fromInt(2))
+              .toDecimal(scaleOnInfinitePrecision: 2);
 
-      // Sum of all tagged expenses (non-transfer)
-      final totalAllocatedExpenses = expenseTagSummaries.fold<Decimal>(
-        Decimal.zero,
-        (sum, summary) => sum + summary.totalAmount.abs(),
-      );
+      // 2. Calculate untagged portions of turnovers in this month
+      // Build map of tagged amounts per turnover
+      final ttByTurnoverId = [
+        ...ttData.allocatedInMonth,
+        ...ttData.allocatedOutsideMonthButTurnoverInMonth,
+      ].groupListsBy((it) => it.turnoverId);
 
-      // Unallocated = total - allocated income/expense - transfers
+      final taggedAmountByTurnover = <UuidValue, Decimal>{};
+      final totalAbsUntaggedBySign = <TurnoverSign, Decimal>{};
+      for (final turnover in turnovers) {
+        final turnoverId = turnover.id;
+        final taggedAmount =
+            ttByTurnoverId[turnoverId]?.sum((it) => it.amountValue) ??
+            Decimal.zero;
+        final untaggedAmount = turnover.amountValue - taggedAmount;
+        taggedAmountByTurnover[turnoverId] = taggedAmount;
+        final sign = TurnoverSign.fromDecimal(turnover.amountValue);
+        totalAbsUntaggedBySign[sign] =
+            (totalAbsUntaggedBySign[sign] ?? Decimal.zero) +
+            untaggedAmount.abs();
+      }
+
+      // Total = tagged (by tt.booking_date) + untagged (by tv.booking_date)
+      final totalAllIncomeAbs =
+          (totalAbsTTByType[TurnoverType.income] ?? Decimal.zero) +
+          (totalAbsUntaggedBySign[TurnoverSign.income] ?? Decimal.zero);
+      final totalAllExpensesAbs =
+          (totalAbsTTByType[TurnoverType.expense] ?? Decimal.zero) +
+          (totalAbsUntaggedBySign[TurnoverSign.expense] ?? Decimal.zero);
+
       final unallocatedIncome =
-          totalAllIncome - totalAllocatedIncome - totalTransferIncome;
+          totalAbsUntaggedBySign[TurnoverSign.income] ?? Decimal.zero;
       final unallocatedExpenses =
-          totalAllExpenses - totalAllocatedExpenses - totalTransferExpenses;
+          totalAbsUntaggedBySign[TurnoverSign.expense] ?? Decimal.zero;
 
       // Total income/expenses for cashflow = allocated + unallocated
-      // (excludes transfers)
-      final totalIncome = totalAllocatedIncome + unallocatedIncome;
-      final totalExpenses = totalAllocatedExpenses + unallocatedExpenses;
+      final totalIncome = totalAllIncomeAbs + unallocatedIncome;
+      final totalExpenses = totalAllExpensesAbs + unallocatedExpenses;
 
       emit(
         state.copyWith(
@@ -318,3 +357,5 @@ class DashboardCubit extends Cubit<DashboardState> {
     await loadMonthData();
   }
 }
+
+enum TurnoverType { expense, transfer, income }

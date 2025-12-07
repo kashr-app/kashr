@@ -1,17 +1,9 @@
+import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/turnover/model/turnover_filter.freezed.dart';
 part '../../_gen/turnover/model/turnover_filter.g.dart';
-
-/// Enum representing the sign/type of a turnover amount
-enum TurnoverSign {
-  /// Income (positive amount)
-  income,
-
-  /// Expense (negative amount)
-  expense,
-}
 
 /// Filter options for querying turnovers.
 @freezed

@@ -10,7 +10,21 @@ part '../../_gen/turnover/model/turnover.freezed.dart';
 part '../../_gen/turnover/model/turnover.g.dart';
 
 final dateFormat = DateFormat("dd.MM.yyyy");
+final isoDateFormatter = DateFormat('yyyy-MM-dd');
 const String isoDateFormat = 'yyyy-MM-dd';
+
+/// Enum representing the sign/type of a turnover amount
+enum TurnoverSign {
+  /// Income (positive amount)
+  income,
+
+  /// Expense (negative amount)
+  expense;
+
+  static TurnoverSign fromDecimal(Decimal amount) {
+    return amount < Decimal.zero ? expense : income;
+  }
+}
 
 @freezed
 abstract class Turnover with _$Turnover {

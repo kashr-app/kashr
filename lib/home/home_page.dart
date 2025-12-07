@@ -26,6 +26,7 @@ import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
 import 'package:finanalyzer/home/widgets/transfer_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/widgets/quick_transfer_entry_sheet.dart';
 import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
@@ -88,6 +89,7 @@ class HomeRoute extends GoRouteData with $HomeRoute {
       create: (context) => DashboardCubit(
         context.read<TurnoverRepository>(),
         context.read<TagTurnoverRepository>(),
+        context.read<TagCubit>(),
       )..loadMonthData(),
       child: const HomePage(),
     );
