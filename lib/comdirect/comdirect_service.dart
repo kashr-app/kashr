@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:finanalyzer/account/model/account.dart';
+import 'package:finanalyzer/ingest/ingest.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:intl/intl.dart';
@@ -10,25 +11,9 @@ import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:uuid/uuid.dart';
 import 'comdirect_api.dart';
 
-const uuid = Uuid();
-final apiDateFormat = DateFormat("yyyy-MM-dd");
+final _apiDateFormat = DateFormat("yyyy-MM-dd");
 
-enum ResultStatus { success, unauthed, otherError }
-
-class FetchComdirectDataResult {
-  ResultStatus status;
-  String? errorMessage;
-  int autoMatchedCount;
-  List<Turnover> unmatchedTurnovers;
-  FetchComdirectDataResult({
-    required this.status,
-    this.errorMessage,
-    this.autoMatchedCount = 0,
-    this.unmatchedTurnovers = const [],
-  });
-}
-
-class ComdirectService {
+class ComdirectService implements DataIngestor {
   final ComdirectAPI comdirectAPI;
   final log = Logger();
   final AccountCubit accountCubit;
@@ -42,9 +27,20 @@ class ComdirectService {
     this.matchingService,
   });
 
+  @override
+  Future<DataIngestResult> ingest({
+    required DateTime minBookingDate,
+    required DateTime maxBookingDate,
+  }) async {
+    return _fetchAccountsAndTurnovers(
+      minBookingDate: minBookingDate,
+      maxBookingDate: maxBookingDate,
+    );
+  }
+
   /// Fetches accounts and turnovers from the Comdirect API.
   /// Also automatically updates the balance for existing accounts.
-  Future<FetchComdirectDataResult> fetchAccountsAndTurnovers({
+  Future<DataIngestResult> _fetchAccountsAndTurnovers({
     required DateTime minBookingDate,
     required DateTime maxBookingDate,
   }) async {
@@ -65,6 +61,8 @@ class ComdirectService {
       for (final a in accountsPage.values) {
         apiBalancesByApiId[a.accountId] = a.balance.value;
       }
+
+      final uuid = Uuid();
 
       for (final a in accountsPage.values) {
         final apiId = a.accountId;
@@ -109,8 +107,8 @@ class ComdirectService {
           // Fetch transactions for each account
           final transactionsResponse = await comdirectAPI.getTransactions(
             accountId: apiId,
-            minBookingDate: apiDateFormat.format(minBookingDate),
-            maxBookingDate: apiDateFormat.format(maxBookingDate),
+            minBookingDate: _apiDateFormat.format(minBookingDate),
+            maxBookingDate: _apiDateFormat.format(maxBookingDate),
             pageElementIndex: pageIndex * pageSize,
             pageSize: pageSize,
           );
@@ -177,7 +175,7 @@ class ComdirectService {
       }
       log.i('Account balances updated successfully');
 
-      return FetchComdirectDataResult(
+      return DataIngestResult(
         status: ResultStatus.success,
         autoMatchedCount: autoMatchedCount,
         unmatchedTurnovers: unmatchedTurnovers,
@@ -185,13 +183,13 @@ class ComdirectService {
     } catch (e) {
       if (e is DioException) {
         if (e.response?.statusCode == 401) {
-          return FetchComdirectDataResult(status: ResultStatus.unauthed);
+          return DataIngestResult(status: ResultStatus.unauthed);
         }
       }
       log.e('Error fetching turnovers: $e', error: e);
-      return FetchComdirectDataResult(
+      return DataIngestResult(
         status: ResultStatus.otherError,
-        errorMessage: 'unknown error',
+        errorMessage: 'unknown error: $e',
       );
     }
   }

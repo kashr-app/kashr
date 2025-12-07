@@ -1,6 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/comdirect/comdirect_service.dart';
+import 'package:finanalyzer/ingest/ingest.dart';
 import 'package:finanalyzer/core/extensions/decimal_extensions.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
@@ -10,7 +10,6 @@ import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:logger/logger.dart';
@@ -40,10 +39,7 @@ class DashboardCubit extends Cubit<DashboardState> {
         ),
       );
 
-  Future<void> downloadBankData(
-    ComdirectService service,
-    ScaffoldMessengerState messenger,
-  ) async {
+  Future<DataIngestResult> ingestData(DataIngestor ingestor) async {
     void setBankDownloadStatus(Status status) {
       emit(state.copyWith(bankDownloadStatus: status));
     }
@@ -53,42 +49,21 @@ class DashboardCubit extends Cubit<DashboardState> {
     final start = state.selectedPeriod.toDateTime();
     final end = Jiffy.parseFromDateTime(start).endOf(Unit.month).dateTime;
 
-    final result = await service.fetchAccountsAndTurnovers(
+    final result = await ingestor.ingest(
       minBookingDate: start,
       maxBookingDate: end,
     );
+
     switch (result.status) {
       case ResultStatus.success:
-        final autoMatchMsg = result.autoMatchedCount > 0
-            ? ' ${result.autoMatchedCount} expenses auto-matched.'
-            : '';
-        final unmatchedMsg = result.unmatchedTurnovers.isNotEmpty
-            ? ' ${result.unmatchedTurnovers.length} transactions need review.'
-            : '';
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Data loaded successfully.$autoMatchMsg$unmatchedMsg',
-            ),
-          ),
-        );
         setBankDownloadStatus(Status.success);
         loadMonthData();
       case ResultStatus.unauthed:
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Not authorized. Please try to login at the bank again.',
-            ),
-          ),
-        );
         setBankDownloadStatus(Status.initial);
       case ResultStatus.otherError:
-        messenger.showSnackBar(
-          SnackBar(content: Text('There was an error: ${result.errorMessage}')),
-        );
         setBankDownloadStatus(Status.error);
     }
+    return result;
   }
 
   /// Loads cashflow data for the currently selected month.
