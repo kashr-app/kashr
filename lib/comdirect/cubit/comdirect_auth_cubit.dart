@@ -112,6 +112,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       log.i("2FA successfull");
       emit(AuthLoading("2FA successfull. Getting api token..."));
       dio.options.headers.clear();
+      final tokenCreatedAt = DateTime.now().millisecondsSinceEpoch;
       final apiToken = await comdirectAuthAPI.createApiToken(
         ApiAccessTokenReqDTO(
           clientId: credentials.clientId,
@@ -120,6 +121,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
           token: authTokenResponse.accessToken,
         ),
       );
+      await apiToken.store(tokenCreatedAt);
 
       final dioApi = Dio();
       dioApi.options.headers.clear();
@@ -133,10 +135,60 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
       final api = ComdirectAPI(dioApi);
 
-      emit(AuthSuccess(apiToken, api));
+      emit(AuthSuccess(apiToken, api, dioApi));
     } catch (e, s) {
       log.e('Faild to authenticate', error: e, stackTrace: s);
       emit(AuthError('Failed to authenticate: $e'));
+    }
+  }
+
+  Future<void> refreshToken() async {
+    try {
+      final s = state;
+      if (s is! AuthSuccess) {
+        log.e('Cannot refresh token: not authenticated');
+        emit(AuthError('Cannot refresh token: not authenticated'));
+        return;
+      }
+
+      final currentToken = await TokenDTO.load();
+      if (currentToken == null) {
+        log.e('No valid token found to refresh');
+        emit(AuthError('No valid token found to refresh'));
+        return;
+      }
+
+      final credentials = await Credentials.load();
+      if (credentials == null) {
+        log.e('No credentials found');
+        emit(AuthError('No credentials found'));
+        return;
+      }
+
+      emit(AuthLoading("Refreshing token..."));
+
+      final dio = Dio();
+      final comdirectAuthAPI = ComdirectAuthAPI(dio);
+
+      final tokenCreatedAt = DateTime.now().millisecondsSinceEpoch;
+      final newToken = await comdirectAuthAPI.refreshToken(
+        RefreshTokenReqDTO(
+          clientId: credentials.clientId,
+          clientSecret: credentials.clientSecret,
+          grantType: 'refresh_token',
+          refreshToken: currentToken.refreshToken,
+        ),
+      );
+      await newToken.store(tokenCreatedAt);
+
+      s.dioClient.options.headers["Authorization"] =
+          "Bearer ${newToken.accessToken}";
+
+      emit(AuthSuccess(newToken, s.api, s.dioClient));
+      log.i('Token refreshed successfully');
+    } catch (e, s) {
+      log.e('Failed to refresh token', error: e, stackTrace: s);
+      emit(AuthError('Failed to refresh token: $e'));
     }
   }
 
@@ -167,6 +219,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
         'AuthState is not AuthSuccess during logout, so there is not access token to invalidate.',
       );
     }
+    await TokenDTO.delete();
     emit(AuthInitial());
     log.i('Logged out');
   }

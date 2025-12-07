@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:finanalyzer/core/secure_storage.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:decimal/decimal.dart';
@@ -127,6 +129,72 @@ class TokenDTO {
     required this.kontaktId,
   });
 
+  /// Checks if the token is close to expiring.
+  /// Does not guarantee that the token is still valid.
+  Future<bool> needsRefresh() async {
+    final storage = secureStorage();
+    final tokenTimestampStr = await storage.read(
+      key: 'comdirectTokenTimestamp',
+    );
+
+    if (tokenTimestampStr == null) {
+      return false;
+    }
+
+    final tokenTimestamp = int.tryParse(tokenTimestampStr);
+    if (tokenTimestamp == null) {
+      return false;
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final tokenAgeMs = now - tokenTimestamp;
+    final expiresInMs = expiresIn * 1000;
+
+    // start refreshing ~1min before expiration
+    return tokenAgeMs >= expiresInMs - 60_000;
+  }
+
+  Future<void> store(int timestampMs) async {
+    final storage = secureStorage();
+    final tokenJson = jsonEncode(toJson());
+
+    await storage.write(key: 'comdirectToken', value: tokenJson);
+    await storage.write(
+      key: 'comdirectTokenTimestamp',
+      value: timestampMs.toString(),
+    );
+  }
+
+  static Future<TokenDTO?> load() async {
+    final storage = secureStorage();
+    final tokenJson = await storage.read(key: 'comdirectToken');
+
+    if (tokenJson == null) {
+      return null;
+    }
+
+    try {
+      return TokenDTO.fromJson(
+        Map<String, dynamic>.from(jsonDecode(tokenJson) as Map),
+      );
+    } catch (e, s) {
+      final log = Logger();
+      log.e(
+        'Bad comdirect token format. Deleting the token.',
+        error: e,
+        stackTrace: s,
+      );
+      await delete();
+      return null;
+    }
+  }
+
+  static Future<void> delete() async {
+    final storage = secureStorage();
+    await storage.delete(key: 'comdirectToken');
+    await storage.delete(key: 'comdirectTokenTimestamp');
+  }
+
   factory TokenDTO.fromJson(Map<String, dynamic> json) =>
       _$TokenDTOFromJson(json);
   Map<String, dynamic> toJson() => _$TokenDTOToJson(this);
@@ -239,6 +307,25 @@ class ApiAccessTokenReqDTO {
   factory ApiAccessTokenReqDTO.fromJson(Map<String, dynamic> json) =>
       _$ApiAccessTokenReqDTOFromJson(json);
   Map<String, dynamic> toJson() => _$ApiAccessTokenReqDTOToJson(this);
+}
+
+@JsonSerializable(fieldRename: FieldRename.snake)
+class RefreshTokenReqDTO {
+  final String clientId;
+  final String clientSecret;
+  final String grantType;
+  final String refreshToken;
+
+  RefreshTokenReqDTO({
+    required this.clientId,
+    required this.clientSecret,
+    required this.grantType,
+    required this.refreshToken,
+  });
+
+  factory RefreshTokenReqDTO.fromJson(Map<String, dynamic> json) =>
+      _$RefreshTokenReqDTOFromJson(json);
+  Map<String, dynamic> toJson() => _$RefreshTokenReqDTOToJson(this);
 }
 
 @JsonSerializable()

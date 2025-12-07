@@ -20,6 +20,12 @@ abstract class ComdirectAuthAPI {
     @Body() ApiAccessTokenReqDTO apiAccessTokenReqDTO,
   );
 
+  @POST("/oauth/token")
+  @FormUrlEncoded()
+  Future<TokenDTO> refreshToken(
+    @Body() RefreshTokenReqDTO refreshTokenReqDTO,
+  );
+
   @DELETE("/oauth/revoke")
   @FormUrlEncoded()
   Future<HttpResponse<void>> revokeToken();

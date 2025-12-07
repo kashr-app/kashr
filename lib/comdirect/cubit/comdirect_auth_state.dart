@@ -20,5 +20,6 @@ class AuthError extends ComdirectAuthState {
 class AuthSuccess extends ComdirectAuthState {
   final TokenDTO apiToken;
   final ComdirectAPI api;
-  AuthSuccess(this.apiToken, this.api);
+  final Dio dioClient;
+  AuthSuccess(this.apiToken, this.api, this.dioClient);
 }
