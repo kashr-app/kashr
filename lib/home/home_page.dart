@@ -60,9 +60,9 @@ part '../_gen/home/home_page.g.dart';
             TypedGoRoute<NextcloudSettingsRoute>(path: 'nextcloud-settings'),
           ],
         ),
+        TypedGoRoute<TagsRoute>(path: 'tags'),
       ],
     ),
-    TypedGoRoute<TagsRoute>(path: 'tags'),
     TypedGoRoute<AnalyticsRoute>(path: 'analytics'),
     TypedGoRoute<PendingTurnoversRoute>(path: 'pending-turnovers'),
     TypedGoRoute<AccountsRoute>(
