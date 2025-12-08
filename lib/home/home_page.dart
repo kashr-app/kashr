@@ -4,14 +4,14 @@ import 'package:finanalyzer/account/account_all_turnovers_page.dart';
 import 'package:finanalyzer/account/account_details_page.dart';
 import 'package:finanalyzer/account/accounts_page.dart';
 import 'package:finanalyzer/account/create_account_page.dart';
-import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/edit_account_page.dart';
 import 'package:finanalyzer/analytics/analytics_page.dart';
 import 'package:finanalyzer/backup/backup_list_page.dart';
 import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
-import 'package:finanalyzer/home/widgets/dual_account_selector.dart';
+import 'package:finanalyzer/account/account_selector_dialog.dart';
+import 'package:finanalyzer/account/dual_account_selector.dart';
 import 'package:finanalyzer/savings/savings_detail_page.dart';
 import 'package:finanalyzer/savings/savings_overview_page.dart';
 import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
@@ -290,37 +290,7 @@ class HomePage extends StatelessWidget {
     // Show account selector
     final selectedAccount = await showDialog<Account>(
       context: context,
-      builder: (context) => BlocBuilder<AccountCubit, AccountState>(
-        builder: (context, state) {
-          return AlertDialog(
-            title: const Text('Select Account'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: state.visibleAccounts.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return SwitchListTile(
-                      title: Text('Show hidden'),
-                      value: state.showHiddenAccounts,
-                      onChanged: (_) =>
-                          context.read<AccountCubit>().toggleHiddenAccounts(),
-                    );
-                  }
-                  final account = state.visibleAccounts[index - 1];
-                  return ListTile(
-                    leading: Icon(account.accountType.icon),
-                    title: Text(account.name),
-                    subtitle: Text(account.accountType.label()),
-                    onTap: () => Navigator.of(context).pop(account),
-                  );
-                },
-              ),
-            ),
-          );
-        },
-      ),
+      builder: (context) => AccountSelectorDialog(),
     );
 
     if (selectedAccount != null && context.mounted) {
