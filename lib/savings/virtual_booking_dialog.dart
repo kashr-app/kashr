@@ -1,5 +1,5 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/account/cubit/account_cubit.dart';
+import 'package:finanalyzer/account/account_selector_dialog.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
 import 'package:finanalyzer/core/currency.dart';
@@ -263,49 +263,40 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                   const SizedBox(height: 16),
                 ],
 
-                // Account selection
-                BlocBuilder<AccountCubit, dynamic>(
-                  builder: (context, state) {
-                    final accounts = state.accounts as List<Account>? ?? [];
-
-                    if (accounts.isEmpty) {
-                      return const Text('No accounts available');
-                    }
-
-                    // Initialize selected account from booking if not yet set
-                    if (widget.booking != null && _selectedAccount == null) {
-                      _selectedAccount = accounts.firstWhere(
-                        (a) => a.id == widget.booking!.accountId,
-                        orElse: () => accounts.first,
-                      );
-                    }
-
-                    return DropdownButtonFormField<Account>(
-                      initialValue: _selectedAccount,
-                      decoration: const InputDecoration(
-                        labelText: 'Account',
-                        border: OutlineInputBorder(),
-                        helperText: 'Which account to allocate from/to',
+                // Account
+                InkWell(
+                  onTap: () async {
+                    final a = await showDialog<Account>(
+                      context: context,
+                      builder: (context) => AccountSelectorDialog(
+                        selectedId: _selectedAccount?.id,
                       ),
-                      items: accounts.map((account) {
-                        return DropdownMenuItem(
-                          value: account,
-                          child: Text(account.name),
-                        );
-                      }).toList(),
-                      onChanged: (account) {
-                        setState(() {
-                          _selectedAccount = account;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Please select an account';
-                        }
-                        return null;
-                      },
                     );
+                    if (a != null) {
+                      setState(() {
+                        _selectedAccount = a;
+                      });
+                    }
                   },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Account',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.arrow_drop_down),
+                    ),
+                    child: Text(
+                      _selectedAccount != null
+                          ? _selectedAccount!.name
+                          : 'Select account',
+                      style: _selectedAccount == null
+                          ? Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            )
+                          : null,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
 
