@@ -24,6 +24,10 @@ abstract class TurnoverFilter with _$TurnoverFilter {
     /// Filter by turnover sign (income/expense)
     /// If null, shows both income and expenses
     TurnoverSign? sign,
+
+    /// Search query for full-text search across turnover purpose,
+    /// counterpart, tag names, and tag_turnover notes
+    String? searchQuery,
   }) = _TurnoverFilter;
 
   const TurnoverFilter._();
@@ -33,7 +37,8 @@ abstract class TurnoverFilter with _$TurnoverFilter {
       unallocatedOnly == true ||
       period != null ||
       (tagIds != null && tagIds!.isNotEmpty) ||
-      sign != null;
+      sign != null ||
+      (searchQuery != null && searchQuery!.isNotEmpty);
 
   /// Returns a filter with all values set to null (no filtering)
   static const empty = TurnoverFilter();

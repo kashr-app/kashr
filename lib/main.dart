@@ -19,6 +19,7 @@ import 'package:finanalyzer/savings/model/savings_virtual_booking_repository.dar
 import 'package:finanalyzer/savings/services/savings_balance_service.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
+import 'package:finanalyzer/turnover/model/recent_search_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
@@ -42,6 +43,7 @@ final turnoverRepository = TurnoverRepository();
 final accountRepository = AccountRepository();
 final tagRepository = TagRepository();
 final tagTurnoverRepository = TagTurnoverRepository();
+final recentSearchRepository = RecentSearchRepository();
 final savingsRepository = SavingsRepository();
 final savingsVirtualBookingRepository = SavingsVirtualBookingRepository();
 final balanceCalculationService = BalanceCalculationService(
@@ -84,6 +86,7 @@ class MyApp extends StatelessWidget {
         Provider<AccountRepository>.value(value: accountRepository),
         Provider<TagRepository>.value(value: tagRepository),
         Provider<TagTurnoverRepository>.value(value: tagTurnoverRepository),
+        Provider<RecentSearchRepository>.value(value: recentSearchRepository),
         Provider<SavingsRepository>.value(value: savingsRepository),
         Provider<SavingsVirtualBookingRepository>.value(
           value: savingsVirtualBookingRepository,

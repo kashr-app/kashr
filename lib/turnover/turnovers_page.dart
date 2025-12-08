@@ -9,6 +9,7 @@ import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/widgets/batch_tag_dialog.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_filter_dialog.dart';
+import 'package:finanalyzer/turnover/widgets/turnover_search_dialog.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_sort_dialog.dart';
 import 'package:finanalyzer/turnover/widgets/turnovers_filter_chips.dart';
 import 'package:finanalyzer/turnover/widgets/turnovers_list_content.dart';
@@ -173,6 +174,19 @@ class _TurnoversPageState extends State<TurnoversPage> {
     if (result != null) {
       setState(() => _sort = result);
       _refresh();
+    }
+  }
+
+  Future<void> _openSearchDialog() async {
+    final searchQuery = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (context) => const TurnoverSearchDialog(),
+        fullscreenDialog: true,
+      ),
+    );
+
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      _updateFilter(_filter.copyWith(searchQuery: searchQuery));
     }
   }
 
@@ -348,6 +362,11 @@ class _TurnoversPageState extends State<TurnoversPage> {
       title: const Text('Turnovers'),
       elevation: 0,
       actions: [
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: _openSearchDialog,
+          tooltip: 'Search',
+        ),
         IconButton(
           icon: const Icon(Icons.sort),
           onPressed: _openSortDialog,

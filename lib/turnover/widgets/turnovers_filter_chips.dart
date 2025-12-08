@@ -59,6 +59,14 @@ class TurnoversFilterChips extends StatelessWidget {
                   label: Text(sort.orderBy.label()),
                   onPressed: onSortDirectionToggled,
                 ),
+              if (filter.searchQuery != null &&
+                  filter.searchQuery!.isNotEmpty)
+                Chip(
+                  avatar: const Icon(Icons.search, size: 18),
+                  label: Text(filter.searchQuery!),
+                  onDeleted: () =>
+                      onFilterChanged(filter.copyWith(searchQuery: null)),
+                ),
               if (filter.unallocatedOnly == true)
                 Chip(
                   label: const Text('Unallocated'),

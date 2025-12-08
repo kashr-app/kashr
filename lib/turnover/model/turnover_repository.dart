@@ -387,6 +387,18 @@ class TurnoverRepository {
       }
     }
 
+    // Search query filter using FTS5
+    if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+      whereClauses.add('''
+        EXISTS (
+          SELECT 1 FROM turnover_fts
+          WHERE turnover_fts.turnover_id = t.id
+          AND turnover_fts MATCH ?
+        )
+      ''');
+      whereArgs.add(filter.searchQuery!);
+    }
+
     // Tag filter - turnovers must have ALL specified tags
     if (filter.tagIds != null && filter.tagIds!.isNotEmpty) {
       // For each tag, ensure the turnover has a tag_turnover entry with that tagId
