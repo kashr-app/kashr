@@ -1,21 +1,13 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:finanalyzer/db/migrations/v1.dart';
-import 'package:finanalyzer/db/migrations/v10.dart';
+import 'package:finanalyzer/db/migrations/schema_v11.dart';
 import 'package:finanalyzer/db/migrations/v11.dart';
-import 'package:finanalyzer/db/migrations/v2.dart';
-import 'package:finanalyzer/db/migrations/v3.dart';
-import 'package:finanalyzer/db/migrations/v4.dart';
-import 'package:finanalyzer/db/migrations/v5.dart';
-import 'package:finanalyzer/db/migrations/v6.dart';
-import 'package:finanalyzer/db/migrations/v7.dart';
-import 'package:finanalyzer/db/migrations/v8.dart';
-import 'package:finanalyzer/db/migrations/v9.dart';
-import 'package:flutter/foundation.dart';
+import 'package:finanalyzer/db/sqlite_compat.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite3;
 
 const dbFileName = 'app_database.db';
 
@@ -23,7 +15,8 @@ const dbVersion = 11;
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
-  static Database? _database;
+  static sqlite3.Database? _database;
+  static Completer<SqliteDatabase>? _initCompleter;
 
   final log = Logger();
 
@@ -31,80 +24,119 @@ class DatabaseHelper {
 
   DatabaseHelper._internal();
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
+  Future<SqliteDatabase> get database async {
+    if (_database != null) return SqliteDatabase(_database!);
 
-    _database = await _initDb();
-    await _database!.execute('PRAGMA foreign_keys = ON');
-    return _database!;
+    // If initialization is already in progress, wait for it
+    if (_initCompleter != null) {
+      return _initCompleter!.future;
+    }
+
+    _initCompleter = Completer<SqliteDatabase>();
+
+    try {
+      _database = await _initDb();
+      _database!.execute('PRAGMA foreign_keys = ON');
+      final dbWrapper = SqliteDatabase(_database!);
+      _initCompleter!.complete(dbWrapper);
+      _initCompleter = null;
+      return dbWrapper;
+    } catch (e) {
+      _initCompleter!.completeError(e);
+      _initCompleter = null;
+      rethrow;
+    }
   }
 
-  Future<Database> _initDb() async {
-    final options = OpenDatabaseOptions(
-      version: dbVersion,
-      onUpgrade: _onUpgrade,
-    );
-    if (Platform.isWindows || Platform.isLinux) {
-      sqfliteFfiInit();
-      var factory = kIsWeb ? databaseFactoryFfiWeb : databaseFactoryFfi;
-      final dbPath = await factory.getDatabasesPath();
-      final path = join(dbPath, dbFileName);
-
-      return await factory.openDatabase(path, options: options);
+  Future<sqlite3.Database> _initDb() async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      throw UnsupportedError(
+        'Only Android and iOS platforms are supported. '
+        'Desktop and web support can be added in the future.',
+      );
     }
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, dbFileName);
 
-    return await openDatabase(
-      path,
-      version: options.version,
-      onCreate: options.onCreate,
-      onUpgrade: options.onUpgrade,
-    );
+    final path = await getDatabasePath();
+
+    final db = sqlite3.sqlite3.open(path);
+    await _migrate(db);
+    return db;
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    final migrations = <int, Future<void> Function(Database db)>{
-      // version => migration function
-      1: v1,
-      2: v2,
-      3: v3,
-      4: v4,
-      5: v5,
-      6: v6,
-      7: v7,
-      8: v8,
-      9: v9,
-      10: v10,
-      11: v11,
-    };
-    for (int i = oldVersion + 1; i <= newVersion; i++) {
-      final m = migrations[i];
+  Future<String> getDatabasePath() async {
+    // Get application documents directory
+    final Directory appDocDir = await getApplicationDocumentsDirectory();
 
-      if (null == m) {
-        log.e("Could not find database migration for v$i.");
-        throw MigrationNotFoundException(i);
-      }
-      log.i("applying migration v$i");
-      await m(db);
+    // Construct databases directory path
+    // On Android: /data/data/com.example.finanalyzer/databases/
+    // On iOS: <app documents parent>/databases/
+    final String dbDir = join(appDocDir.parent.path, 'databases');
+
+    await Directory(dbDir).create(recursive: true);
+
+    return join(dbDir, dbFileName);
+  }
+
+  Future<void> _migrate(sqlite3.Database db) async {
+    final version = _getCurrentVersion(db);
+
+    if (version == 0) {
+      log.i('New database installation, creating schema at v$dbVersion');
+      await createSchemaV11(SqliteDatabase(db));
+      _setVersion(db, dbVersion);
+      log.i('Database schema created at v$dbVersion');
+    } else if (version == 10) {
+      log.i('Upgrading database from v$version to v$dbVersion');
+      await v11(SqliteDatabase(db));
+      _setVersion(db, dbVersion);
+      log.i('Database upgraded to v$dbVersion');
+    } else if (version == dbVersion) {
+      log.i('Database already at v$dbVersion');
+    } else {
+      // Unsupported version
+      throw UnsupportedDatabaseVersionException(version, dbVersion);
     }
+  }
+
+  int _getCurrentVersion(sqlite3.Database db) {
+    try {
+      final result = db.select('PRAGMA user_version');
+      if (result.isEmpty) return 0;
+      return result.first['user_version'] as int;
+    } catch (e) {
+      log.e('Failed to get database version', error: e);
+      return 0;
+    }
+  }
+
+  void _setVersion(sqlite3.Database db, int version) {
+    db.execute('PRAGMA user_version = $version');
+    log.i('Database version set to $version');
   }
 
   Future<void> close() async {
     if (_database != null) {
-      await _database!.close();
+      _database!.close();
       _database = null;
+      _initCompleter = null;
     }
   }
 }
 
-class MigrationNotFoundException implements Exception {
-  final int migrationId;
+class UnsupportedDatabaseVersionException implements Exception {
+  final int currentVersion;
+  final int expectedVersion;
 
-  const MigrationNotFoundException(this.migrationId);
+  const UnsupportedDatabaseVersionException(
+    this.currentVersion,
+    this.expectedVersion,
+  );
 
   @override
   String toString() {
-    return 'MigrationNotFoundException: Database migration $migrationId not found. Application cannot proceed.';
+    return 'UnsupportedDatabaseVersionException: Current database version is '
+        'v$currentVersion, but expected v$expectedVersion or v${expectedVersion - 1}. '
+        'This database version is not supported. Please restore from a backup or '
+        'reinstall the application.';
   }
 }

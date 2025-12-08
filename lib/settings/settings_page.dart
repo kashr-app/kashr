@@ -53,9 +53,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _getSqlLiteVersion() async {
     final db = await DatabaseHelper().database;
-    final v =
-        (await db.rawQuery('SELECT sqlite_version()')).first.values.first
-            as String?;
+    final result = db.rawQuery('SELECT sqlite_version()');
+    final v = result.isNotEmpty ? result.first['sqlite_version()'] as String? : null;
     setState(() {
       sqliteVersion = v ?? 'err';
     });

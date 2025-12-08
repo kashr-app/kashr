@@ -11,7 +11,6 @@ import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:uuid/uuid.dart';
 
 const backupFileExt = 'finbak';
@@ -459,16 +458,12 @@ class BackupService {
     return _localStorageService.getBackupsDirectory();
   }
 
-  /// Get database file path
   Future<String> _getDatabasePath() async {
-    if (Platform.isWindows || Platform.isLinux) {
-      final factory = databaseFactoryFfi;
-      final dbPath = await factory.getDatabasesPath();
-      return '$dbPath/$dbFileName';
-    } else {
-      final dbPath = await getDatabasesPath();
-      return '$dbPath/$dbFileName';
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      throw UnsupportedError('Backup only supported on Android/iOS');
     }
+
+    return await DatabaseHelper().getDatabasePath();
   }
 
   static String createFilename(DateTime timestamp) {
