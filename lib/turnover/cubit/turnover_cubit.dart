@@ -64,6 +64,7 @@ class TurnoverCubit extends Cubit<TurnoverState> {
           .toList();
 
       // Fetch existing turnovers for this account in one query
+      // We query per account because an apiId is not guaranteed to be unique across accounts
       final existingTurnovers =
           await turnoverRepository.getTurnoversByApiIdsForAccount(
         accountId: accountId,
