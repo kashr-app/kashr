@@ -46,8 +46,13 @@ abstract class Turnover with _$Turnover {
 
     required String amountUnit,
     String? counterPart,
+    String? counterIban,
     required String purpose,
+
     String? apiId,
+    String? apiTurnoverType,
+    // the raw unparsed data from the API
+    String? apiRaw,
   }) = _Turnover;
 
   factory Turnover.fromJson(Map<String, dynamic> json) =>

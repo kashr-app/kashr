@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:finanalyzer/db/migrations/schema_v11.dart';
+import 'package:finanalyzer/db/migrations/schema_v12.dart';
 import 'package:finanalyzer/db/migrations/v11.dart';
+import 'package:finanalyzer/db/migrations/v12.dart';
 import 'package:finanalyzer/db/sqlite_compat.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart';
@@ -10,8 +11,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite3;
 
 const dbFileName = 'app_database.db';
-
-const dbVersion = 11;
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -77,24 +76,53 @@ class DatabaseHelper {
     return join(dbDir, dbFileName);
   }
 
-  Future<void> _migrate(sqlite3.Database db) async {
-    final version = _getCurrentVersion(db);
+  Future<String?> sqlLiteVersion() async {
+    final db = await DatabaseHelper().database;
+    final result = db.rawQuery('SELECT sqlite_version()');
+    return result.isNotEmpty
+        ? result.first['sqlite_version()'] as String?
+        : null;
+  }
 
-    if (version == 0) {
-      log.i('New database installation, creating schema at v$dbVersion');
-      await createSchemaV11(SqliteDatabase(db));
-      _setVersion(db, dbVersion);
-      log.i('Database schema created at v$dbVersion');
-    } else if (version == 10) {
-      log.i('Upgrading database from v$version to v$dbVersion');
-      await v11(SqliteDatabase(db));
-      _setVersion(db, dbVersion);
-      log.i('Database upgraded to v$dbVersion');
-    } else if (version == dbVersion) {
-      log.i('Database already at v$dbVersion');
+  int get dbVersion {
+    return _migrations.keys.last;
+  }
+
+  final _migrations = <int, Future<void> Function(SqliteDatabase db)>{
+    // version => migration function
+    11: v11,
+    12: v12,
+  };
+
+  Future<void> _migrate(sqlite3.Database db3) async {
+    final oldVersion = _getCurrentVersion(db3);
+    final newVersion = dbVersion;
+
+    final targetVersion = _migrations.keys.last;
+    final db = SqliteDatabase(db3);
+
+    if (oldVersion == 0) {
+      log.i('New database installation, creating schema at v$newVersion');
+      await createSchemaV12(db);
+      _setVersion(db3, newVersion);
+      log.i('Database schema created at v$newVersion');
+    } else if (oldVersion < targetVersion) {
+      for (int i = oldVersion + 1; i <= newVersion; i++) {
+        final m = _migrations[i];
+
+        if (null == m) {
+          log.e("Could not find database migration for v$i.");
+          throw Exception('Could not find database migration v$i');
+        }
+        log.i("applying migration v$i");
+        await m(db);
+        _setVersion(db3, i);
+        log.i('Database upgraded to v$i');
+      }
+    } else if (oldVersion == targetVersion) {
+      log.d('No database migration. Version already at v$newVersion');
     } else {
-      // Unsupported version
-      throw UnsupportedDatabaseVersionException(version, dbVersion);
+      throw UnsupportedDatabaseVersionException(oldVersion, newVersion);
     }
   }
 

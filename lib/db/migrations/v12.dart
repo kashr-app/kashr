@@ -1,155 +1,29 @@
-import 'package:finanalyzer/backup/model/backup_config.dart';
 import 'package:finanalyzer/db/sqlite_compat.dart';
 
-/// Creates the full database schema at version 11.
+/// Migration v12: Add counter_iban, api_turnover_type, and api_raw columns
 ///
-/// This is used for new installations to avoid running all incremental
-/// migrations. The schema here should match the result of applying all
-/// migrations from v1 to v11.
-Future<void> createSchemaV11(SqliteDatabase db) async {
-  // Account table
-  db.execute('''
-    CREATE TABLE account(
-      id TEXT PRIMARY KEY,
-      created_at TEXT NOT NULL,
-      name TEXT NOT NULL,
-      identifier TEXT,
-      api_id TEXT,
-      account_type TEXT NOT NULL,
-      sync_source TEXT,
-      currency TEXT NOT NULL,
-      opening_balance INTEGER NOT NULL,
-      opening_balance_date TEXT NOT NULL,
-      is_hidden INTEGER NOT NULL
-    )
-  ''');
+/// Adds to turnover table:
+/// - turnover.counter_iban: The IBAN of the counterparty (nullable)
+/// - turnover.api_turnover_type: Type of turnover from API (nullable)
+/// - turnover.api_raw: Raw unparsed data from the API (nullable)
+///
+/// Also updates FTS triggers to include counter_iban in searchable content.
+/// Note: api_turnover_type and api_raw are NOT included in FTS.
+Future<void> v12(SqliteDatabase db) async {
+  // Add new columns to turnover table
+  db.execute('ALTER TABLE turnover ADD COLUMN counter_iban TEXT');
+  db.execute('ALTER TABLE turnover ADD COLUMN api_turnover_type TEXT');
+  db.execute('ALTER TABLE turnover ADD COLUMN api_raw TEXT');
 
-  // Turnover table
-  db.execute('''
-    CREATE TABLE turnover(
-      id TEXT PRIMARY KEY,
-      created_at TEXT NOT NULL,
-      account_id TEXT NOT NULL,
-      booking_date TEXT,
-      amount_value INTEGER NOT NULL,
-      amount_unit TEXT NOT NULL,
-      counter_part TEXT,
-      purpose TEXT NOT NULL,
-      api_id TEXT,
-      FOREIGN KEY(account_id) REFERENCES account(id)
-    )
-  ''');
+  // Drop existing FTS triggers that need to be updated
+  db.execute('DROP TRIGGER IF EXISTS turnover_fts_insert');
+  db.execute('DROP TRIGGER IF EXISTS turnover_fts_update');
+  db.execute('DROP TRIGGER IF EXISTS tag_turnover_fts_insert');
+  db.execute('DROP TRIGGER IF EXISTS tag_turnover_fts_update');
+  db.execute('DROP TRIGGER IF EXISTS tag_turnover_fts_delete');
+  db.execute('DROP TRIGGER IF EXISTS tag_fts_update');
 
-  // Tag table
-  db.execute('''
-    CREATE TABLE tag (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      color TEXT,
-      semantic TEXT
-    )
-  ''');
-
-  // Tag turnover table
-  db.execute('''
-    CREATE TABLE tag_turnover(
-      id TEXT PRIMARY KEY,
-      turnover_id TEXT,
-      tag_id TEXT NOT NULL,
-      amount_value INTEGER NOT NULL,
-      amount_unit TEXT NOT NULL,
-      note TEXT,
-      created_at TEXT NOT NULL,
-      booking_date TEXT NOT NULL,
-      account_id TEXT NOT NULL,
-      recurring_rule_id TEXT,
-      FOREIGN KEY(turnover_id) REFERENCES turnover(id),
-      FOREIGN KEY(tag_id) REFERENCES tag(id)
-    )
-  ''');
-
-  // Savings table
-  db.execute('''
-    CREATE TABLE savings (
-      id TEXT PRIMARY KEY,
-      tag_id TEXT NOT NULL UNIQUE,
-      goal_value INTEGER,
-      goal_unit TEXT,
-      created_at TEXT NOT NULL,
-      FOREIGN KEY(tag_id) REFERENCES tag(id) ON DELETE CASCADE
-    )
-  ''');
-
-  // Savings virtual booking table
-  db.execute('''
-    CREATE TABLE savings_virtual_booking (
-      id TEXT PRIMARY KEY,
-      savings_id TEXT NOT NULL,
-      account_id TEXT NOT NULL,
-      amount_value INTEGER NOT NULL,
-      amount_unit TEXT NOT NULL,
-      note TEXT,
-      booking_date TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      FOREIGN KEY(savings_id) REFERENCES savings(id) ON DELETE CASCADE,
-      FOREIGN KEY(account_id) REFERENCES account(id) ON DELETE CASCADE
-    )
-  ''');
-
-  // Backup config table
-  db.execute('''
-    CREATE TABLE backup_config (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      auto_backup_enabled INTEGER NOT NULL,
-      frequency TEXT NOT NULL,
-      last_auto_backup TEXT,
-      encryption_enabled INTEGER NOT NULL,
-      max_local_backups INTEGER NOT NULL,
-      auto_backup_to_cloud INTEGER NOT NULL
-    )
-  ''');
-
-  // Insert default backup config
-  db.insert('backup_config', BackupConfig.defaultConfig().toJson());
-
-  // FTS5 virtual table for full-text search
-  db.execute('''
-    CREATE VIRTUAL TABLE turnover_fts USING fts5(
-      turnover_id UNINDEXED,
-      content,
-      tokenize='unicode61 remove_diacritics 1'
-    )
-  ''');
-
-  // Recent search table
-  db.execute('''
-    CREATE TABLE recent_search (
-      id TEXT PRIMARY KEY,
-      query TEXT NOT NULL UNIQUE,
-      created_at TEXT NOT NULL
-    )
-  ''');
-
-  // Create indices
-  db.execute(
-    'CREATE INDEX idx_tag_turnover_account ON tag_turnover(account_id)',
-  );
-  db.execute(
-    'CREATE INDEX idx_tag_turnover_booking_date ON tag_turnover(booking_date)',
-  );
-  db.execute('''
-    CREATE INDEX idx_tag_turnover_unmatched
-      ON tag_turnover(turnover_id)
-      WHERE turnover_id IS NULL
-  ''');
-  db.execute(
-    'CREATE INDEX idx_savings_virtual_booking_account_id ON savings_virtual_booking(account_id)',
-  );
-  db.execute(
-    'CREATE INDEX idx_savings_virtual_booking_savings_id ON savings_virtual_booking(savings_id)',
-  );
-
-  // Create FTS triggers to keep turnover_fts in sync
+  // Recreate triggers with counter_iban included in search content
 
   // Trigger: When a new turnover is inserted
   db.execute('''
@@ -160,6 +34,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
         NEW.id,
         NEW.purpose || ' ' ||
         COALESCE(NEW.counter_part, '') || ' ' ||
+        COALESCE(NEW.counter_iban, '') || ' ' ||
         COALESCE(
           (SELECT GROUP_CONCAT(tag.name, ' ')
            FROM tag_turnover tt
@@ -186,6 +61,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
         NEW.id,
         NEW.purpose || ' ' ||
         COALESCE(NEW.counter_part, '') || ' ' ||
+        COALESCE(NEW.counter_iban, '') || ' ' ||
         COALESCE(
           (SELECT GROUP_CONCAT(tag.name, ' ')
            FROM tag_turnover tt
@@ -202,15 +78,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
     END
   ''');
 
-  // Trigger: When a turnover is deleted
-  db.execute('''
-    CREATE TRIGGER turnover_fts_delete AFTER DELETE ON turnover
-    BEGIN
-      DELETE FROM turnover_fts WHERE turnover_id = OLD.id;
-    END
-  ''');
-
-  // Trigger: When a tag_turnover is inserted/updated/deleted, update the FTS entry
+  // Trigger: When a tag_turnover is inserted
   db.execute('''
     CREATE TRIGGER tag_turnover_fts_insert AFTER INSERT ON tag_turnover
     BEGIN
@@ -220,6 +88,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
         t.id,
         t.purpose || ' ' ||
         COALESCE(t.counter_part, '') || ' ' ||
+        COALESCE(t.counter_iban, '') || ' ' ||
         COALESCE(
           (SELECT GROUP_CONCAT(tag.name, ' ')
            FROM tag_turnover tt
@@ -238,6 +107,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
     END
   ''');
 
+  // Trigger: When a tag_turnover is updated
   db.execute('''
     CREATE TRIGGER tag_turnover_fts_update AFTER UPDATE ON tag_turnover
     BEGIN
@@ -247,6 +117,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
         t.id,
         t.purpose || ' ' ||
         COALESCE(t.counter_part, '') || ' ' ||
+        COALESCE(t.counter_iban, '') || ' ' ||
         COALESCE(
           (SELECT GROUP_CONCAT(tag.name, ' ')
            FROM tag_turnover tt
@@ -265,6 +136,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
     END
   ''');
 
+  // Trigger: When a tag_turnover is deleted
   db.execute('''
     CREATE TRIGGER tag_turnover_fts_delete AFTER DELETE ON tag_turnover
     BEGIN
@@ -274,6 +146,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
         t.id,
         t.purpose || ' ' ||
         COALESCE(t.counter_part, '') || ' ' ||
+        COALESCE(t.counter_iban, '') || ' ' ||
         COALESCE(
           (SELECT GROUP_CONCAT(tag.name, ' ')
            FROM tag_turnover tt
@@ -292,7 +165,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
     END
   ''');
 
-  // Trigger: When a tag is updated (name changed), update FTS for all related turnovers
+  // Trigger: When a tag is updated (name changed)
   db.execute('''
     CREATE TRIGGER tag_fts_update AFTER UPDATE ON tag
     BEGIN
@@ -308,6 +181,7 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
         t.id,
         t.purpose || ' ' ||
         COALESCE(t.counter_part, '') || ' ' ||
+        COALESCE(t.counter_iban, '') || ' ' ||
         COALESCE(
           (SELECT GROUP_CONCAT(tag.name, ' ')
            FROM tag_turnover tt
@@ -328,5 +202,30 @@ Future<void> createSchemaV11(SqliteDatabase db) async {
         WHERE tag_id = NEW.id
       );
     END
+  ''');
+
+  // Rebuild FTS index to include counter_iban for existing turnovers
+  db.execute('DELETE FROM turnover_fts');
+  db.execute('''
+    INSERT INTO turnover_fts(turnover_id, content)
+    SELECT
+      t.id,
+      t.purpose || ' ' ||
+      COALESCE(t.counter_part, '') || ' ' ||
+      COALESCE(t.counter_iban, '') || ' ' ||
+      COALESCE(
+        (SELECT GROUP_CONCAT(tag.name, ' ')
+         FROM tag_turnover tt
+         LEFT JOIN tag ON tt.tag_id = tag.id
+         WHERE tt.turnover_id = t.id),
+        ''
+      ) || ' ' ||
+      COALESCE(
+        (SELECT GROUP_CONCAT(COALESCE(tt.note, ''), ' ')
+         FROM tag_turnover tt
+         WHERE tt.turnover_id = t.id),
+        ''
+      ) AS content
+    FROM turnover t
   ''');
 }

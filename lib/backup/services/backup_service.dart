@@ -119,7 +119,7 @@ class BackupService {
       final metadata = BackupMetadata(
         id: backupId,
         createdAt: timestamp,
-        dbVersion: dbVersion,
+        dbVersion: DatabaseHelper().dbVersion,
         appVersion: appVersion,
         encrypted: encrypted,
         fileSizeBytes: null, // will be set later

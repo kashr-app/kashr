@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:finanalyzer/account/model/account.dart';
@@ -127,8 +129,11 @@ class ComdirectService implements DataIngestor {
               amountValue: transaction.amount.value,
               amountUnit: transaction.amount.unit,
               counterPart: counterPart?.holderName,
-              purpose: transaction.remittanceInfo,
+              counterIban: counterPart?.iban,
+              purpose: _cleanPurpose(transaction.remittanceInfo),
               apiId: transaction.reference,
+              apiRaw: jsonEncode(transaction.toJson()),
+              apiTurnoverType: transaction.transactionType.key,
             );
             turnovers.add(turnover);
           }
@@ -192,5 +197,48 @@ class ComdirectService implements DataIngestor {
         errorMessage: 'unknown error: $e',
       );
     }
+  }
+
+  /// Cleans the `purpose` field from comdirect transaction data.
+  ///
+  /// Since the upstream data format is ambiguous by design, this
+  /// implementation is best-effort and may (in rare cases) remove or alter
+  /// numeric content that resembles segment markers.
+  ///
+  /// comdirect embeds MT940/SEPA-style segment numbers (01, 02, 03, …) directly
+  /// into the reference text. These appear even in the middle of words and are
+  /// not part of the actual remittance information.
+  ///
+  /// This function scans the string, detects true segment numbers based on the
+  /// expected sequential order (01 → 02 → 03 …), and removes them while keeping
+  /// all real numeric content intact (dates, amounts, IDs, article numbers, etc.).
+  String _cleanPurpose(String raw) {
+    final buffer = StringBuffer();
+    int i = 0;
+    int expectedSegment = 1;
+
+    while (i < raw.length) {
+      if (i + 2 <= raw.length) {
+        final maybe = raw.substring(i, i + 2);
+
+        final num = int.tryParse(maybe);
+
+        if (num != null && num >= 1 && num <= 99) {
+          if (num == expectedSegment) {
+            // skip sequence number
+            expectedSegment++;
+            i += 2;
+            continue;
+          }
+        }
+      }
+
+      // not a sequence number
+      buffer.write(raw[i]);
+      i++;
+    }
+
+    // Whitespace normalisieren
+    return buffer.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 }

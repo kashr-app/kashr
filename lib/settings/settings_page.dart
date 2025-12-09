@@ -52,9 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _getSqlLiteVersion() async {
-    final db = await DatabaseHelper().database;
-    final result = db.rawQuery('SELECT sqlite_version()');
-    final v = result.isNotEmpty ? result.first['sqlite_version()'] as String? : null;
+    final v = await DatabaseHelper().sqlLiteVersion();
     setState(() {
       sqliteVersion = v ?? 'err';
     });
@@ -131,7 +129,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 ListTile(
                   title: const Text('Database Version'),
-                  subtitle: Text('$dbVersion'),
+                  subtitle: Text('${DatabaseHelper().dbVersion}'),
                   leading: const Icon(Icons.storage),
                 ),
                 ListTile(
