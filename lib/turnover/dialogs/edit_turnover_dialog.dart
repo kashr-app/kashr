@@ -4,7 +4,6 @@ import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 class EditTurnoverDialog extends StatefulWidget {
   final Turnover turnover;
@@ -142,7 +141,7 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
                   ),
                   child: Text(
                     _bookingDate != null
-                        ? DateFormat('dd.MM.yyyy').format(_bookingDate!)
+                        ? dateFormat.format(_bookingDate!)
                         : 'No date',
                   ),
                 ),

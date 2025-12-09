@@ -151,9 +151,10 @@ class ComdirectService implements DataIngestor {
       var unmatchedCount = 0;
       if (matchingService != null) {
         for (final turnover in turnovers) {
-          final matched = await matchingService!.autoMatchPerfectTagTurnover(
+          final match = await matchingService!.autoMatchPerfectTagTurnover(
             turnover,
           );
+          final matched = null != match;
           if (matched) {
             autoMatchedCount++;
             log.i('Auto-matched turnover: ${turnover.purpose}');

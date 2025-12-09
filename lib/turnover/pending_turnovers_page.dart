@@ -6,6 +6,8 @@ import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/dialogs/edit_pending_tag_turnover_dialog.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
@@ -78,28 +80,6 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
   Future<void> _deletePendingTurnover(TagTurnover tagTurnover) async {
     if (!mounted) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Turnover'),
-        content: const Text(
-          'Are you sure you want to delete this pending turnover?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
     try {
       final tagTurnoverRepository = context.read<TagTurnoverRepository>();
       await tagTurnoverRepository.deleteTagTurnover(tagTurnover.id);
@@ -116,6 +96,46 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
           context,
         ).showSnackBar(SnackBar(content: Text('Error deleting turnover: $e')));
       }
+    }
+  }
+
+  Future<void> _editPendingTurnover(
+    TagTurnover tagTurnover,
+    Account account,
+    Tag tag,
+  ) async {
+    if (!mounted) return;
+
+    final result = await EditPendingTagTurnoverDialog.show(
+      context,
+      tagTurnover: tagTurnover,
+      account: account,
+      tag: tag,
+    );
+
+    if (!mounted || result == null) return;
+
+    switch (result) {
+      case EditPendingTagTurnoverDeleted():
+        await _deletePendingTurnover(tagTurnover);
+      case EditPendingTagTurnoverUpdated(:final tagTurnover):
+        try {
+          final tagTurnoverRepository = context.read<TagTurnoverRepository>();
+          await tagTurnoverRepository.updateTagTurnover(tagTurnover);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Pending turnover updated')),
+            );
+            _loadPendingTurnovers();
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error updating turnover: $e')),
+            );
+          }
+        }
     }
   }
 
@@ -402,28 +422,38 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
                       itemBuilder: (context, index) {
                         final item = _pendingTurnovers![index];
                         final account = state.accountById[item.accountId];
-                        return _PendingTurnoverItem(
-                          tagTurnoverWithTagAndAccount: item,
-                          onDelete: () =>
-                              _deletePendingTurnover(item.tagTurnover),
-                          onUnmatch: item.tagTurnover.isMatched
-                              ? () => _unmatchTurnover(item.tagTurnover)
-                              : null,
-                          onMaterialize:
-                              account != null &&
-                                  account.syncSource == SyncSource.manual &&
-                                  !item.tagTurnover.isMatched
-                              ? () => _materializeTurnover(
-                                  item.tagTurnover,
-                                  account,
-                                )
-                              : null,
-                          onFindMatch:
-                              account != null &&
-                                  account.syncSource != SyncSource.manual &&
-                                  !item.tagTurnover.isMatched
-                              ? () => _findMatch(item.tagTurnover, account)
-                              : null,
+                        return BlocBuilder<TagCubit, TagState>(
+                          builder: (context, tagState) {
+                            final tag = tagState.tagById[item.tagId];
+                            return _PendingTurnoverItem(
+                              tagTurnoverWithTagAndAccount: item,
+                              onEdit: account != null && tag != null
+                                  ? () => _editPendingTurnover(
+                                      item.tagTurnover,
+                                      account,
+                                      tag,
+                                    )
+                                  : null,
+                              onUnmatch: item.tagTurnover.isMatched
+                                  ? () => _unmatchTurnover(item.tagTurnover)
+                                  : null,
+                              onMaterialize:
+                                  account != null &&
+                                      account.syncSource == SyncSource.manual &&
+                                      !item.tagTurnover.isMatched
+                                  ? () => _materializeTurnover(
+                                      item.tagTurnover,
+                                      account,
+                                    )
+                                  : null,
+                              onFindMatch:
+                                  account != null &&
+                                      account.syncSource != SyncSource.manual &&
+                                      !item.tagTurnover.isMatched
+                                  ? () => _findMatch(item.tagTurnover, account)
+                                  : null,
+                            );
+                          },
                         );
                       },
                     ),
@@ -437,14 +467,14 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
 
 class _PendingTurnoverItem extends StatelessWidget {
   final TagTurnoverWithTagAndAccount tagTurnoverWithTagAndAccount;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
   final VoidCallback? onUnmatch;
   final VoidCallback? onMaterialize;
   final VoidCallback? onFindMatch;
 
   const _PendingTurnoverItem({
     required this.tagTurnoverWithTagAndAccount,
-    required this.onDelete,
+    this.onEdit,
     this.onUnmatch,
     this.onMaterialize,
     this.onFindMatch,
@@ -459,155 +489,150 @@ class _PendingTurnoverItem extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BlocBuilder<TagCubit, TagState>(
-              builder: (context, tagState) {
-                final tag = tagState.tagById[tagId];
-                return Row(
-                  children: [
-                    TagAvatar(tag: tag, radius: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            tt.note ?? tag?.name ?? 'Unknown',
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            tag?.name ?? 'Unknown',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.colorScheme.onSurfaceVariant,
+      child: InkWell(
+        onTap: onEdit,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              BlocBuilder<TagCubit, TagState>(
+                builder: (context, tagState) {
+                  final tag = tagState.tagById[tagId];
+                  return Row(
+                    children: [
+                      TagAvatar(tag: tag, radius: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tt.note ?? tag?.name ?? 'Unknown',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 2),
+                            Text(
+                              tag?.name ?? 'Unknown',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      tt.format(),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: tt.amountValue < Decimal.zero
-                            ? theme.colorScheme.error
-                            : theme.colorScheme.primary,
+                      Text(
+                        tt.format(),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: tt.amountValue < Decimal.zero
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.primary,
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            BlocBuilder<AccountCubit, AccountState>(
-              builder: (context, state) {
-                final account = state.accountById[accountId];
-                return Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      dateFormat.format(tt.bookingDate),
-                      style: TextStyle(
-                        fontSize: 12,
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              BlocBuilder<AccountCubit, AccountState>(
+                builder: (context, state) {
+                  final account = state.accountById[accountId];
+                  return Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 12,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(
-                      account?.syncSource?.icon ?? Icons.account_balance,
-                      size: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      account?.name ?? 'Unknown Account',
-                      style: TextStyle(
-                        fontSize: 12,
+                      const SizedBox(width: 4),
+                      Text(
+                        dateFormat.format(tt.bookingDate),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        account?.syncSource?.icon ?? Icons.account_balance,
+                        size: 12,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      tt.isMatched
-                          ? Icons.check_circle_outline
-                          : Icons.pending_outlined,
-                      size: 12,
-                      color: tt.isMatched
-                          ? Colors.green
-                          : theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      tt.isMatched ? 'Matched' : 'Pending',
-                      style: TextStyle(
-                        fontSize: 12,
+                      const SizedBox(width: 4),
+                      Text(
+                        account?.name ?? 'Unknown Account',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        tt.isMatched
+                            ? Icons.check_circle_outline
+                            : Icons.pending_outlined,
+                        size: 12,
                         color: tt.isMatched
                             ? Colors.green
                             : theme.colorScheme.primary,
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
-            if (onMaterialize != null ||
-                onFindMatch != null ||
-                onUnmatch != null)
-              const SizedBox(height: 8),
-            if (onMaterialize != null ||
-                onFindMatch != null ||
-                onUnmatch != null)
-              Row(
-                children: [
-                  if (onMaterialize != null)
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        onPressed: onMaterialize,
-                        icon: const Icon(Icons.add_circle_outline, size: 18),
-                        label: const Text('Materialize'),
+                      const SizedBox(width: 4),
+                      Text(
+                        tt.isMatched ? 'Matched' : 'Pending',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: tt.isMatched
+                              ? Colors.green
+                              : theme.colorScheme.primary,
+                        ),
                       ),
-                    ),
-                  if (onFindMatch != null)
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        onPressed: onFindMatch,
-                        icon: const Icon(Icons.search, size: 18),
-                        label: const Text('Find Match'),
-                      ),
-                    ),
-                  if (onUnmatch != null)
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        onPressed: onUnmatch,
-                        icon: const Icon(Icons.link_off, size: 18),
-                        label: const Text('Unmatch'),
-                      ),
-                    ),
-                  if (onMaterialize == null &&
-                      onFindMatch == null &&
-                      onUnmatch == null)
-                    const Spacer(),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: onDelete,
-                    color: theme.colorScheme.error,
-                    tooltip: 'Delete',
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
-          ],
+              if (onMaterialize != null ||
+                  onFindMatch != null ||
+                  onUnmatch != null)
+                const SizedBox(height: 8),
+              if (onMaterialize != null ||
+                  onFindMatch != null ||
+                  onUnmatch != null)
+                Row(
+                  children: [
+                    if (onMaterialize != null)
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          onPressed: onMaterialize,
+                          icon: const Icon(Icons.add_circle_outline, size: 18),
+                          label: const Text('Materialize'),
+                        ),
+                      ),
+                    if (onFindMatch != null)
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          onPressed: onFindMatch,
+                          icon: const Icon(Icons.search, size: 18),
+                          label: const Text('Find Match'),
+                        ),
+                      ),
+                    if (onUnmatch != null)
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          onPressed: onUnmatch,
+                          icon: const Icon(Icons.link_off, size: 18),
+                          label: const Text('Unmatch'),
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -10,9 +10,13 @@ import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/pending_turnovers_page.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
+import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -106,6 +110,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
       final theme = Theme.of(context);
 
       createTurnoverAndTagTurnoverOnAccount(
+        GoRouter.of(context),
         widget.account,
         amount,
         note,
@@ -273,6 +278,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
 }
 
 Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
+  GoRouter router,
   Account account,
   Decimal amount,
   String note,
@@ -285,6 +291,8 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
   ThemeData theme,
   TurnoverMatchingService matchingService,
 ) async {
+  final log = Logger();
+
   final isManual = account.syncSource == SyncSource.manual;
   final turnoverId = isManual
       ? Uuid().v4obj()
@@ -305,13 +313,7 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
     );
 
     await turnoverRepository.createTurnover(turnover);
-    Status.success.snack2(
-      scaffoldMessenger,
-      theme,
-      amount < Decimal.zero
-          ? 'From turnover materialized'
-          : 'To turnover materialized',
-    );
+    log.i('Manual turnover materialized');
   }
 
   final tagTurnover = TagTurnover(
@@ -328,33 +330,50 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
 
   await tagTurnoverRepository.createTagTurnover(tagTurnover);
 
+  final snackInfo =
+      '✔️ ${tag.name} ${Currency.currencyFrom(account.currency).format(amount)}';
   if (isManual) {
     Status.success.snack2(
       scaffoldMessenger,
       theme,
-      amount < Decimal.zero
-          ? 'From tagTurnover logged'
-          : 'To tagTurnover logged',
+      snackInfo,
+      action: SnackBarAction(
+        label: 'Show',
+        onPressed: () =>
+            router.go(TurnoverTagsRoute(turnoverId: turnoverId!.uuid).location),
+      ),
     );
+    log.i('Manual tagTurnover created');
   } else {
-    bool matched = await matchingService.autoMatchPerfectTurnover(tagTurnover);
+    final match = await matchingService.autoMatchPerfectTurnover(tagTurnover);
+    final matched = match != null;
 
     if (matched) {
       Status.success.snack2(
         scaffoldMessenger,
         theme,
-        amount < Decimal.zero
-            ? 'From tagTurnover matched automatically!'
-            : 'To tagTurnover matched automatically!',
+        '$snackInfo\n'
+        '✨ Matched automatically!',
+        action: SnackBarAction(
+          label: 'Show',
+          onPressed: () => router.go(
+            TurnoverTagsRoute(turnoverId: match.turnover.id.uuid).location,
+          ),
+        ),
       );
+      log.i('Matched tagTurnover created');
     } else {
       Status.success.snack2(
         scaffoldMessenger,
         theme,
-        amount < Decimal.zero
-            ? 'From tagTurnover logged, pending confirmation'
-            : 'To tagTurnover logged, pending confirmation',
+        '$snackInfo\n'
+        '⏳ Pending confirmation',
+        action: SnackBarAction(
+          label: 'Show',
+          onPressed: () => router.go(PendingTurnoversRoute().location),
+        ),
       );
+      log.i('Pending tagTurnover created');
     }
   }
   return (turnover, tagTurnover);

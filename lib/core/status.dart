@@ -43,24 +43,29 @@ enum Status {
   void snack2(
     ScaffoldMessengerState scaffoldMessenger,
     ThemeData theme,
-    String msg,
-  ) {
-    final [colorBg, color] = switch (this) {
+    String msg, {
+    SnackBarAction? action,
+  }) {
+    final [colorBg, color, actionColor] = switch (this) {
       Status.initial => [
         theme.colorScheme.surfaceContainer,
         theme.colorScheme.onSurface,
+        theme.colorScheme.primary,
       ],
       Status.loading => [
         theme.colorScheme.surfaceContainer,
         theme.colorScheme.onSurface,
+        theme.colorScheme.primary,
       ],
       Status.success => [
         theme.colorScheme.primaryContainer,
         theme.colorScheme.onPrimaryContainer,
+        theme.colorScheme.primary,
       ],
       Status.error => [
         theme.colorScheme.errorContainer,
         theme.colorScheme.onErrorContainer,
+        theme.colorScheme.error,
       ],
     };
     scaffoldMessenger.showSnackBar(
@@ -70,6 +75,13 @@ enum Status {
           style: theme.textTheme.bodyMedium?.copyWith(color: color),
         ),
         backgroundColor: colorBg,
+        action: action != null
+            ? SnackBarAction(
+                label: action.label,
+                onPressed: action.onPressed,
+                textColor: actionColor,
+              )
+            : null,
       ),
     );
   }

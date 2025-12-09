@@ -108,15 +108,15 @@ class TurnoverMatchingService {
   }
 
   /// Auto-match if perfect match (exact amount + high confidence)
-  /// Returns true if auto-matched
-  Future<bool> autoMatchPerfectTurnover(TagTurnover tagTurnover) async {
+  /// Returns the match if auto-matched or null
+  Future<TagTurnoverMatch?> autoMatchPerfectTurnover(TagTurnover tagTurnover) async {
     final matches = await findMatchesForTagTurnover(tagTurnover);
     return _autoConfirmPerfectMatch(matches);
   }
 
   /// Auto-match if perfect match (exact amount + high confidence)
-  /// Returns true if auto-matched
-  Future<bool> autoMatchPerfectTagTurnover(Turnover turnover) async {
+  /// Returns the match if auto-matched or null
+  Future<TagTurnoverMatch?> autoMatchPerfectTagTurnover(Turnover turnover) async {
     final matches = await findMatchesForTurnover(turnover);
     return _autoConfirmPerfectMatch(matches);
   }
@@ -125,17 +125,17 @@ class TurnoverMatchingService {
   // 1. Exactly one match found
   // 3. Confidence >= 95%
   // 2. Exact amount match
-  Future<bool> _autoConfirmPerfectMatch(List<TagTurnoverMatch> matches) async {
-    if (matches.length != 1) return false;
+  Future<TagTurnoverMatch?> _autoConfirmPerfectMatch(List<TagTurnoverMatch> matches) async {
+    if (matches.length != 1) return null;
     final match = matches.first;
 
-    if (match.confidence < 0.95) return false;
+    if (match.confidence < 0.95) return null;
 
     if (match.tagTurnover.amountValue != match.turnover.amountValue) {
-      return false;
+      return null;
     }
     await confirmMatch(matches.first);
-    return true;
+    return (match);
   }
 
   /// Unlink a matched TagTurnover from its Turnover

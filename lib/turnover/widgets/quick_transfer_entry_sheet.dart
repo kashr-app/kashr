@@ -12,6 +12,7 @@ import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class QuickTransferEntrySheet extends StatefulWidget {
@@ -98,6 +99,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
     });
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
     final theme = Theme.of(context);
     try {
       final Decimal amount = decimalUnscale(_amountScaled)!;
@@ -109,6 +111,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
       final matchingService = context.read<TurnoverMatchingService>();
 
       await createTurnoverAndTagTurnoverOnAccount(
+        router,
         widget.fromAccount,
         -amount,
         note,
@@ -123,6 +126,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
       );
 
       await createTurnoverAndTagTurnoverOnAccount(
+        router,
         widget.toAccount,
         amount,
         note,

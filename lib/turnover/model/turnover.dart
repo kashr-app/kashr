@@ -10,8 +10,8 @@ part '../../_gen/turnover/model/turnover.freezed.dart';
 part '../../_gen/turnover/model/turnover.g.dart';
 
 final dateFormat = DateFormat("dd.MM.yyyy");
-final isoDateFormatter = DateFormat('yyyy-MM-dd');
 const String isoDateFormat = 'yyyy-MM-dd';
+final isoDateFormatter = DateFormat(isoDateFormat);
 
 /// Enum representing the sign/type of a turnover amount
 enum TurnoverSign {
