@@ -24,9 +24,10 @@ class TagSuggestionService {
   /// Returns a list of up to 3 suggestions ordered by confidence score.
   /// Uses multi-factor scoring:
   /// - Fuzzy text similarity (40%)
-  /// - Tag frequency (30%)
-  /// - Recency (20%)
-  /// - Amount similarity (10%)
+  /// - Tag frequency (25%)
+  /// - Recency (15%)
+  /// - Transaction type match (15%)
+  /// - Amount similarity (5%)
   Future<List<TagSuggestion>> getSuggestionsForTurnover(
     Turnover turnover,
   ) async {
@@ -43,6 +44,7 @@ class TagSuggestionService {
         tv.purpose as turnover_purpose,
         tv.amount_value as turnover_amount,
         tv.booking_date as turnover_date,
+        tv.api_turnover_type as api_turnover_type,
         tt.amount_value as tag_amount,
         tt.created_at as tag_created_at
       FROM tag_turnover tt
@@ -70,6 +72,7 @@ class TagSuggestionService {
       final tagColor = row['tag_color'] as String?;
       final counterPart = row['turnover_counterpart'] as String?;
       final purpose = row['turnover_purpose'] as String;
+      final apiTurnoverType = row['api_turnover_type'] as String?;
       final tagAmountInt = row['tag_amount'] as int;
       final tagAmount = (Decimal.fromInt(tagAmountInt) / Decimal.fromInt(100))
           .toDecimal(scaleOnInfinitePrecision: 2);
@@ -97,6 +100,7 @@ class TagSuggestionService {
           similarities: [],
           amounts: [],
           dates: [],
+          transactionTypes: [],
           frequency: 0,
         );
       }
@@ -105,6 +109,7 @@ class TagSuggestionService {
       tagScore.similarities.add(similarity);
       tagScore.amounts.add(tagAmount);
       tagScore.dates.add(createdAt);
+      tagScore.transactionTypes.add(apiTurnoverType);
       tagScore.frequency++;
     }
 
@@ -113,56 +118,58 @@ class TagSuggestionService {
     final now = DateTime.now();
 
     // weights should sum up to 1
-    var weightSimilarirty = 0.4;
-    var weightFrequency = 0.3;
-    var weightRecency = 0.2;
-    var weightAmount = 0.1;
+    final weightSimilarirty = 0.4;
+    final weightFrequency = 0.25;
+    final weightRecency = 0.15;
+    final weightTransactionType = 0.15;
+    final weightAmount = 0.05;
 
     for (final tagScore in tagScores.values) {
       // Skip tags with no matches
       if (tagScore.similarities.isEmpty) continue;
 
-      // Calculate average similarity
-      final avgSimilarity =
-          tagScore.similarities.reduce((a, b) => a + b) /
-          tagScore.similarities.length;
-      final similarityScore = avgSimilarity * weightSimilarirty;
+      // Calculate all scoring factors and apply weights
+      final scoresAndWeights = <_ScoreAndWeight>[
+        _ScoreAndWeight(
+          score: _calcSimilarityScore(tagScore) * weightSimilarirty,
+          weight: weightSimilarirty,
+        ),
 
-      // Calculate frequency score
-      // Normalize by max frequency in the dataset
-      final maxFrequency = tagScores.values.map((s) => s.frequency).reduce(max);
-      final frequencyScore =
-          (tagScore.frequency / maxFrequency) * weightFrequency;
+        _ScoreAndWeight(
+          score: _calcFrequencyScore(tagScore, tagScores) * weightFrequency,
+          weight: weightFrequency,
+        ),
 
-      // Calculate recency score
-      // More recent tags get higher scores
-      final avgDaysSinceUse =
-          tagScore.dates
-              .map((d) => now.difference(d).inDays)
-              .reduce((a, b) => a + b) /
-          tagScore.dates.length;
-      final recencyScore = (1 / (1 + avgDaysSinceUse / 30)) * weightRecency;
+        _ScoreAndWeight(
+          score: _calcRecencyScore(tagScore, now) * weightRecency,
+          weight: weightRecency,
+        ),
 
-      // Calculate amount similarity
-      // Find the best match among all historical amounts
-      // Note: Historical amounts already have the same sign due to SQL filtering
-      final currentAmount = turnover.amountValue;
-      double bestAmountSimilarity = 0.0;
+        _ScoreAndWeight(
+          score:
+              _calcAmountScore(tagScore, turnover.amountValue) * weightAmount,
+          weight: weightAmount,
+        ),
+        if (turnover.apiTurnoverType != null)
+          _ScoreAndWeight(
+            score:
+                _calcTransactionTypeScore(tagScore, turnover.apiTurnoverType!) *
+                weightTransactionType,
+            weight: weightTransactionType,
+          ),
+      ];
 
-      for (final historicalAmount in tagScore.amounts) {
-        final amountDifference = (currentAmount - historicalAmount).abs();
-        final similarity = max(
-          0.0,
-          1.0 - (amountDifference / currentAmount.abs()).toDouble(),
-        );
-        bestAmountSimilarity = max(bestAmountSimilarity, similarity);
-      }
-
-      final amountScore = bestAmountSimilarity * weightAmount;
-
-      // Calculate total score
-      final totalScore =
-          similarityScore + frequencyScore + recencyScore + amountScore;
+      // Calculate total score and normalize by weights used
+      // This ensures fair comparison between turnovers with and without specific features
+      final rawScore = scoresAndWeights.fold<double>(
+        0,
+        (sum, it) => sum + it.score,
+      );
+      final weightsUsed = scoresAndWeights.fold<double>(
+        0,
+        (sum, it) => sum + it.weight,
+      );
+      final totalScore = rawScore / weightsUsed;
 
       // Create suggestion
       suggestions.add(
@@ -177,6 +184,71 @@ class TagSuggestionService {
     // Sort by score and return top N
     suggestions.sort((a, b) => b.score.compareTo(a.score));
     return suggestions.take(_maxSuggestions).toList();
+  }
+
+  /// Calculates similarity score based on text matching.
+  ///
+  /// Returns normalized score (0-1) representing average text similarity.
+  double _calcSimilarityScore(_TagScore tagScore) {
+    return tagScore.similarities.reduce((a, b) => a + b) /
+        tagScore.similarities.length;
+  }
+
+  /// Calculates frequency score based on tag usage count.
+  ///
+  /// Returns normalized score (0-1) based on frequency relative to most used tag.
+  double _calcFrequencyScore(
+    _TagScore tagScore,
+    Map<String, _TagScore> allScores,
+  ) {
+    final maxFrequency = allScores.values.map((s) => s.frequency).reduce(max);
+    return tagScore.frequency / maxFrequency;
+  }
+
+  /// Calculates recency score based on how recently the tag was used.
+  ///
+  /// Returns normalized score (0-1) where more recent usage scores higher.
+  /// Uses exponential decay with 30-day half-life.
+  double _calcRecencyScore(_TagScore tagScore, DateTime now) {
+    final avgDaysSinceUse =
+        tagScore.dates
+            .map((d) => now.difference(d).inDays)
+            .reduce((a, b) => a + b) /
+        tagScore.dates.length;
+    return 1 / (1 + avgDaysSinceUse / 30);
+  }
+
+  /// Calculates amount similarity score.
+  ///
+  /// Returns normalized score (0-1) based on best match with historical amounts.
+  /// Note: Historical amounts already have the same sign due to SQL filtering.
+  double _calcAmountScore(_TagScore tagScore, Decimal currentAmount) {
+    double bestAmountSimilarity = 0.0;
+
+    for (final historicalAmount in tagScore.amounts) {
+      final amountDifference = (currentAmount - historicalAmount).abs();
+      final similarity = max(
+        0.0,
+        1.0 - (amountDifference / currentAmount.abs()).toDouble(),
+      );
+      bestAmountSimilarity = max(bestAmountSimilarity, similarity);
+    }
+
+    return bestAmountSimilarity;
+  }
+
+  /// Calculates transaction type match score.
+  ///
+  /// Returns normalized score (0-1).
+  /// Score represents ratio of historical matches.
+  double _calcTransactionTypeScore(_TagScore tagScore, String currentType) {
+    final typeMatchCount = tagScore.transactionTypes
+        .where((type) => type == currentType)
+        .length;
+
+    return tagScore.transactionTypes.isNotEmpty
+        ? typeMatchCount / tagScore.transactionTypes.length
+        : 0.0;
   }
 
   /// Calculates text similarity between two turnovers.
@@ -266,6 +338,7 @@ class _TagScore {
   final List<double> similarities;
   final List<Decimal> amounts;
   final List<DateTime> dates;
+  final List<String?> transactionTypes;
   int frequency;
 
   _TagScore({
@@ -273,6 +346,14 @@ class _TagScore {
     required this.similarities,
     required this.amounts,
     required this.dates,
+    required this.transactionTypes,
     required this.frequency,
   });
+}
+
+class _ScoreAndWeight {
+  final double score;
+  final double weight;
+
+  _ScoreAndWeight({required this.score, required this.weight});
 }
