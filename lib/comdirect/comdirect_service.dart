@@ -13,6 +13,7 @@ import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
 import 'package:meta/meta.dart';
 import 'package:uuid/uuid.dart';
 import 'comdirect_api.dart';
+import 'comdirect_model.dart';
 
 final _apiDateFormat = DateFormat("yyyy-MM-dd");
 
@@ -118,10 +119,7 @@ class ComdirectService implements DataIngestor {
 
           // Collect turnovers for this account
           for (final transaction in transactionsResponse.values) {
-            final counterPart =
-                transaction.remitter ??
-                transaction.creditor ??
-                transaction.debtor;
+            final counterPartInfo = _extractCounterPart(transaction);
             final turnover = Turnover(
               id: uuid.v4obj(),
               createdAt: DateTime.now(),
@@ -129,8 +127,8 @@ class ComdirectService implements DataIngestor {
               bookingDate: transaction.bookingDate,
               amountValue: transaction.amount.value,
               amountUnit: transaction.amount.unit,
-              counterPart: counterPart?.holderName,
-              counterIban: counterPart?.iban,
+              counterPart: counterPartInfo.name,
+              counterIban: counterPartInfo.iban,
               purpose: cleanPurpose(transaction.remittanceInfo),
               apiId: transaction.reference,
               apiRaw: jsonEncode(transaction.toJson()),
@@ -198,6 +196,39 @@ class ComdirectService implements DataIngestor {
         errorMessage: 'unknown error: $e',
       );
     }
+  }
+
+  /// Extracts the counterpart name and IBAN from a transaction.
+  ///
+  /// First attempts to use the structured fields (remitter, creditor, debtor).
+  /// If all are null (e.g., for debit card transactions), parses the remittanceInfo
+  /// field to extract the merchant name from the first line (01).
+  ({String? name, String? iban}) _extractCounterPart(
+    AccountTransaction transaction,
+  ) {
+    // Try standard fields first
+    final counterPart =
+        transaction.remitter ?? transaction.creditor ?? transaction.debtor;
+
+    if (counterPart != null) {
+      return (name: counterPart.holderName, iban: counterPart.iban);
+    }
+
+    // Fallback: Parse remittanceInfo for card transactions
+    final remittanceInfo = transaction.remittanceInfo;
+    if (remittanceInfo.isEmpty || !remittanceInfo.startsWith("01")) {
+      return (name: null, iban: null);
+    }
+
+    // Extract first line (01) which typically contains the merchant name
+    // Format: "01<35 chars>02<35 chars>..."
+    final firstLine = remittanceInfo.substring(
+      2,
+      37.clamp(0, remittanceInfo.length),
+    );
+    final merchantName = firstLine.trim();
+
+    return (name: merchantName.isEmpty ? null : merchantName, iban: null);
   }
 
   /// Cleans the `purpose` field from comdirect transaction data.
