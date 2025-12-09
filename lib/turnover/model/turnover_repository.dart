@@ -352,6 +352,63 @@ class TurnoverRepository {
     return maps.map((e) => Turnover.fromJson(e)).toList();
   }
 
+  /// Get unmatched turnovers for a specific account.
+  /// An unmatched turnover is one that has NO associated tag_turnover entries.
+  /// This ensures 1:1 matching semantics which are expected and easy to understand by the user.
+  /// I.e. a turnover can only be matched fully and not partially.
+  /// 
+  /// Optionally filter by date range.
+  /// [startDateInclusive] filters turnovers with bookingDate >= startDate
+  /// [endDateInclusive] filters turnovers with bookingDate <= endDate
+  Future<List<Turnover>> getUnmatchedTurnoversForAccount({
+    required UuidValue accountId,
+    DateTime? startDateInclusive,
+    DateTime? endDateInclusive,
+    int? limit,
+    SortDirection direction = SortDirection.asc,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final whereClauses = ['t.account_id = ?'];
+    final whereArgs = <Object>[accountId.uuid];
+
+    if (startDateInclusive != null) {
+      whereClauses.add('t.booking_date >= ?');
+      whereArgs.add(
+        Jiffy.parseFromDateTime(
+          startDateInclusive,
+        ).format(pattern: isoDateFormat),
+      );
+    }
+
+    if (endDateInclusive != null) {
+      whereClauses.add('t.booking_date <= ?');
+      whereArgs.add(
+        Jiffy.parseFromDateTime(
+          endDateInclusive,
+        ).format(pattern: isoDateFormat),
+      );
+    }
+
+    final whereClause = 'WHERE ${whereClauses.join(' AND ')}';
+
+    final maps = await db.rawQuery(
+      '''
+      SELECT DISTINCT t.*
+      FROM turnover t
+      LEFT JOIN tag_turnover tt ON t.id = tt.turnover_id
+      $whereClause
+      GROUP BY t.id
+      HAVING COUNT(tt.id) = 0
+      ORDER BY t.booking_date ${direction.name}
+      ${limit != null ? 'LIMIT ?' : ''}
+      ''',
+      limit != null ? [...whereArgs, limit] : whereArgs,
+    );
+
+    return maps.map((e) => Turnover.fromJson(e)).toList();
+  }
+
   /// Fetches a paginated list of turnovers with their associated tags.
   /// This method efficiently loads all data in a single query to avoid N+1 problems.
   Future<List<TurnoverWithTags>> getTurnoversWithTagsPaginated({

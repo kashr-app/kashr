@@ -50,6 +50,11 @@ class TurnoverMatchingService {
 
   /// Find potential matches for a tag turnover
   /// Returns list sorted by confidence (highest first)
+  /// Only considers turnovers with no existing tag_turnover allocations
+  /// (1:1 matching semantics). Turnovers cannot be partially matched
+  /// becuse that could easily confuse users. Instead we assume that if
+  /// a turnover has already some allocation it was manually handeled by
+  /// the user and hence they should continue manually.
   Future<List<TagTurnoverMatch>> findMatchesForTagTurnover(
     TagTurnover tagTurnover,
   ) async {
@@ -57,11 +62,12 @@ class TurnoverMatchingService {
 
     final (startDate, endDate) = _calcMatchingWindow(bookingDate);
 
-    final candidates = await _turnoverRepository.getTurnoversForAccount(
-      accountId: tagTurnover.accountId,
-      startDateInclusive: startDate,
-      endDateInclusive: endDate,
-    );
+    final candidates = await _turnoverRepository
+        .getUnmatchedTurnoversForAccount(
+          accountId: tagTurnover.accountId,
+          startDateInclusive: startDate,
+          endDateInclusive: endDate,
+        );
 
     return _calcMatches(candidates, [tagTurnover]);
   }
@@ -105,21 +111,21 @@ class TurnoverMatchingService {
   /// Returns true if auto-matched
   Future<bool> autoMatchPerfectTurnover(TagTurnover tagTurnover) async {
     final matches = await findMatchesForTagTurnover(tagTurnover);
-    return autoConfirmPerfectMatch(matches);
+    return _autoConfirmPerfectMatch(matches);
   }
 
   /// Auto-match if perfect match (exact amount + high confidence)
   /// Returns true if auto-matched
   Future<bool> autoMatchPerfectTagTurnover(Turnover turnover) async {
     final matches = await findMatchesForTurnover(turnover);
-    return autoConfirmPerfectMatch(matches);
+    return _autoConfirmPerfectMatch(matches);
   }
 
   // Only auto-match if:
   // 1. Exactly one match found
   // 3. Confidence >= 95%
   // 2. Exact amount match
-  Future<bool> autoConfirmPerfectMatch(List<TagTurnoverMatch> matches) async {
+  Future<bool> _autoConfirmPerfectMatch(List<TagTurnoverMatch> matches) async {
     if (matches.length != 1) return false;
     final match = matches.first;
 
@@ -145,7 +151,21 @@ class TurnoverMatchingService {
     return true;
   }
 
-  /// Calculate match confidence (0.0 - 1.0)
+  /// Calculate match confidence between a TagTurnover and Turnover (0.0 - 1.0)
+  ///
+  /// IMPORTANT: This method assumes 1:1 matching semantics:
+  /// - The TagTurnover must be unmatched (turnoverId == null)
+  /// - The Turnover must be unmatched (no associated tag_turnover entries)
+  ///
+  /// The confidence calculation directly compares tt.amountValue with
+  /// t.amountValue. This is only semantically correct when both entities are
+  /// completely unallocated. Partially allocated turnovers should NOT be
+  /// included in matching, as this would make auto-matching unpredictable
+  /// and confusing for users.
+  ///
+  /// The confidence is calculated using:
+  /// - Amount match (50% weight): How closely the amounts match
+  /// - Date proximity (50% weight): How close the booking dates are
   double _calculateConfidence(TagTurnover tt, Turnover t) {
     double confidence = 0.0;
 
