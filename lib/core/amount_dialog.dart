@@ -35,7 +35,7 @@ class AmountDialog extends StatefulWidget {
   @override
   State<AmountDialog> createState() => _AmountDialogState();
 
-  /// Shows the dialog and returns the entered amount as scaled integer.
+  /// Shows the bottom sheet and returns the entered amount as scaled integer.
   static Future<int?> show(
     BuildContext context, {
     required String currencyUnit,
@@ -44,18 +44,24 @@ class AmountDialog extends StatefulWidget {
     bool showSignSwitch = false,
     bool initialIsNegative = false,
   }) async {
-    return showDialog<int>(
+    return showModalBottomSheet<int>(
       context: context,
-      builder: (context) => AmountDialog(
-        currencyUnit: currencyUnit,
-        maxAmountScaled: maxAmountScaled,
-        initialAmountScaled: initialAmountScaled,
-        showSignSwitch: showSignSwitch,
-        initialIsNegative: initialIsNegative,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: AmountDialog(
+          currencyUnit: currencyUnit,
+          maxAmountScaled: maxAmountScaled,
+          initialAmountScaled: initialAmountScaled,
+          showSignSwitch: showSignSwitch,
+          initialIsNegative: initialIsNegative,
+        ),
       ),
     );
   }
 }
+
+const buttonWidth = 72.0;
+const buttonHeight = 56.0;
 
 class _AmountDialogState extends State<AmountDialog> {
   late TextEditingController _controller;
@@ -135,115 +141,124 @@ class _AmountDialogState extends State<AmountDialog> {
     final colorScheme = theme.colorScheme;
     final currency = Currency.currencyFrom(widget.currencyUnit);
 
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Maximum amount indicator (if set)
-            if (widget.maxAmountScaled != null) ...[
-              Row(
-                children: [
-                  Text(
-                    'Maximum',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: _isAmountExceeded ? colorScheme.error : null,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _setMaxAmount,
-                    icon: Icon(
-                      _isAmountExceeded
-                          ? Icons.arrow_downward
-                          : Icons.arrow_upward,
-                      size: 16,
-                    ),
-                    color: _isAmountExceeded ? colorScheme.error : null,
-                    tooltip: 'Set to maximum',
-                  ),
-                ],
-              ),
-              Text(
-                _formatAmountWithCurrency(widget.maxAmountScaled!),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: _isAmountExceeded ? colorScheme.error : null,
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 16.0,
+        right: 16.0,
+        top: 16.0,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 36),
+          // Amount display
+          Text(
+            '${_isNegative && widget.showSignSwitch ? '-' : ''}${currency.symbol()} ${_controller.text}',
+            style: theme.textTheme.headlineLarge?.copyWith(
+              color: _isAmountExceeded ? colorScheme.error : null,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+
+          if (widget.showSignSwitch) ...[
+            const SizedBox(height: 16),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text('Expense'),
+                  icon: Icon(Icons.remove_circle_outline),
                 ),
-              ),
-              const Divider(),
-            ],
-
-            // Amount display
-            Text(
-              'Enter Amount',
-              style: theme.textTheme.titleMedium,
-              textAlign: TextAlign.center,
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('Income'),
+                  icon: Icon(Icons.add_circle_outline),
+                ),
+              ],
+              selected: {_isNegative},
+              onSelectionChanged: (Set<bool> selection) {
+                setState(() {
+                  _isNegative = selection.first;
+                });
+              },
             ),
-            const SizedBox(height: 16),
-            Text(
-              '${_isNegative && widget.showSignSwitch ? '-' : ''}${currency.symbol()} ${_controller.text}',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: _isAmountExceeded ? colorScheme.error : null,
-              ),
-              textAlign: TextAlign.center,
-            ),
+          ],
+          const SizedBox(height: 24),
 
-            // Sign toggle (if enabled)
-            if (widget.showSignSwitch) ...[
-              const SizedBox(height: 16),
-              SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment<bool>(
-                    value: true,
-                    label: Text('Expense'),
-                    icon: Icon(Icons.remove_circle_outline),
-                  ),
-                  ButtonSegment<bool>(
-                    value: false,
-                    label: Text('Income'),
-                    icon: Icon(Icons.add_circle_outline),
-                  ),
-                ],
-                selected: {_isNegative},
-                onSelectionChanged: (Set<bool> selection) {
-                  setState(() {
-                    _isNegative = selection.first;
-                  });
-                },
-              ),
-            ],
-            const SizedBox(height: 24),
-
-            // Number pad
-            _NumberPad(
-              onDigitPressed: _onDigitPressed,
-              onBackspace: _onBackspace,
-              onClear: _onClear,
-            ),
-
-            const SizedBox(height: 16),
-
-            // Action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+          // Maximum amount indicator (if set)
+          if (widget.maxAmountScaled != null) ...[
+            Stack(
+              alignment: Alignment.center,
               children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    const SizedBox(width: buttonWidth, height: buttonHeight),
+                    const SizedBox(width: buttonWidth, height: buttonHeight),
+                    const SizedBox(width: buttonWidth, height: buttonHeight),
+                    _ActionButton(
+                      onPressed: _amountScaled == widget.maxAmountScaled
+                          ? null
+                          : _setMaxAmount,
+                      style: _isAmountExceeded
+                          ? IconButton.styleFrom(
+                              backgroundColor: theme.colorScheme.errorContainer,
+                              foregroundColor:
+                                  theme.colorScheme.onErrorContainer,
+                            )
+                          : null,
+                      child: Icon(
+                        _amountScaled == widget.maxAmountScaled
+                            ? Icons.check
+                            : _isAmountExceeded
+                            ? Icons.arrow_downward
+                            : Icons.arrow_upward,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _canConfirm
-                      ? () => Navigator.of(context).pop(_finalAmount)
-                      : null,
-                  child: const Text('OK'),
+                Column(
+                  children: [
+                    Text(
+                      'Maximum',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: _isAmountExceeded ? colorScheme.error : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatAmountWithCurrency(widget.maxAmountScaled!),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: _isAmountExceeded ? colorScheme.error : null,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+            const Divider(),
           ],
-        ),
+          // Number pad with integrated controls
+          _NumberPad(
+            onDigitPressed: _onDigitPressed,
+            onBackspace: _onBackspace,
+            onClear: _onClear,
+            showSignSwitch: widget.showSignSwitch,
+            isNegative: _isNegative,
+            onToggleSign: () {
+              setState(() {
+                _isNegative = !_isNegative;
+              });
+            },
+            currencyUnit: widget.currencyUnit,
+            canConfirm: _canConfirm,
+            onConfirm: () => Navigator.of(context).pop(_finalAmount),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }
@@ -253,50 +268,78 @@ class _NumberPad extends StatelessWidget {
   final void Function(String digit) onDigitPressed;
   final VoidCallback onBackspace;
   final VoidCallback onClear;
+  final bool showSignSwitch;
+  final bool isNegative;
+  final VoidCallback onToggleSign;
+  final String currencyUnit;
+  final bool canConfirm;
+  final VoidCallback onConfirm;
 
   const _NumberPad({
     required this.onDigitPressed,
     required this.onBackspace,
     required this.onClear,
+    required this.showSignSwitch,
+    required this.isNegative,
+    required this.onToggleSign,
+    required this.currencyUnit,
+    required this.canConfirm,
+    required this.onConfirm,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _NumberButton('1', onDigitPressed),
-            _NumberButton('2', onDigitPressed),
-            _NumberButton('3', onDigitPressed),
-          ],
-        ),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _NumberButton('4', onDigitPressed),
-            _NumberButton('5', onDigitPressed),
-            _NumberButton('6', onDigitPressed),
-          ],
-        ),
-        const SizedBox(height: 8),
+        // Row 1: 7, 8, 9
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _NumberButton('7', onDigitPressed),
             _NumberButton('8', onDigitPressed),
             _NumberButton('9', onDigitPressed),
+            _ActionButton(
+              onPressed: onBackspace,
+              child: Icon(Icons.backspace_outlined),
+            ),
           ],
         ),
         const SizedBox(height: 8),
+        // Row 2: 4, 5, 6
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _ActionButton('C', Icons.clear, onClear),
+            _NumberButton('4', onDigitPressed),
+            _NumberButton('5', onDigitPressed),
+            _NumberButton('6', onDigitPressed),
+            _ActionButton(onPressed: onClear, child: Icon(Icons.clear)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Row 3: 1, 2, 3
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _NumberButton('1', onDigitPressed),
+            _NumberButton('2', onDigitPressed),
+            _NumberButton('3', onDigitPressed),
+            if (showSignSwitch)
+              _SignToggleButton(isNegative: isNegative, onToggle: onToggleSign)
+            else
+              const SizedBox(width: buttonWidth, height: buttonHeight),
+            // _CurrencyButton(currencyUnit),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Bottom row: +/-, 0, OK
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            const SizedBox(width: buttonWidth, height: buttonHeight),
             _NumberButton('0', onDigitPressed),
-            _ActionButton('⌫', Icons.backspace_outlined, onBackspace),
+            const SizedBox(width: buttonWidth, height: buttonHeight),
+            _ConfirmButton(canConfirm: canConfirm, onConfirm: onConfirm),
           ],
         ),
       ],
@@ -313,8 +356,8 @@ class _NumberButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 72,
-      height: 56,
+      width: buttonWidth,
+      height: buttonHeight,
       child: FilledButton.tonal(
         onPressed: () => onPressed(digit),
         child: Text(digit, style: Theme.of(context).textTheme.titleLarge),
@@ -324,18 +367,100 @@ class _NumberButton extends StatelessWidget {
 }
 
 class _ActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
+  final Widget child;
+  final VoidCallback? onPressed;
+  final ButtonStyle? style;
 
-  const _ActionButton(this.label, this.icon, this.onPressed);
+  const _ActionButton({required this.child, this.onPressed, this.style});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 72,
-      height: 56,
-      child: FilledButton.tonal(onPressed: onPressed, child: Icon(icon)),
+      width: buttonWidth,
+      height: buttonHeight,
+      child: FilledButton(
+        onPressed: onPressed,
+        style:
+            style ??
+            FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
+              foregroundColor: Theme.of(
+                context,
+              ).colorScheme.onTertiaryContainer,
+            ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _CurrencyButton extends StatelessWidget {
+  final String currencyUnit;
+
+  const _CurrencyButton(this.currencyUnit);
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = Currency.currencyFrom(currencyUnit);
+    return SizedBox(
+      width: buttonWidth,
+      height: buttonHeight,
+      child: FilledButton(
+        onPressed: () {
+          // TODO: Implement currency selection if needed
+        },
+        style: FilledButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
+          foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
+        ),
+        child: Text(
+          currency.symbol(),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+      ),
+    );
+  }
+}
+
+class _SignToggleButton extends StatelessWidget {
+  final bool isNegative;
+  final VoidCallback onToggle;
+
+  const _SignToggleButton({required this.isNegative, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: buttonWidth,
+      height: buttonHeight,
+      child: FilledButton(
+        onPressed: onToggle,
+        style: FilledButton.styleFrom(
+          backgroundColor: theme.colorScheme.tertiaryContainer,
+          foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
+        ),
+        child: Text('±', style: theme.textTheme.titleLarge),
+      ),
+    );
+  }
+}
+
+class _ConfirmButton extends StatelessWidget {
+  final bool canConfirm;
+  final VoidCallback onConfirm;
+
+  const _ConfirmButton({required this.canConfirm, required this.onConfirm});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: buttonWidth,
+      height: buttonHeight,
+      child: FilledButton(
+        onPressed: canConfirm ? onConfirm : null,
+        child: const Text('OK'),
+      ),
     );
   }
 }
