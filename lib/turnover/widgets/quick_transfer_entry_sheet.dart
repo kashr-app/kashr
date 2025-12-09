@@ -36,8 +36,10 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
   final _counterpartController = TextEditingController();
 
   int? _amountScaled;
+  String? _amountError;
 
   Tag? _selectedTag;
+  String? _tagError;
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
 
@@ -60,6 +62,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
     if (result != null) {
       setState(() {
         _amountScaled = result;
+        _amountError = null;
       });
     }
   }
@@ -81,18 +84,21 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    bool hasError = false;
     if (_selectedTag == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a tag')));
-      return;
+      setState(() {
+        _tagError = 'Please select a tag';
+      });
+      hasError = true;
     }
     if (_amountScaled == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter an amount')));
-      return;
+      setState(() {
+        _amountError = 'Please enter an amount';
+      });
+      hasError = true;
     }
+    if (hasError) return;
 
     setState(() {
       _isSubmitting = true;
@@ -195,57 +201,114 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              InkWell(
-                onTap: _selectAmount,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Amount',
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.edit),
-                  ),
-                  child: Text(
-                    _amountScaled != null
-                        ? _formatAmount(_amountScaled!)
-                        : 'Tap to enter amount',
-                    style: _amountScaled == null
-                        ? theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          )
-                        : null,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () async {
-                  final selectedTag = await AddTagDialog.show(context);
-                  if (selectedTag != null) {
-                    setState(() {
-                      _selectedTag = selectedTag;
-                    });
-                  }
-                },
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Tag',
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.arrow_drop_down),
-                  ),
-                  child: _selectedTag != null
-                      ? Row(
-                          children: [
-                            TagAvatar(tag: _selectedTag!, radius: 12),
-                            const SizedBox(width: 8),
-                            Text(_selectedTag!.name),
-                          ],
-                        )
-                      : Text(
-                          'Tap to select tag',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  InkWell(
+                    onTap: _selectAmount,
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Amount',
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: _amountError != null
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.outline,
                           ),
                         ),
-                ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: _amountError != null
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.outline,
+                          ),
+                        ),
+                        suffixIcon: const Icon(Icons.edit),
+                      ),
+                      child: Text(
+                        _amountScaled != null
+                            ? _formatAmount(_amountScaled!)
+                            : 'Tap to enter amount',
+                        style: _amountScaled == null
+                            ? theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                  if (_amountError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, top: 4),
+                      child: Text(
+                        _amountError!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  InkWell(
+                    onTap: () async {
+                      final selectedTag = await AddTagDialog.show(context);
+                      if (selectedTag != null) {
+                        setState(() {
+                          _selectedTag = selectedTag;
+                          _tagError = null;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Tag',
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: _tagError != null
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.outline,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: _tagError != null
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.outline,
+                          ),
+                        ),
+                        suffixIcon: const Icon(Icons.arrow_drop_down),
+                      ),
+                      child: _selectedTag != null
+                          ? Row(
+                              children: [
+                                TagAvatar(tag: _selectedTag!, radius: 12),
+                                const SizedBox(width: 8),
+                                Text(_selectedTag!.name),
+                              ],
+                            )
+                          : Text(
+                              'Tap to select tag',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                    ),
+                  ),
+                  if (_tagError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, top: 4),
+                      child: Text(
+                        _tagError!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               if (isManual) ...[
