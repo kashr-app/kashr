@@ -1,5 +1,3 @@
-import 'package:finanalyzer/turnover/model/turnover.dart';
-
 abstract class DataIngestor {
   Future<DataIngestResult> ingest({
     required DateTime minBookingDate,
@@ -11,12 +9,12 @@ class DataIngestResult {
   ResultStatus status;
   String? errorMessage;
   int autoMatchedCount;
-  List<Turnover> unmatchedTurnovers;
+  int unmatchedCount;
   DataIngestResult({
     required this.status,
     this.errorMessage,
     this.autoMatchedCount = 0,
-    this.unmatchedTurnovers = const [],
+    this.unmatchedCount = 0,
   });
 }
 

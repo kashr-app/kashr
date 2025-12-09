@@ -85,8 +85,8 @@ class LoadBankDataSection extends StatelessWidget {
           final autoMatchMsg = result.autoMatchedCount > 0
               ? ' ${result.autoMatchedCount} expenses auto-matched.'
               : '';
-          final unmatchedMsg = result.unmatchedTurnovers.isNotEmpty
-              ? ' ${result.unmatchedTurnovers.length} transactions need review.'
+          final unmatchedMsg = result.unmatchedCount > 0
+              ? ' ${result.unmatchedCount} transactions need review.'
               : '';
           messenger.showSnackBar(
             SnackBar(

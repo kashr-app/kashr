@@ -142,30 +142,28 @@ class ComdirectService implements DataIngestor {
         }
       }
 
+      // we upsert in case the data changed or that our data extraction changed
       await turnoverCubit.upsertTurnovers(turnovers);
       log.i('Turnovers fetched and upserted successfully');
 
       // Auto-match turnovers with pending expenses
       var autoMatchedCount = 0;
-      final unmatchedTurnovers = <Turnover>[];
+      var unmatchedCount = 0;
       if (matchingService != null) {
         for (final turnover in turnovers) {
-          final matches = await matchingService!.findMatchesForTurnover(
+          final matched = await matchingService!.autoMatchPerfectTagTurnover(
             turnover,
-          );
-          final matched = await matchingService!.autoConfirmPerfectMatch(
-            matches,
           );
           if (matched) {
             autoMatchedCount++;
             log.i('Auto-matched turnover: ${turnover.purpose}');
           } else {
-            if (matches.isNotEmpty) {
-              unmatchedTurnovers.add(turnover);
-            }
+            unmatchedCount++;
           }
         }
-        log.i('Auto-matched $autoMatchedCount turnovers');
+        log.i(
+          'Auto-matched $autoMatchedCount turnovers, $unmatchedCount not matched',
+        );
       }
 
       // Update balances for existing comdirect accounts
@@ -182,7 +180,7 @@ class ComdirectService implements DataIngestor {
       return DataIngestResult(
         status: ResultStatus.success,
         autoMatchedCount: autoMatchedCount,
-        unmatchedTurnovers: unmatchedTurnovers,
+        unmatchedCount: unmatchedCount,
       );
     } catch (e) {
       if (e is DioException) {
