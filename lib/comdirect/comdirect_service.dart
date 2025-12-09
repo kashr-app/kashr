@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
+import 'package:meta/meta.dart';
 import 'package:uuid/uuid.dart';
 import 'comdirect_api.dart';
 
@@ -130,7 +131,7 @@ class ComdirectService implements DataIngestor {
               amountUnit: transaction.amount.unit,
               counterPart: counterPart?.holderName,
               counterIban: counterPart?.iban,
-              purpose: _cleanPurpose(transaction.remittanceInfo),
+              purpose: cleanPurpose(transaction.remittanceInfo),
               apiId: transaction.reference,
               apiRaw: jsonEncode(transaction.toJson()),
               apiTurnoverType: transaction.transactionType.key,
@@ -201,44 +202,27 @@ class ComdirectService implements DataIngestor {
 
   /// Cleans the `purpose` field from comdirect transaction data.
   ///
-  /// Since the upstream data format is ambiguous by design, this
-  /// implementation is best-effort and may (in rare cases) remove or alter
-  /// numeric content that resembles segment markers.
-  ///
-  /// comdirect embeds MT940/SEPA-style segment numbers (01, 02, 03, …) directly
-  /// into the reference text. These appear even in the middle of words and are
-  /// not part of the actual remittance information.
-  ///
-  /// This function scans the string, detects true segment numbers based on the
-  /// expected sequential order (01 → 02 → 03 …), and removes them while keeping
-  /// all real numeric content intact (dates, amounts, IDs, article numbers, etc.).
-  String _cleanPurpose(String raw) {
-    final buffer = StringBuffer();
-    int i = 0;
-    int expectedSegment = 1;
-
-    while (i < raw.length) {
-      if (i + 2 <= raw.length) {
-        final maybe = raw.substring(i, i + 2);
-
-        final num = int.tryParse(maybe);
-
-        if (num != null && num >= 1 && num <= 99) {
-          if (num == expectedSegment) {
-            // skip sequence number
-            expectedSegment++;
-            i += 2;
-            continue;
-          }
-        }
-      }
-
-      // not a sequence number
-      buffer.write(raw[i]);
-      i++;
+  /// Each line in the original booking text is exactly 35 characters long
+  /// and starts with a 2-character line number. This function removes the
+  /// line numbers and normalizes the text.
+  @visibleForTesting
+  String cleanPurpose(String raw) {
+    if (raw.isEmpty) return raw;
+    if (!raw.startsWith("01")) {
+      return raw.replaceAll(RegExp(r'\s+'), ' ').trim();
     }
 
-    // Whitespace normalisieren
-    return buffer.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < raw.length; i += 37) {
+      // Get the current line without line number
+      final line = raw.substring(i + 2, (i + 37).clamp(0, raw.length));
+      // normalize whitespace, it is intended to keep one space at start and end of the line
+      var normalized = line.replaceAll(RegExp(r'\s+'), ' ');
+      buffer.write(normalized);
+    }
+
+    // Combine lines and final trim
+    return buffer.toString().trim();
   }
 }
