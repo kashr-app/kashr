@@ -4,6 +4,7 @@ import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/ingest/ingest.dart';
+import 'package:finanalyzer/main.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:intl/intl.dart';
@@ -22,25 +23,23 @@ class ComdirectService implements DataIngestor {
   final log = Logger();
   final AccountCubit accountCubit;
   final TurnoverCubit turnoverCubit;
-  final TurnoverMatchingService? matchingService;
+  final TurnoverMatchingService matchingService;
 
   ComdirectService({
     required this.comdirectAPI,
     required this.accountCubit,
     required this.turnoverCubit,
-    this.matchingService,
+    required this.matchingService,
   });
 
   @override
   Future<DataIngestResult> ingest({
     required DateTime minBookingDate,
     required DateTime maxBookingDate,
-  }) async {
-    return _fetchAccountsAndTurnovers(
-      minBookingDate: minBookingDate,
-      maxBookingDate: maxBookingDate,
-    );
-  }
+  }) => _fetchAccountsAndTurnovers(
+    minBookingDate: minBookingDate,
+    maxBookingDate: maxBookingDate,
+  );
 
   /// Fetches accounts and turnovers from the Comdirect API.
   /// Also automatically updates the balance for existing accounts.
@@ -71,7 +70,7 @@ class ComdirectService implements DataIngestor {
       for (final a in accountsPage.values) {
         final apiId = a.accountId;
         if (!existingAccountsByApiId.containsKey(apiId)) {
-          log.i("New account ... storing");
+          log.d("Sotring new account");
           final account = Account(
             id: uuid.v4obj(),
             createdAt: DateTime.now(),
@@ -88,14 +87,26 @@ class ComdirectService implements DataIngestor {
           await accountCubit.addAccount(account);
           log.i("New account stored");
         }
-        log.i('Account displayId: ${a.account.accountDisplayId}');
-        log.i("Type: ${a.account.accountType.toJson()}");
-        log.i("IBAN ${a.account.iban}");
-        log.i('Balance: ${a.balance.value} ${a.balance.unit}');
       }
 
+      // Update balances for existing comdirect accounts
+      if (existingAccountsByApiId.isNotEmpty) {
+        var count = 0;
+        for (final account in existingAccountsByApiId.values) {
+          final apiId = account.apiId;
+          if (apiId != null && apiBalancesByApiId.containsKey(apiId)) {
+            final apiBalance = apiBalancesByApiId[apiId]!;
+            log.i(
+              'Updating balance for account ${account.name} to $apiBalance',
+            );
+            await accountCubit.updateBalanceFromReal(account, apiBalance);
+            count++;
+          }
+        }
+        log.i('$count account balance(s) updated successfully');
+      }
       // For each account, fetch turnovers (transactions)
-      final turnovers = <Turnover>[];
+      final turnoversById = <UuidValue, Turnover>{};
       final accounts = accountCubit.state.accountById.values;
 
       for (final account in accounts) {
@@ -134,7 +145,7 @@ class ComdirectService implements DataIngestor {
               apiRaw: jsonEncode(transaction.toJson()),
               apiTurnoverType: transaction.transactionType.key,
             );
-            turnovers.add(turnover);
+            turnoversById[turnover.id] = turnover;
           }
 
           pageCount = (transactionsResponse.paging.matches / pageSize).ceil();
@@ -143,55 +154,62 @@ class ComdirectService implements DataIngestor {
       }
 
       // we upsert in case the data changed or that our data extraction changed
-      await turnoverCubit.upsertTurnovers(turnovers);
-      log.i('Turnovers fetched and upserted successfully');
+      final (newIds, existingIds) = await turnoverCubit.upsertTurnovers(
+        turnoversById.values,
+      );
+      log.i(
+        '${turnoversById.length} turnover(s) fetched and upserted successfully.',
+      );
 
       // Auto-match turnovers with pending expenses
       var autoMatchedCount = 0;
       var unmatchedCount = 0;
-      if (matchingService != null) {
-        for (final turnover in turnovers) {
-          final match = await matchingService!.autoMatchPerfectTagTurnover(
-            turnover,
+
+      // newIds are always unmatched, for existingIds we need to check if they are unmatched
+      final unmatchedTurnoverIds = [
+        ...await turnoverRepository.filterUnmatched(turnoverIds: existingIds),
+        ...newIds,
+      ];
+
+      for (final id in unmatchedTurnoverIds) {
+        final turnover = turnoversById[id];
+        if (turnover == null) {
+          log.e(
+            'Unexpected to not find a turnover that has been selected for matching.',
           );
-          final matched = null != match;
-          if (matched) {
-            autoMatchedCount++;
-            log.i('Auto-matched turnover: ${turnover.purpose}');
-          } else {
-            unmatchedCount++;
-          }
+          continue;
         }
-        log.i(
-          'Auto-matched $autoMatchedCount turnovers, $unmatchedCount not matched',
+        final match = await matchingService.autoMatchPerfectTagTurnover(
+          turnover,
+          isGuaranteedToBeUnmatched:
+              true, // because we filtered in batch which are unmatched
         );
-      }
-
-      // Update balances for existing comdirect accounts
-      for (final account in existingAccountsByApiId.values) {
-        final apiId = account.apiId;
-        if (apiId != null && apiBalancesByApiId.containsKey(apiId)) {
-          final apiBalance = apiBalancesByApiId[apiId]!;
-          log.i('Updating balance for account ${account.name} to $apiBalance');
-          await accountCubit.updateBalanceFromReal(account, apiBalance);
+        final matched = null != match;
+        if (matched) {
+          autoMatchedCount++;
+        } else {
+          unmatchedCount++;
         }
       }
-      log.i('Account balances updated successfully');
+      log.i(
+        'Auto-matched $autoMatchedCount turnovers, $unmatchedCount remain unmatched',
+      );
 
-      return DataIngestResult(
-        status: ResultStatus.success,
+      return DataIngestResult.success(
+        newCount: newIds.length,
+        updatedCount: existingIds.length,
         autoMatchedCount: autoMatchedCount,
         unmatchedCount: unmatchedCount,
       );
-    } catch (e) {
+    } catch (e, s) {
       if (e is DioException) {
         if (e.response?.statusCode == 401) {
-          return DataIngestResult(status: ResultStatus.unauthed);
+          return DataIngestResult.error(ResultStatus.unauthed);
         }
       }
-      log.e('Error fetching turnovers: $e', error: e);
-      return DataIngestResult(
-        status: ResultStatus.otherError,
+      log.e('Error fetching turnovers: $e', error: e, stackTrace: s);
+      return DataIngestResult.error(
+        ResultStatus.otherError,
         errorMessage: 'unknown error: $e',
       );
     }

@@ -82,16 +82,18 @@ class LoadBankDataSection extends StatelessWidget {
       final messenger = ScaffoldMessenger.of(context);
       switch (result.status) {
         case ResultStatus.success:
+          final total =
+              '${result.newCount} new, ${result.updatedCount} updated.';
           final autoMatchMsg = result.autoMatchedCount > 0
-              ? ' ${result.autoMatchedCount} expenses auto-matched.'
+              ? '\n✨ ${result.autoMatchedCount} auto-matched.'
               : '';
           final unmatchedMsg = result.unmatchedCount > 0
-              ? ' ${result.unmatchedCount} transactions need review.'
+              ? '\n🤔 ${result.unmatchedCount} need tagging.'
               : '';
           messenger.showSnackBar(
             SnackBar(
               content: Text(
-                'Data loaded successfully.$autoMatchMsg$unmatchedMsg',
+                'Data loaded successfully.\n$total$autoMatchMsg$unmatchedMsg',
               ),
             ),
           );

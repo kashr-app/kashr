@@ -12,43 +12,41 @@ class TurnoverCubit extends Cubit<TurnoverState> {
   final log = Logger();
 
   TurnoverCubit(this.turnoverRepository)
-      : super(const TurnoverState(
-          status: Status.initial,
-          turnovers: [],
-        ));
+    : super(const TurnoverState(status: Status.initial, turnovers: []));
 
   Future<void> loadTurnoversByApiIds(List<UuidValue> apiIds) async {
     final turnovers = await turnoverRepository.getTurnoversByApiIds(apiIds);
-    emit(state.copyWith(
-      status: Status.success,
-      turnovers: turnovers,
-    ));
+    emit(state.copyWith(status: Status.success, turnovers: turnovers));
   }
 
   Future<void> addTurnover(Turnover turnover) async {
     await turnoverRepository.createTurnover(turnover);
-    emit(state.copyWith(
-      status: Status.success,
-      turnovers: [turnover, ...state.turnovers],
-    ));
+    emit(
+      state.copyWith(
+        status: Status.success,
+        turnovers: [turnover, ...state.turnovers],
+      ),
+    );
   }
 
   Future<void> loadAllTurnovers() async {
     final all = await turnoverRepository.getTurnovers();
-    emit(state.copyWith(
-      status: Status.success,
-      turnovers: all,
-    ));
+    emit(state.copyWith(status: Status.success, turnovers: all));
   }
 
   /// Upserts turnovers by inserting new ones and updating existing ones.
   /// Uses apiId to determine if a turnover already exists for the account.
-  /// Performs batch operations to avoid N+1 queries.
-  Future<void> upsertTurnovers(List<Turnover> turnovers) async {
+  ///
+  /// Returns the ids of (new, updated) turnovers.
+  Future<(Iterable<UuidValue>, Iterable<UuidValue>)> upsertTurnovers(
+    Iterable<Turnover> turnovers,
+  ) async {
     // Group turnovers by accountId for efficient querying
     final turnoversByAccount = <UuidValue, List<Turnover>>{};
     for (final turnover in turnovers) {
-      turnoversByAccount.putIfAbsent(turnover.accountId, () => []).add(turnover);
+      turnoversByAccount
+          .putIfAbsent(turnover.accountId, () => [])
+          .add(turnover);
     }
 
     final allToInsert = <Turnover>[];
@@ -65,11 +63,8 @@ class TurnoverCubit extends Cubit<TurnoverState> {
 
       // Fetch existing turnovers for this account in one query
       // We query per account because an apiId is not guaranteed to be unique across accounts
-      final existingTurnovers =
-          await turnoverRepository.getTurnoversByApiIdsForAccount(
-        accountId: accountId,
-        apiIds: apiIds,
-      );
+      final existingTurnovers = await turnoverRepository
+          .getTurnoversByApiIdsForAccount(accountId: accountId, apiIds: apiIds);
 
       // Create lookup map: apiId -> existing Turnover
       final existingByApiId = <String, Turnover>{
@@ -103,14 +98,21 @@ class TurnoverCubit extends Cubit<TurnoverState> {
 
             if (normalizedExisting != normalizedTurnover) {
               // Update with existing ID to preserve database identity
-              allToUpdate.add(turnover.copyWith(
-                id: existing.id,
-                createdAt: existing.createdAt,
-              ));
+              allToUpdate.add(
+                turnover.copyWith(
+                  id: existing.id,
+                  createdAt: existing.createdAt,
+                ),
+              );
             }
           }
         }
       }
+    }
+
+    if (allToInsert.isEmpty && allToUpdate.isEmpty) {
+      log.i('No turnovers to insert or update');
+      return (<UuidValue>[], <UuidValue>[]);
     }
 
     // Perform batch operations
@@ -124,8 +126,6 @@ class TurnoverCubit extends Cubit<TurnoverState> {
       log.i('Updated ${allToUpdate.length} existing turnovers');
     }
 
-    if (allToInsert.isEmpty && allToUpdate.isEmpty) {
-      log.i('No turnovers to insert or update');
-    }
+    return (allToInsert.map((it) => it.id), allToUpdate.map((it) => it.id));
   }
 }

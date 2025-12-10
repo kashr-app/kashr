@@ -352,11 +352,42 @@ class TurnoverRepository {
     return maps.map((e) => Turnover.fromJson(e)).toList();
   }
 
+  /// Returns the ids of turnovers that are unmatched.
+  /// An unmatched turnover is one that has NO associated tag_turnover entries.
+  /// This ensures 1:1 matching semantics which are expected and easy to understand by the user.
+  /// I.e. a turnover can only be matched fully and not partially.
+  Future<Iterable<UuidValue>> filterUnmatched({
+    required Iterable<UuidValue> turnoverIds,
+  }) async {
+    if (turnoverIds.isEmpty) {
+      return [];
+    }
+    final db = await DatabaseHelper().database;
+
+    // Create placeholders: (?, ?, ?, ...)
+    final placeholders = List.filled(turnoverIds.length, '?').join(', ');
+    final args = turnoverIds.map((id) => id.uuid).toList();
+
+    final maps = await db.rawQuery(
+      '''
+      SELECT t.id
+      FROM turnover t
+      LEFT JOIN tag_turnover tt ON t.id = tt.turnover_id
+      WHERE t.id IN ($placeholders)
+      GROUP BY t.id
+      HAVING COUNT(tt.id) = 0
+      ''',
+      [args],
+    );
+
+    return maps.map((it) => UuidValue.fromString(it['id'] as String));
+  }
+
   /// Get unmatched turnovers for a specific account.
   /// An unmatched turnover is one that has NO associated tag_turnover entries.
   /// This ensures 1:1 matching semantics which are expected and easy to understand by the user.
   /// I.e. a turnover can only be matched fully and not partially.
-  /// 
+  ///
   /// Optionally filter by date range.
   /// [startDateInclusive] filters turnovers with bookingDate >= startDate
   /// [endDateInclusive] filters turnovers with bookingDate <= endDate
@@ -392,8 +423,7 @@ class TurnoverRepository {
 
     final whereClause = 'WHERE ${whereClauses.join(' AND ')}';
 
-    final maps = await db.rawQuery(
-      '''
+    final maps = await db.rawQuery('''
       SELECT DISTINCT t.*
       FROM turnover t
       LEFT JOIN tag_turnover tt ON t.id = tt.turnover_id
@@ -402,9 +432,7 @@ class TurnoverRepository {
       HAVING COUNT(tt.id) = 0
       ORDER BY t.booking_date ${direction.name}
       ${limit != null ? 'LIMIT ?' : ''}
-      ''',
-      limit != null ? [...whereArgs, limit] : whereArgs,
-    );
+      ''', limit != null ? [...whereArgs, limit] : whereArgs);
 
     return maps.map((e) => Turnover.fromJson(e)).toList();
   }

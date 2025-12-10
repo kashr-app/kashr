@@ -1,7 +1,9 @@
+import 'package:finanalyzer/main.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
 // up to this count of days tag turnovers are considered candidates for a match.
@@ -10,6 +12,8 @@ const dateMatchingWindow = 7;
 class TurnoverMatchingService {
   final TagTurnoverRepository _tagTurnoverRepository;
   final TurnoverRepository _turnoverRepository;
+
+  final log = Logger();
 
   TurnoverMatchingService(
     this._tagTurnoverRepository,
@@ -109,14 +113,40 @@ class TurnoverMatchingService {
 
   /// Auto-match if perfect match (exact amount + high confidence)
   /// Returns the match if auto-matched or null
-  Future<TagTurnoverMatch?> autoMatchPerfectTurnover(TagTurnover tagTurnover) async {
+  Future<TagTurnoverMatch?> autoMatchPerfectTurnover(
+    TagTurnover tagTurnover,
+  ) async {
+    if (tagTurnover.isMatched) {
+      log.e('Trying to match a TagTurnover that is already matched');
+      return null;
+    }
     final matches = await findMatchesForTagTurnover(tagTurnover);
     return _autoConfirmPerfectMatch(matches);
   }
 
   /// Auto-match if perfect match (exact amount + high confidence)
+  ///
+  /// By default it prevents matching turnovers that are not unmatched
+  /// (i.e. at least one TagTurnover exists that references it) by
+  /// running another db call. If you can guarantee that the [turnover]
+  /// is unmatched, set [isGuaranteedToBeUnmatched] to true to skip the db call.
+  ///
   /// Returns the match if auto-matched or null
-  Future<TagTurnoverMatch?> autoMatchPerfectTagTurnover(Turnover turnover) async {
+  Future<TagTurnoverMatch?> autoMatchPerfectTagTurnover(
+    Turnover turnover, {
+    isGuaranteedToBeUnmatched = false,
+  }) async {
+    if (!isGuaranteedToBeUnmatched) {
+      final ids = await turnoverRepository.filterUnmatched(
+        turnoverIds: [turnover.id],
+      );
+      if (ids.isEmpty) {
+        log.e(
+          'Trying to match a Turnover that is not matched (i.e. at least one TagTurnover exists that references it.)',
+        );
+        return null;
+      }
+    }
     final matches = await findMatchesForTurnover(turnover);
     return _autoConfirmPerfectMatch(matches);
   }
@@ -125,7 +155,9 @@ class TurnoverMatchingService {
   // 1. Exactly one match found
   // 3. Confidence >= 95%
   // 2. Exact amount match
-  Future<TagTurnoverMatch?> _autoConfirmPerfectMatch(List<TagTurnoverMatch> matches) async {
+  Future<TagTurnoverMatch?> _autoConfirmPerfectMatch(
+    List<TagTurnoverMatch> matches,
+  ) async {
     if (matches.length != 1) return null;
     final match = matches.first;
 
