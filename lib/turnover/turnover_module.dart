@@ -1,6 +1,7 @@
 import 'package:finanalyzer/core/module.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
+import 'package:finanalyzer/turnover/listeners/tag_turnover_tag_listener.dart';
 import 'package:finanalyzer/turnover/model/recent_search_repository.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
@@ -23,9 +24,7 @@ class TurnoverModule implements Module {
   @override
   late final List<SingleChildWidget> providers;
 
-  final List<TagListener> tagListeners = [
-    // TODO add TagTurnoverTagListener
-  ];
+  late final List<TagListener> tagListeners = [];
 
   TurnoverModule() {
     turnoverMatchingService = TurnoverMatchingService(
@@ -45,6 +44,10 @@ class TurnoverModule implements Module {
         create: (_) => TagCubit(tagRepository)..loadTags(),
       ),
     ];
+
+    registerTagListener(
+      TagTurnoverTagListener(tagTurnoverRepository: tagTurnoverRepository),
+    );
   }
 
   void registerTagListener(TagListener listener) {
@@ -53,7 +56,10 @@ class TurnoverModule implements Module {
 }
 
 abstract class TagListener {
-  Future<BeforeTagDeleteResult> onBeforeTagDelete(Tag tag);
+  Future<BeforeTagDeleteResult> onBeforeTagDelete(
+    Tag tag, {
+    required VoidCallback recheckStatus,
+  });
 }
 
 class BeforeTagDeleteResult {

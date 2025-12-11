@@ -241,6 +241,16 @@ class TagTurnoverRepository {
     return db.delete('tag_turnover', where: 'id = ?', whereArgs: [id.uuid]);
   }
 
+  Future<int> deleteAllByTagId(UuidValue tagId) async {
+    final db = await DatabaseHelper().database;
+
+    return db.delete(
+      'tag_turnover',
+      where: 'tag_id = ?',
+      whereArgs: [tagId.uuid],
+    );
+  }
+
   Future<int> deleteAllForTurnover(UuidValue turnoverId) async {
     final db = await DatabaseHelper().database;
 
@@ -259,6 +269,17 @@ class TagTurnoverRepository {
       {'amount_value': amountValue.toString()},
       where: 'id = ?',
       whereArgs: [id.uuid],
+    );
+  }
+
+  Future<int> updateTagByTagId(UuidValue oldTagId, UuidValue newTagId) async {
+    final db = await DatabaseHelper().database;
+
+    return await db.update(
+      'tag_turnover',
+      {'tag_id': newTagId.uuid},
+      where: 'tag_id = ?',
+      whereArgs: [oldTagId.uuid],
     );
   }
 

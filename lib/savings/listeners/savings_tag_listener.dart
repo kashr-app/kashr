@@ -16,7 +16,10 @@ class SavingsTagListener extends TagListener {
   SavingsTagListener(this.savingsCubit);
 
   @override
-  Future<BeforeTagDeleteResult> onBeforeTagDelete(Tag tag) async {
+  Future<BeforeTagDeleteResult> onBeforeTagDelete(
+    Tag tag, {
+    required VoidCallback recheckStatus,
+  }) async {
     final savingsState = savingsCubit.state;
     final savings = savingsState.savingsById.values
         .where((s) => s.tagId == tag.id)

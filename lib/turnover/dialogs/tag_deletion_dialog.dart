@@ -43,13 +43,21 @@ class _TagDeletionDialogState extends State<TagDeletionDialog> {
     _checkListeners();
   }
 
+  /// Public method to trigger a refresh of the listener checks.
+  /// This allows suggested actions to refresh the dialog state after
+  /// performing remediation actions.
+  void refreshListeners() => _checkListeners();
+
   Future<void> _checkListeners() async {
     final results = <BeforeTagDeleteResult>[];
     final tagListeners = context.read<TurnoverModule>().tagListeners;
 
     for (final listener in tagListeners) {
       try {
-        final result = await listener.onBeforeTagDelete(widget.tag);
+        final result = await listener.onBeforeTagDelete(
+          widget.tag,
+          recheckStatus: refreshListeners,
+        );
         results.add(result);
       } catch (e) {
         results.add(
