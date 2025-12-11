@@ -9,7 +9,7 @@ import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:finanalyzer/account/cubit/account_cubit.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
+import 'package:finanalyzer/turnover/services/turnover_service.dart';
 import 'package:meta/meta.dart';
 import 'package:uuid/uuid.dart';
 import 'comdirect_api.dart';
@@ -21,13 +21,13 @@ class ComdirectService implements DataIngestor {
   final ComdirectAPI comdirectAPI;
   final log = Logger();
   final AccountCubit accountCubit;
-  final TurnoverCubit turnoverCubit;
+  final TurnoverService turnoverService;
   final TurnoverMatchingService matchingService;
 
   ComdirectService({
     required this.comdirectAPI,
     required this.accountCubit,
-    required this.turnoverCubit,
+    required this.turnoverService,
     required this.matchingService,
   });
 
@@ -153,7 +153,7 @@ class ComdirectService implements DataIngestor {
       }
 
       // we upsert in case the data changed or that our data extraction changed
-      final (newIds, existingIds) = await turnoverCubit.upsertTurnovers(
+      final (newIds, existingIds) = await turnoverService.upsertTurnovers(
         turnoversById.values,
       );
       log.i(
@@ -166,7 +166,7 @@ class ComdirectService implements DataIngestor {
 
       // newIds are always unmatched, for existingIds we need to check if they are unmatched
       final unmatchedTurnoverIds = [
-        ...await turnoverCubit.filterUnmatched(turnoverIds: existingIds),
+        ...await turnoverService.filterUnmatched(turnoverIds: existingIds),
         ...newIds,
       ];
 

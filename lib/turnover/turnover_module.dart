@@ -1,6 +1,6 @@
 import 'package:finanalyzer/core/module.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
+import 'package:finanalyzer/turnover/services/turnover_service.dart';
 import 'package:finanalyzer/turnover/listeners/tag_turnover_tag_listener.dart';
 import 'package:finanalyzer/turnover/model/recent_search_repository.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
@@ -19,6 +19,7 @@ class TurnoverModule implements Module {
   final tagTurnoverRepository = TagTurnoverRepository();
   final recentSearchRepository = RecentSearchRepository();
 
+  late final TurnoverService turnoverService;
   late final TurnoverMatchingService turnoverMatchingService;
 
   @override
@@ -27,6 +28,7 @@ class TurnoverModule implements Module {
   late final List<TagListener> tagListeners = [];
 
   TurnoverModule() {
+    turnoverService = TurnoverService(turnoverRepository);
     turnoverMatchingService = TurnoverMatchingService(
       tagTurnoverRepository,
       turnoverRepository,
@@ -37,8 +39,8 @@ class TurnoverModule implements Module {
       Provider<TagRepository>.value(value: tagRepository),
       Provider<TagTurnoverRepository>.value(value: tagTurnoverRepository),
       Provider<RecentSearchRepository>.value(value: recentSearchRepository),
+      Provider<TurnoverService>.value(value: turnoverService),
       Provider<TurnoverMatchingService>.value(value: turnoverMatchingService),
-      BlocProvider(create: (_) => TurnoverCubit(turnoverRepository)),
       BlocProvider(
         lazy: false,
         create: (_) => TagCubit(tagRepository)..loadTags(),

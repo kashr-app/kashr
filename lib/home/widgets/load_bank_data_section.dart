@@ -9,7 +9,7 @@ import 'package:finanalyzer/ingest/ingest.dart';
 import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_cubit.dart';
+import 'package:finanalyzer/turnover/services/turnover_service.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -116,7 +116,7 @@ class LoadBankDataSection extends StatelessWidget {
     return ComdirectService(
       comdirectAPI: api,
       accountCubit: context.read<AccountCubit>(),
-      turnoverCubit: context.read<TurnoverCubit>(),
+      turnoverService: context.read<TurnoverService>(),
       matchingService: context.read<TurnoverMatchingService>(),
     );
   }

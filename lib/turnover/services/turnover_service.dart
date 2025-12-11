@@ -1,38 +1,14 @@
-import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_state.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
-class TurnoverCubit extends Cubit<TurnoverState> {
+class TurnoverService {
   final TurnoverRepository turnoverRepository;
 
   final log = Logger();
 
-  TurnoverCubit(this.turnoverRepository)
-    : super(const TurnoverState(status: Status.initial, turnovers: []));
-
-  Future<void> loadTurnoversByApiIds(List<UuidValue> apiIds) async {
-    final turnovers = await turnoverRepository.getTurnoversByApiIds(apiIds);
-    emit(state.copyWith(status: Status.success, turnovers: turnovers));
-  }
-
-  Future<void> addTurnover(Turnover turnover) async {
-    await turnoverRepository.createTurnover(turnover);
-    emit(
-      state.copyWith(
-        status: Status.success,
-        turnovers: [turnover, ...state.turnovers],
-      ),
-    );
-  }
-
-  Future<void> loadAllTurnovers() async {
-    final all = await turnoverRepository.getTurnovers();
-    emit(state.copyWith(status: Status.success, turnovers: all));
-  }
+  TurnoverService(this.turnoverRepository);
 
   /// Upserts turnovers by inserting new ones and updating existing ones.
   /// Uses apiId to determine if a turnover already exists for the account.
