@@ -7,6 +7,7 @@ import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/savings/model/savings.dart';
 import 'package:finanalyzer/savings/model/savings_virtual_booking.dart';
 import 'package:finanalyzer/savings/model/savings_virtual_booking_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -63,6 +64,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
   Account? _selectedAccount;
   int? _amountScaled;
+  DateTime _bookingDate = DateTime.now();
   bool _isAllocating =
       true; // true = add to savings, false = remove from savings
   bool _isLoading = false;
@@ -82,6 +84,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
     _amountScaled = (absAmount * Decimal.fromInt(100)).toBigInt().toInt();
     _isAllocating = booking.amountValue >= Decimal.zero;
     _noteController.text = booking.note ?? '';
+    _bookingDate = booking.bookingDate;
   }
 
   @override
@@ -110,6 +113,21 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
       setState(() {
         _amountScaled = result.abs();
         _errorMessage = null;
+      });
+    }
+  }
+
+  Future<void> _selectDate() async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: _bookingDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (selectedDate != null) {
+      setState(() {
+        _bookingDate = selectedDate;
       });
     }
   }
@@ -208,7 +226,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
         note: _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
-        bookingDate: widget.booking?.bookingDate ?? DateTime.now(),
+        bookingDate: _bookingDate,
         createdAt: widget.booking?.createdAt ?? DateTime.now(),
       );
 
@@ -321,6 +339,20 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                             )
                           : null,
                     ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Booking Date
+                InkWell(
+                  onTap: _selectDate,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Date',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text(dateFormat.format(_bookingDate)),
                   ),
                 ),
                 const SizedBox(height: 16),
