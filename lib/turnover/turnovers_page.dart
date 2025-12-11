@@ -1,6 +1,6 @@
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
@@ -211,8 +211,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
   Future<void> _batchAddTag() async {
     if (_selectedTurnoverIds.isEmpty) return;
 
-    final allTags = await context.read<TagRepository>().getAllTags();
-    if (!mounted) return;
+    final allTags = context.read<TagCubit>().state.tags;
 
     final selectedTag = await showDialog<Tag>(
       context: context,
