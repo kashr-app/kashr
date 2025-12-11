@@ -10,8 +10,6 @@ import 'package:jiffy/jiffy.dart';
 import 'turnover.dart';
 import 'package:uuid/uuid.dart';
 
-const int scaleFactor = 100; // Define scale factor (e.g., 2 decimal places)
-
 class TurnoverRepository {
   Future<int> createTurnover(Turnover turnover) async {
     final db = await DatabaseHelper().database;
@@ -268,7 +266,7 @@ class TurnoverRepository {
         tagId: UuidValue.fromString(map['tt_tag_id'] as String),
         amountValue:
             (Decimal.fromInt(map['tt_amount_value'] as int) /
-                    Decimal.fromInt(scaleFactor))
+                    Decimal.fromInt(100))
                 .toDecimal(),
         amountUnit: map['tt_amount_unit'] as String,
         note: map['tt_note'] as String?,
@@ -481,7 +479,7 @@ class TurnoverRepository {
           AND turnover_fts MATCH ?
         )
       ''');
-      whereArgs.add(filter.searchQuery!);
+      whereArgs.add(_sanitizeFts5Query(filter.searchQuery!));
     }
 
     // Tag filter - turnovers must have ALL specified tags
@@ -602,7 +600,7 @@ class TurnoverRepository {
         tagId: UuidValue.fromString(map['tt_tag_id'] as String),
         amountValue:
             (Decimal.fromInt(map['tt_amount_value'] as int) /
-                    Decimal.fromInt(scaleFactor))
+                    Decimal.fromInt(100))
                 .toDecimal(),
         amountUnit: map['tt_amount_unit'] as String,
         note: map['tt_note'] as String?,
@@ -638,5 +636,41 @@ class TurnoverRepository {
         tagTurnovers: tagTurnoversByTurnoverId[turnoverId] ?? [],
       );
     }).toList();
+  }
+
+  /// Sanitizes a user input string for use with SQLite FTS5 MATCH queries.
+  ///
+  /// This function escapes all user input as literal text, with the exception
+  /// of a single trailing `*` which enables prefix search (e.g., "foo*" matches
+  /// "food", "football", etc.).
+  ///
+  /// All tokens are quoted to prevent FTS5 syntax interpretation. Internal
+  /// quotes are escaped by doubling them per FTS5 convention.
+  String _sanitizeFts5Query(String query) {
+    if (query.trim().isEmpty) return query;
+
+    final tokens = <String>[];
+
+    for (var token in query.split(RegExp(r'\s+'))) {
+      if (token.isEmpty) continue;
+
+      // Check if token has a trailing asterisk (prefix search)
+      final hasTrailingStar = token.endsWith('*');
+
+      // Remove trailing asterisk for escaping
+      final tokenWithoutStar = hasTrailingStar
+          ? token.substring(0, token.length - 1)
+          : token;
+
+      if (tokenWithoutStar.isEmpty) continue;
+
+      // Escape internal quotes by doubling them (FTS5 convention)
+      final escaped = tokenWithoutStar.replaceAll('"', '""');
+
+      // Quote the token, add trailing * outside quotes if needed
+      tokens.add(hasTrailingStar ? '"$escaped"*' : '"$escaped"');
+    }
+
+    return tokens.join(' ');
   }
 }
