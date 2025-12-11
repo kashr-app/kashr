@@ -31,16 +31,6 @@ class TurnoverRepository {
     return null;
   }
 
-  Future<List<Turnover>> getTurnovers() async {
-    final db = await DatabaseHelper().database;
-    final maps = await db.query(
-      'turnover',
-      orderBy: 'booking_date DESC NULLS FIRST',
-    );
-
-    return maps.map((map) => Turnover.fromJson(map)).toList();
-  }
-
   Future<List<Turnover>> getTurnoversByApiIds(List<UuidValue> apiIds) async {
     final db = await DatabaseHelper().database;
     final result = await db.query(
