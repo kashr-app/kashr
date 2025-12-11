@@ -128,4 +128,10 @@ class TurnoverCubit extends Cubit<TurnoverState> {
 
     return (allToInsert.map((it) => it.id), allToUpdate.map((it) => it.id));
   }
+
+  Future<Iterable<UuidValue>> filterUnmatched({
+    required Iterable<UuidValue> turnoverIds,
+  }) async {
+    return await turnoverRepository.filterUnmatched(turnoverIds: turnoverIds);
+  }
 }

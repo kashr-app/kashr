@@ -4,7 +4,6 @@ import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/ingest/ingest.dart';
-import 'package:finanalyzer/main.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:intl/intl.dart';
@@ -167,7 +166,7 @@ class ComdirectService implements DataIngestor {
 
       // newIds are always unmatched, for existingIds we need to check if they are unmatched
       final unmatchedTurnoverIds = [
-        ...await turnoverRepository.filterUnmatched(turnoverIds: existingIds),
+        ...await turnoverCubit.filterUnmatched(turnoverIds: existingIds),
         ...newIds,
       ];
 

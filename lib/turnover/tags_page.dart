@@ -6,6 +6,7 @@ import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/dialogs/merge_final_confirmation_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/merge_tags_preview_dialog.dart';
+import 'package:finanalyzer/turnover/dialogs/tag_deletion_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/widgets/tag_edit_bottom_sheet.dart';
@@ -112,27 +113,11 @@ class _TagsPageState extends State<TagsPage> {
     TagEditBottomSheet.show(context, tag: tag);
   }
 
-  void _confirmDelete(BuildContext context, Tag tag) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Tag'),
-        content: Text('Are you sure you want to delete "${tag.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              context.read<TagCubit>().deleteTag(tag.id);
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _confirmDelete(BuildContext context, Tag tag) async {
+    final deleted = await TagDeletionDialog.show(context, tag: tag);
+    if (deleted == true && context.mounted) {
+      context.read<TagCubit>().loadTags();
+    }
   }
 
   Future<void> _showMergeDialog(BuildContext context, Tag sourceTag) async {

@@ -1,4 +1,3 @@
-import 'package:finanalyzer/main.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
@@ -137,7 +136,7 @@ class TurnoverMatchingService {
     isGuaranteedToBeUnmatched = false,
   }) async {
     if (!isGuaranteedToBeUnmatched) {
-      final ids = await turnoverRepository.filterUnmatched(
+      final ids = await _turnoverRepository.filterUnmatched(
         turnoverIds: [turnover.id],
       );
       if (ids.isEmpty) {
