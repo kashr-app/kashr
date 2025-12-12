@@ -482,7 +482,7 @@ class TurnoverRepository {
             WHERE tt_filter.turnover_id = t.id AND tt_filter.tag_id = ?
           )
         ''');
-        whereArgs.add(tagId);
+        whereArgs.add(tagId.uuid);
       }
     }
 

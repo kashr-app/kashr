@@ -1,6 +1,8 @@
+import 'package:finanalyzer/core/uuid_json_converter.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:uuid/uuid.dart';
 
 part '../../_gen/turnover/model/turnover_filter.freezed.dart';
 part '../../_gen/turnover/model/turnover_filter.g.dart';
@@ -17,9 +19,10 @@ abstract class TurnoverFilter with _$TurnoverFilter {
     /// Both year and month must be provided together to ensure a valid filter
     YearMonth? period,
 
-    /// Filter by specific tag IDs (UUIDs as strings)
+    /// Filter by specific tag IDs
     /// If provided, only turnovers with ALL these tags are shown
-    List<String>? tagIds,
+    @UUIDListNullableJsonConverter()
+    List<UuidValue>? tagIds,
 
     /// Filter by turnover sign (income/expense)
     /// If null, shows both income and expenses

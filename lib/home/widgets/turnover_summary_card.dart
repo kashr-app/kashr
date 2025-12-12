@@ -181,7 +181,7 @@ class TurnoverSummaryCard extends StatelessWidget {
       onTap: () {
         TurnoversRoute(
           filter: TurnoverFilter(
-            tagIds: [tagId.uuid],
+            tagIds: [tagId],
             sign: turnoverSign,
             period: selectedPeriod,
           ),

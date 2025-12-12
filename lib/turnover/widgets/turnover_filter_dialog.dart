@@ -1,10 +1,12 @@
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
+import 'package:finanalyzer/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 
 /// Dialog for editing turnover filters.
 class TurnoverFilterDialog extends StatefulWidget {
@@ -19,11 +21,8 @@ class TurnoverFilterDialog extends StatefulWidget {
 class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
   late bool _unallocatedOnly;
   late YearMonth? _period;
-  late Set<String> _selectedTagIds;
+  late Set<UuidValue> _selectedTagIds;
   late TurnoverSign? _sign;
-
-  List<Tag> _availableTags = [];
-  bool _isLoadingTags = true;
 
   @override
   void initState() {
@@ -34,21 +33,19 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
     _period = widget.initialFilter.period;
     _selectedTagIds = widget.initialFilter.tagIds?.toSet() ?? {};
     _sign = widget.initialFilter.sign;
-
-    _loadTags();
   }
 
-  Future<void> _loadTags() async {
-    try {
-      final tagRepository = context.read<TagRepository>();
-      final tags = await tagRepository.getAllTags();
+  Future<void> _pickTag() async {
+    final tag = await TagPickerDialog.show(
+      context,
+      excludeTagIds: _selectedTagIds,
+      title: 'Select Tag',
+      subtitle: 'Choose a tag to filter by:',
+    );
+
+    if (tag != null) {
       setState(() {
-        _availableTags = tags;
-        _isLoadingTags = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingTags = false;
+        _selectedTagIds.add(tag.id);
       });
     }
   }
@@ -268,50 +265,58 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                       contentPadding: EdgeInsets.zero,
                     ),
                     const SizedBox(height: 16),
-                    // tags
-                    if (_isLoadingTags)
-                      const Center(child: CircularProgressIndicator())
-                    else if (_availableTags.isEmpty)
-                      const Text('No tags available')
-                    else
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: _availableTags.map((tag) {
-                          final isSelected = _selectedTagIds.contains(
-                            tag.id.uuid,
-                          );
-                          final tagColor = tag.color != null
-                              ? Color(
-                                  int.parse(
-                                    tag.color!.replaceFirst('#', '0xff'),
-                                  ),
-                                )
-                              : null;
+                    // Selected tags
+                    BlocBuilder<TagCubit, TagState>(
+                      builder: (context, tagState) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_selectedTagIds.isNotEmpty) ...[
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: _selectedTagIds.map((id) {
+                                  final tag = tagState.tagById[id]!;
+                                  final tagColor = tag.color != null
+                                      ? Color(
+                                          int.parse(
+                                            tag.color!.replaceFirst(
+                                              '#',
+                                              '0xff',
+                                            ),
+                                          ),
+                                        )
+                                      : null;
 
-                          return FilterChip(
-                            label: Text(tag.name),
-                            selected: isSelected,
-                            backgroundColor: tagColor?.withValues(alpha: 0.2),
-                            selectedColor: tagColor?.withValues(alpha: 0.3),
-                            side: tagColor != null
-                                ? BorderSide(
-                                    color: tagColor,
-                                    width: isSelected ? 2.0 : 1.5,
-                                  )
-                                : null,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  _selectedTagIds.add(tag.id.uuid);
-                                } else {
-                                  _selectedTagIds.remove(tag.id.uuid);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
+                                  return Chip(
+                                    label: Text(tag.name),
+                                    backgroundColor:
+                                        tagColor?.withValues(alpha: 0.2),
+                                    side: tagColor != null
+                                        ? BorderSide(
+                                            color: tagColor,
+                                            width: 1.5,
+                                          )
+                                        : null,
+                                    onDeleted: () {
+                                      setState(() {
+                                        _selectedTagIds.remove(tag.id.uuid);
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                            OutlinedButton.icon(
+                              onPressed: _pickTag,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Add tag filter'),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),

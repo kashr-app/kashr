@@ -59,8 +59,7 @@ class TurnoversFilterChips extends StatelessWidget {
                   label: Text(sort.orderBy.label()),
                   onPressed: onSortDirectionToggled,
                 ),
-              if (filter.searchQuery != null &&
-                  filter.searchQuery!.isNotEmpty)
+              if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty)
                 Chip(
                   avatar: const Icon(Icons.search, size: 18),
                   label: Text(filter.searchQuery!),
@@ -103,8 +102,9 @@ class TurnoversFilterChips extends StatelessWidget {
     onFilterChanged(filter.copyWith(period: newPeriod));
   }
 
-  void _removeTagFilter(String tagId) {
-    final updatedTagIds = List<String>.from(filter.tagIds ?? [])..remove(tagId);
+  void _removeTagFilter(UuidValue tagId) {
+    final updatedTagIds = List<UuidValue>.from(filter.tagIds ?? [])
+      ..remove(tagId);
     onFilterChanged(
       filter.copyWith(tagIds: updatedTagIds.isEmpty ? null : updatedTagIds),
     );
@@ -114,18 +114,16 @@ class TurnoversFilterChips extends StatelessWidget {
 class _TagFilterChip extends StatelessWidget {
   const _TagFilterChip({required this.tagId, required this.onDeleted});
 
-  final String tagId;
+  final UuidValue tagId;
   final VoidCallback onDeleted;
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: context.read<TagRepository>().getTagById(
-        UuidValue.fromString(tagId),
-      ),
+      future: context.read<TagRepository>().getTagById(tagId),
       builder: (context, snapshot) {
         final tag = snapshot.data;
-        final tagName = tag?.name ?? tagId.substring(0, 8);
+        final tagName = tag?.name ?? 'Unkown';
         final tagColor = tag?.color != null
             ? Color(int.parse(tag!.color!.replaceFirst('#', '0xff')))
             : null;

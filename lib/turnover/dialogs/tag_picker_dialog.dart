@@ -4,27 +4,38 @@ import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 
-/// A dialog for selecting a tag to merge with.
+/// A dialog for selecting a tag.
 ///
-/// Allows searching existing tags while excluding the source tag.
+/// Allows searching existing tags while excluding specified tag IDs.
 /// Returns the selected [Tag] or null if cancelled.
 class TagPickerDialog extends StatefulWidget {
-  final Tag excludeTag;
+  final Set<UuidValue> excludeTagIds;
+  final String title;
+  final String subtitle;
 
   const TagPickerDialog({
     super.key,
-    required this.excludeTag,
+    this.excludeTagIds = const {},
+    required this.title,
+    required this.subtitle,
   });
 
   /// Shows the dialog and returns the selected tag or null if cancelled.
   static Future<Tag?> show(
     BuildContext context, {
-    required Tag excludeTag,
+    Set<UuidValue> excludeTagIds = const {},
+    required String title,
+    required String subtitle,
   }) {
     return showDialog<Tag>(
       context: context,
-      builder: (context) => TagPickerDialog(excludeTag: excludeTag),
+      builder: (context) => TagPickerDialog(
+        excludeTagIds: excludeTagIds,
+        title: title,
+        subtitle: subtitle,
+      ),
     );
   }
 
@@ -50,8 +61,9 @@ class _TagPickerDialogState extends State<TagPickerDialog> {
   List<Tag> _getFilteredTags(List<Tag> allTags) {
     final query = _searchController.text;
 
-    var filtered =
-        allTags.where((tag) => tag.id != widget.excludeTag.id).toList();
+    var filtered = allTags
+        .where((tag) => !widget.excludeTagIds.contains(tag.id))
+        .toList();
 
     if (query.isEmpty) {
       return filtered;
@@ -79,12 +91,12 @@ class _TagPickerDialogState extends State<TagPickerDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Select Target Tag',
+                  widget.title,
                   style: theme.textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Merge "${widget.excludeTag.name}" into:',
+                  widget.subtitle,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

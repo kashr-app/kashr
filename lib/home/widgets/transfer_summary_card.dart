@@ -123,7 +123,7 @@ class TransferSummaryCard extends StatelessWidget {
           onTap: () {
             TurnoversRoute(
               filter: TurnoverFilter(
-                tagIds: [tagId.uuid],
+                tagIds: [tagId],
                 period: selectedPeriod,
               ),
             ).go(context);

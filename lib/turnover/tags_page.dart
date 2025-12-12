@@ -124,7 +124,9 @@ class _TagsPageState extends State<TagsPage> {
     // Step 1: Show tag picker dialog to select target tag
     final targetTag = await TagPickerDialog.show(
       context,
-      excludeTag: sourceTag,
+      excludeTagIds: {sourceTag.id},
+      title: 'Select Target Tag',
+      subtitle: 'Merge "${sourceTag.name}" into:',
     );
 
     if (targetTag == null || !context.mounted) {
