@@ -193,13 +193,16 @@ class _SettingsPageState extends State<SettingsPage> {
         return AlertDialog(
           title: const Text("Fast Form Mode"),
           content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
                 'Enable this to save some taps! Instead of tapping each field, the app will automatically walk you through the form, popping up dialogs one by one. Work\'s for:',
               ),
               SizedBox(height: 8),
-              Text('- (None)'),
+              Text('Dasboard', style: Theme.of(context).textTheme.labelMedium),
+              Text('- Adding a transaction'),
+              Text('- Adding a transfer'),
             ],
           ),
           actions: [

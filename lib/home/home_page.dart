@@ -251,13 +251,13 @@ class HomePage extends StatelessWidget {
             FloatingActionButton(
               heroTag: null,
               onPressed: () => _showTransferDialog(context),
-              tooltip: 'Log Expense',
+              tooltip: 'Log Transfer',
               child: const Icon(Icons.swap_horiz),
             ),
             Spacer(),
             FloatingActionButton(
               onPressed: () => _showQuickExpenseEntry(context),
-              tooltip: 'Log Expense',
+              tooltip: 'Log Transaction',
               child: const Icon(Icons.add),
             ),
           ],

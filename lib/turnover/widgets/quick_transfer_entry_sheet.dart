@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/status.dart';
+import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
@@ -34,6 +37,8 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
   final _formKey = GlobalKey<FormState>();
   final _noteController = TextEditingController();
   final _counterpartController = TextEditingController();
+  final _counterpartFocusNode = FocusNode();
+  final _noteFocusNode = FocusNode();
 
   int? _amountScaled;
   String? _amountError;
@@ -44,13 +49,33 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
   bool _isSubmitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Trigger auto-flow after first frame if setting is enabled
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final autoFlowEnabled = context
+          .read<SettingsCubit>()
+          .state
+          .quickTurnoverEntryAutoFlow;
+      if (autoFlowEnabled) {
+        _runAutoFlow();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _noteController.dispose();
     _counterpartController.dispose();
+    _counterpartFocusNode.dispose();
+    _noteFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _selectAmount() async {
+  /// Returns if updated (true) or canceled (false)
+  Future<bool> _selectAmount() async {
     final result = await AmountDialog.show(
       context,
       currencyUnit: widget.fromAccount.currency,
@@ -59,12 +84,27 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
       initialIsNegative: false,
     );
 
-    if (result != null) {
+    if (result != null && mounted) {
       setState(() {
         _amountScaled = result;
         _amountError = null;
       });
+      return true;
     }
+    return false;
+  }
+
+  /// Returns if updated (true) or canceled (false)
+  Future<bool> _selectTag() async {
+    final selectedTag = await AddTagDialog.show(context);
+    if (selectedTag != null && mounted) {
+      setState(() {
+        _selectedTag = selectedTag;
+        _tagError = null;
+      });
+      return true;
+    }
+    return false;
   }
 
   Future<void> _selectDate() async {
@@ -75,7 +115,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
       lastDate: DateTime.now().add(const Duration(days: 1)),
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _selectedDate = picked;
       });
@@ -167,6 +207,41 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
     return currency.format(decimal);
   }
 
+  Future<void> _runAutoFlow() async {
+    final steps = [
+      //
+      _selectAmount,
+      _selectTag,
+      _focusFirstTextField,
+    ];
+    for (final step in steps) {
+      final continueAutoFlow = await step();
+      if (!continueAutoFlow || !mounted) {
+        // stop auto-flow
+        return;
+      }
+    }
+  }
+
+  Future<bool> _focusFirstTextField() async {
+    final c = Completer<bool>();
+    // Use addPostFrameCallback to ensure the form is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final isManual = widget.fromAccount.syncSource == SyncSource.manual;
+      if (isManual) {
+        // Focus counterpart field for manual accounts
+        FocusScope.of(context).requestFocus(_counterpartFocusNode);
+      } else {
+        // Focus note field for linked accounts
+        FocusScope.of(context).requestFocus(_noteFocusNode);
+      }
+      c.complete(true);
+    });
+    return c.future;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -254,15 +329,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   InkWell(
-                    onTap: () async {
-                      final selectedTag = await AddTagDialog.show(context);
-                      if (selectedTag != null) {
-                        setState(() {
-                          _selectedTag = selectedTag;
-                          _tagError = null;
-                        });
-                      }
-                    },
+                    onTap: _selectTag,
                     child: InputDecorator(
                       decoration: InputDecoration(
                         labelText: 'Tag',
@@ -314,6 +381,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
               if (isManual) ...[
                 TextFormField(
                   controller: _counterpartController,
+                  focusNode: _counterpartFocusNode,
                   decoration: const InputDecoration(
                     labelText: 'Counterpart (optional)',
                     border: OutlineInputBorder(),
@@ -324,6 +392,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
               ],
               TextFormField(
                 controller: _noteController,
+                focusNode: _noteFocusNode,
                 decoration: const InputDecoration(
                   labelText: 'Note (optional)',
                   border: OutlineInputBorder(),
