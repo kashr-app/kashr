@@ -91,11 +91,11 @@ class _SettingsPageState extends State<SettingsPage> {
                         title: const Text("Fast Form Mode"),
                         subtitle: const Text('Tap <here> for explanation'),
                         trailing: Switch(
-                          value: state.quickTurnoverEntryAutoFlow,
+                          value: state.fastFormMode,
                           onChanged: (value) {
                             context
                                 .read<SettingsCubit>()
-                                .setQuickTurnoverEntryAutoFlow(value);
+                                .setFastFormMode(value);
                           },
                         ),
                         onTap: () => _showFastFormModeInfo(context),

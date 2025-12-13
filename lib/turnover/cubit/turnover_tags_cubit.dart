@@ -4,7 +4,6 @@ import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:finanalyzer/core/associate_by.dart';
 import 'package:finanalyzer/core/extensions/map_extensios.dart';
 import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';

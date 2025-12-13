@@ -9,7 +9,7 @@ part '../_gen/settings/settings_state.g.dart';
 abstract class SettingsState with _$SettingsState {
   const factory SettingsState({
     @Default(ThemeMode.system) ThemeMode themeMode,
-    @BoolJsonConverter() @Default(false) bool quickTurnoverEntryAutoFlow,
+    @BoolJsonConverter() @Default(false) bool fastFormMode,
   }) = _SettingsState;
 
   factory SettingsState.fromJson(Map<String, Object?> json) =>

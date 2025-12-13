@@ -19,9 +19,9 @@ class SettingsCubit extends Cubit<SettingsState> {
     _upsertAndEmit('themeMode', newState);
   }
 
-  Future<void> setQuickTurnoverEntryAutoFlow(bool value) async {
-    final newState = state.copyWith(quickTurnoverEntryAutoFlow: value);
-    await _upsertAndEmit('quickTurnoverEntryAutoFlow', newState);
+  Future<void> setFastFormMode(bool value) async {
+    final newState = state.copyWith(fastFormMode: value);
+    await _upsertAndEmit('fastFormMode', newState);
   }
 
   Future<void> _upsertAndEmit(String key, SettingsState newState) async {

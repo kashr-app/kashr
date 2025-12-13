@@ -58,7 +58,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
       final autoFlowEnabled = context
           .read<SettingsCubit>()
           .state
-          .quickTurnoverEntryAutoFlow;
+          .fastFormMode;
       if (autoFlowEnabled) {
         _runAutoFlow();
       }
