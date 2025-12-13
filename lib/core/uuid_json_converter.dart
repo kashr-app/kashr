@@ -36,12 +36,12 @@ class UUIDJsonConverter extends JsonConverter<UuidValue, String> {
   }
 }
 
-class UUIDListJsonConverter extends JsonConverter<List<UuidValue>, List<String>> {
+class UUIDListJsonConverter extends JsonConverter<List<UuidValue>, List<dynamic>> {
   const UUIDListJsonConverter();
 
   @override
-  List<UuidValue> fromJson(List<String> json) {
-    return json.map((id) => UuidValue.fromString(id)).toList();
+  List<UuidValue> fromJson(List<dynamic> json) {
+    return json.map((id) => UuidValue.fromString(id as String)).toList();
   }
 
   @override
@@ -50,13 +50,13 @@ class UUIDListJsonConverter extends JsonConverter<List<UuidValue>, List<String>>
   }
 }
 
-class UUIDListNullableJsonConverter extends JsonConverter<List<UuidValue>?, List<String>?> {
+class UUIDListNullableJsonConverter extends JsonConverter<List<UuidValue>?, List<dynamic>?> {
   const UUIDListNullableJsonConverter();
 
   @override
-  List<UuidValue>? fromJson(List<String>? json) {
+  List<UuidValue>? fromJson(List<dynamic>? json) {
     if (json == null) return null;
-    return json.map((id) => UuidValue.fromString(id)).toList();
+    return json.map((id) => UuidValue.fromString(id as String)).toList();
   }
 
   @override
