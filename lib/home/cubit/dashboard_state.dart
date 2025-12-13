@@ -19,6 +19,8 @@ abstract class DashboardState with _$DashboardState {
     required Decimal totalTransfers,
     required Decimal unallocatedIncome,
     required Decimal unallocatedExpenses,
+    required int pendingCount,
+    required Decimal pendingTotalAmount,
     // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])

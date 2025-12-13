@@ -36,6 +36,8 @@ class DashboardCubit extends Cubit<DashboardState> {
           unallocatedExpenses: Decimal.zero,
           unallocatedTurnovers: const [],
           unallocatedCount: 0,
+          pendingCount: 0,
+          pendingTotalAmount: Decimal.zero,
         ),
       );
 
@@ -171,6 +173,8 @@ class DashboardCubit extends Cubit<DashboardState> {
       final totalIncome = totalAllIncomeAbs + unallocatedIncome;
       final totalExpenses = totalAllExpensesAbs + unallocatedExpenses;
 
+      final (pendingCount, pendingTotalAmount) = await _pending();
+
       emit(
         state.copyWith(
           status: Status.success,
@@ -184,6 +188,8 @@ class DashboardCubit extends Cubit<DashboardState> {
           transferTagSummaries: transferTagSummaries,
           unallocatedTurnovers: unallocatedTurnovers,
           unallocatedCount: unallocatedCount,
+          pendingCount: pendingCount,
+          pendingTotalAmount: pendingTotalAmount,
         ),
       );
     } catch (e, s) {
@@ -195,6 +201,15 @@ class DashboardCubit extends Cubit<DashboardState> {
         ),
       );
     }
+  }
+
+  Future<(int, Decimal)> _pending() async {
+    final pendingTurnovers = await _tagTurnoverRepository.getUnmatched();
+    final count = pendingTurnovers.length;
+    final totalAmount = pendingTurnovers
+        .map((tt) => tt.amountValue)
+        .fold(Decimal.zero, (sum, amount) => sum + amount);
+    return (count, totalAmount);
   }
 
   Future<(List<TagSummary>, Decimal, Decimal, Decimal)>

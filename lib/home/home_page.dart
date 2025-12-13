@@ -200,7 +200,10 @@ class HomePage extends StatelessWidget {
                           context.read<DashboardCubit>().selectMonth(yearMonth),
                     ),
                     const SizedBox(height: 8),
-                    const PendingTurnoversHint(),
+                    PendingTurnoversHint(
+                      count: state.pendingCount,
+                      totalAmount: state.pendingTotalAmount,
+                    ),
                     const SizedBox(height: 8),
                     const LoadBankDataSection(),
                     const SizedBox(height: 8),
