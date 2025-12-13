@@ -1,6 +1,7 @@
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/widgets/note_field.dart';
 import 'package:finanalyzer/turnover/widgets/tag_amount_controls.dart';
@@ -12,12 +13,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 ///
 /// Shows the tag name, avatar, slider for amount allocation, and note field.
 class TagTurnoverItem extends StatelessWidget {
-  final TagTurnoverWithTag tagTurnoverWithTag;
+  final TagTurnover tagTurnover;
+  final Tag tag;
   final int maxAmountScaled;
   final String currencyUnit;
 
   const TagTurnoverItem({
-    required this.tagTurnoverWithTag,
+    required this.tagTurnover,
+    required this.tag,
     required this.maxAmountScaled,
     required this.currencyUnit,
     super.key,
@@ -26,8 +29,6 @@ class TagTurnoverItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tagTurnover = tagTurnoverWithTag.tagTurnover;
-    final tag = tagTurnoverWithTag.tag;
     final amountScaled = decimalScale(tagTurnover.amountValue) ?? 0;
 
     // Configure slider to work with absolute values for better UX
@@ -84,7 +85,7 @@ class TagTurnoverItem extends StatelessWidget {
             children: [
               Text(tag.name, style: theme.textTheme.titleMedium),
               Text(
-                dateFormat.format(tagTurnoverWithTag.tagTurnover.bookingDate),
+                dateFormat.format(tagTurnover.bookingDate),
                 style: theme.textTheme.bodySmall,
               ),
             ],

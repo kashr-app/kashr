@@ -1,19 +1,35 @@
+import 'dart:async';
+
+import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover_change.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
-import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
-import 'turnover.dart';
 import 'package:uuid/uuid.dart';
 
+import 'turnover.dart';
+
 class TurnoverRepository {
+  final StreamController<TurnoverChange> _changeController =
+      StreamController<TurnoverChange>.broadcast();
+
+  /// Stream of turnover changes for reactive updates.
+  Stream<TurnoverChange> watchChanges() => _changeController.stream;
+
+  void dispose() {
+    _changeController.close();
+  }
+
   Future<int> createTurnover(Turnover turnover) async {
     final db = await DatabaseHelper().database;
-    return await db.insert('turnover', turnover.toJson());
+    final result = db.insert('turnover', turnover.toJson());
+    _changeController.add(TurnoversInserted([turnover]));
+    return result;
   }
 
   Future<Turnover?> getTurnoverById(UuidValue id) async {
@@ -108,17 +124,21 @@ class TurnoverRepository {
 
   Future<int> updateTurnover(Turnover turnover) async {
     final db = await DatabaseHelper().database;
-    return await db.update(
+    final result = db.update(
       'turnover',
       turnover.toJson(),
       where: 'id = ?',
       whereArgs: [turnover.id.uuid],
     );
+    _changeController.add(TurnoversUpdated([turnover]));
+    return result;
   }
 
   Future<int> deleteTurnover(UuidValue id) async {
     final db = await DatabaseHelper().database;
-    return await db.delete('turnover', where: 'id = ?', whereArgs: [id.uuid]);
+    final result = db.delete('turnover', where: 'id = ?', whereArgs: [id.uuid]);
+    _changeController.add(TurnoversDeleted([id]));
+    return result;
   }
 
   Future<List<Turnover>> getTurnoversByApiIdsForAccount({

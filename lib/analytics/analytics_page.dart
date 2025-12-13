@@ -2,15 +2,13 @@ import 'package:finanalyzer/analytics/cubit/analytics_cubit.dart';
 import 'package:finanalyzer/analytics/cubit/analytics_state.dart';
 import 'package:finanalyzer/analytics/widgets/analytics_chart.dart';
 import 'package:finanalyzer/analytics/widgets/tag_filter_section.dart';
+import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-part '../_gen/analytics/analytics_page.g.dart';
-
-@TypedGoRoute<AnalyticsRoute>(path: '/app/analytics')
 class AnalyticsRoute extends GoRouteData with $AnalyticsRoute {
   const AnalyticsRoute();
 
@@ -47,11 +45,7 @@ class AnalyticsPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Colors.red,
-                  ),
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
                   const SizedBox(height: 16),
                   Text(
                     state.errorMessage ?? 'An error occurred',
@@ -59,8 +53,7 @@ class AnalyticsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () =>
-                        context.read<AnalyticsCubit>().loadData(),
+                    onPressed: () => context.read<AnalyticsCubit>().loadData(),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -88,9 +81,7 @@ class AnalyticsPage extends StatelessWidget {
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
                             child: Center(
-                              child: Text(
-                                'Select tags to view analytics',
-                              ),
+                              child: Text('Select tags to view analytics'),
                             ),
                           )
                         else

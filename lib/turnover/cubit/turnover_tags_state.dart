@@ -1,25 +1,12 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_suggestion.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:uuid/uuid.dart';
 
 part '../../_gen/turnover/cubit/turnover_tags_state.freezed.dart';
-part '../../_gen/turnover/cubit/turnover_tags_state.g.dart';
-
-/// Represents a TagTurnover with its associated Tag.
-@freezed
-abstract class TagTurnoverWithTag with _$TagTurnoverWithTag {
-  const factory TagTurnoverWithTag({
-    required TagTurnover tagTurnover,
-    required Tag tag,
-  }) = _TagTurnoverWithTag;
-
-  factory TagTurnoverWithTag.fromJson(Map<String, dynamic> json) =>
-      _$TagTurnoverWithTagFromJson(json);
-}
 
 @freezed
 abstract class TurnoverTagsState with _$TurnoverTagsState {
@@ -29,23 +16,20 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     @Default(Status.initial) Status status,
     Turnover? turnover,
     Turnover? initialTurnover,
-    @Default([]) List<TagTurnoverWithTag> tagTurnovers,
-    @Default([]) List<TagTurnoverWithTag> initialTagTurnovers,
+    @Default({}) Map<UuidValue, TagTurnover> currentTagTurnoversById,
+    @Default([]) List<TagTurnover> initialTagTurnovers,
     @Default([]) List<TagSuggestion> suggestions,
     String? errorMessage,
     @Default(false) bool isManualAccount,
-    @Default({}) Set<String> associatedPendingIds,
-    @Default({}) Set<String> unlinkedTagTurnoverIds,
+    @Default([]) List<TagTurnover> associatedPendingTagTurnovers,
+    @Default([]) List<TagTurnover> unlinkedTagTurnovers,
   }) = _TurnoverTagsState;
-
-  factory TurnoverTagsState.fromJson(Map<String, dynamic> json) =>
-      _$TurnoverTagsStateFromJson(json);
 
   /// Returns the sum of all tag turnover amounts.
   Decimal get totalTagAmount {
-    return tagTurnovers.fold<Decimal>(
+    return currentTagTurnoversById.values.fold<Decimal>(
       Decimal.zero,
-      (sum, tt) => sum + tt.tagTurnover.amountValue,
+      (sum, tt) => sum + tt.amountValue,
     );
   }
 
@@ -78,13 +62,16 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     if (turnover != initialTurnover) return true;
 
     // Different number of tag turnovers
-    if (tagTurnovers.length != initialTagTurnovers.length) return true;
+    if (currentTagTurnoversById.length != initialTagTurnovers.length) {
+      return true;
+    }
 
-    // Compare index by index - this uses freezed's generated equality for TagTurnover
+    // Compare with initial TagTurnovers - this uses freezed's generated equality for TagTurnover
     // which automatically compares ALL fields (amount, note, etc.)
     // Order matters to users, so we check each position
-    for (var i = 0; i < tagTurnovers.length; i++) {
-      if (tagTurnovers[i].tagTurnover != initialTagTurnovers[i].tagTurnover) {
+    final tagTurnovers = currentTagTurnoversById.values.toList();
+    for (var i = 0; i < currentTagTurnoversById.length; i++) {
+      if (tagTurnovers[i] != initialTagTurnovers[i]) {
         return true;
       }
     }

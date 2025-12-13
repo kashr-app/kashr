@@ -27,12 +27,12 @@ import 'package:finanalyzer/home/widgets/transfer_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/banks_page.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
-import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
-import 'package:finanalyzer/turnover/widgets/quick_transfer_entry_sheet.dart';
-import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
+import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/widgets/quick_transfer_entry_sheet.dart';
+import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/tags_page.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
@@ -45,7 +45,7 @@ import 'package:go_router/go_router.dart';
 part '../_gen/home/home_page.g.dart';
 
 @TypedGoRoute<HomeRoute>(
-  path: '/app',
+  path: '/',
   routes: <TypedGoRoute<GoRouteData>>[
     TypedGoRoute<SettingsRoute>(
       path: 'settings',
@@ -97,7 +97,7 @@ class HomeRoute extends GoRouteData with $HomeRoute {
       create: (context) => DashboardCubit(
         context.read<TurnoverRepository>(),
         context.read<TagTurnoverRepository>(),
-        context.read<TagCubit>(),
+        context.read<TagRepository>(),
       )..loadMonthData(),
       child: const HomePage(),
     );
@@ -183,64 +183,61 @@ class HomePage extends StatelessWidget {
                   context.read<DashboardCubit>().nextMonth();
                 }
               },
-              child: RefreshIndicator(
-                onRefresh: () => context.read<DashboardCubit>().loadMonthData(),
-                child: ListView(
-                  padding: const EdgeInsets.all(
-                    16,
-                  ).copyWith(bottom: 80), // let fab not hide the bottom
-                  children: [
-                    PeriodSelector(
-                      selectedPeriod: state.selectedPeriod,
-                      onPreviousMonth: () =>
-                          context.read<DashboardCubit>().previousMonth(),
-                      onNextMonth: () =>
-                          context.read<DashboardCubit>().nextMonth(),
-                      onMonthSelected: (yearMonth) =>
-                          context.read<DashboardCubit>().selectMonth(yearMonth),
-                    ),
-                    const SizedBox(height: 8),
-                    PendingTurnoversHint(
-                      count: state.pendingCount,
-                      totalAmount: state.pendingTotalAmount,
-                    ),
-                    const SizedBox(height: 8),
-                    const LoadBankDataSection(),
-                    const SizedBox(height: 8),
-                    CashflowCard(
-                      totalIncome: state.totalIncome,
-                      totalExpenses: state.totalExpenses,
-                    ),
-                    const SizedBox(height: 16),
-                    UnallocatedTurnoversSection(
-                      unallocatedTurnovers: state.unallocatedTurnovers,
-                      unallocatedCount: state.unallocatedCount,
-                      onRefresh: () =>
-                          context.read<DashboardCubit>().loadMonthData(),
-                      selectedPeriod: state.selectedPeriod,
-                    ),
-                    const SizedBox(height: 16),
-                    IncomeSummaryCard(
-                      totalIncome: state.totalIncome,
-                      unallocatedIncome: state.unallocatedIncome,
-                      tagSummaries: state.incomeTagSummaries,
-                      selectedPeriod: state.selectedPeriod,
-                    ),
-                    const SizedBox(height: 16),
-                    SpendingSummaryCard(
-                      totalExpenses: -state.totalExpenses,
-                      unallocatedExpenses: -state.unallocatedExpenses,
-                      tagSummaries: state.expenseTagSummaries,
-                      selectedPeriod: state.selectedPeriod,
-                    ),
-                    const SizedBox(height: 16),
-                    TransferSummaryCard(
-                      totalTransfers: state.totalTransfers,
-                      tagSummaries: state.transferTagSummaries,
-                      selectedPeriod: state.selectedPeriod,
-                    ),
-                  ],
-                ),
+              child: ListView(
+                padding: const EdgeInsets.all(
+                  16,
+                ).copyWith(bottom: 80), // let fab not hide the bottom
+                children: [
+                  PeriodSelector(
+                    selectedPeriod: state.selectedPeriod,
+                    onPreviousMonth: () =>
+                        context.read<DashboardCubit>().previousMonth(),
+                    onNextMonth: () =>
+                        context.read<DashboardCubit>().nextMonth(),
+                    onMonthSelected: (yearMonth) =>
+                        context.read<DashboardCubit>().selectMonth(yearMonth),
+                  ),
+                  const SizedBox(height: 8),
+                  PendingTurnoversHint(
+                    count: state.pendingCount,
+                    totalAmount: state.pendingTotalAmount,
+                  ),
+                  const SizedBox(height: 8),
+                  const LoadBankDataSection(),
+                  const SizedBox(height: 8),
+                  CashflowCard(
+                    totalIncome: state.totalIncome,
+                    totalExpenses: state.totalExpenses,
+                  ),
+                  const SizedBox(height: 16),
+                  UnallocatedTurnoversSection(
+                    unallocatedTurnovers: state.unallocatedTurnovers,
+                    unallocatedCount: state.unallocatedCount,
+                    onRefresh: () =>
+                        context.read<DashboardCubit>().loadMonthData(),
+                    selectedPeriod: state.selectedPeriod,
+                  ),
+                  const SizedBox(height: 16),
+                  IncomeSummaryCard(
+                    totalIncome: state.totalIncome,
+                    unallocatedIncome: state.unallocatedIncome,
+                    tagSummaries: state.incomeTagSummaries,
+                    selectedPeriod: state.selectedPeriod,
+                  ),
+                  const SizedBox(height: 16),
+                  SpendingSummaryCard(
+                    totalExpenses: -state.totalExpenses,
+                    unallocatedExpenses: -state.unallocatedExpenses,
+                    tagSummaries: state.expenseTagSummaries,
+                    selectedPeriod: state.selectedPeriod,
+                  ),
+                  const SizedBox(height: 16),
+                  TransferSummaryCard(
+                    totalTransfers: state.totalTransfers,
+                    tagSummaries: state.transferTagSummaries,
+                    selectedPeriod: state.selectedPeriod,
+                  ),
+                ],
               ),
             );
           },

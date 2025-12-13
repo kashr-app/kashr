@@ -6,6 +6,7 @@ import 'package:finanalyzer/backup/services/archive_service.dart';
 import 'package:finanalyzer/backup/services/backup_service.dart';
 import 'package:finanalyzer/backup/services/encryption_service.dart';
 import 'package:finanalyzer/backup/services/local_storage_service.dart';
+import 'package:finanalyzer/core/module.dart';
 import 'package:finanalyzer/core/restart_widget.dart';
 import 'package:finanalyzer/core/secure_storage.dart';
 import 'package:finanalyzer/db/db_helper.dart';
@@ -30,36 +31,62 @@ void main() {
   runApp(RestartWidget(child: const MyApp()));
 }
 
-final turnoverModule = TurnoverModule();
-final modules = [
-  //
-  turnoverModule,
-  SavingsModule(turnoverModule),
-];
-
-final accountRepository = AccountRepository();
-final balanceCalculationService = BalanceCalculationService(
-  turnoverModule.turnoverRepository,
-  turnoverModule.tagTurnoverRepository,
-);
-
-// Backup services
-final archiveService = ArchiveService();
-final localStorageService = LocalStorageService();
-final encryptionService = EncryptionService();
-final backupRepository = BackupRepository(
-  localStorageService: localStorageService,
-);
-final backupService = BackupService(
-  dbHelper: DatabaseHelper(),
-  backupRepository: backupRepository,
-  archiveService: archiveService,
-  localStorageService: localStorageService,
-  encryptionService: encryptionService,
-);
-
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  // Dependency tree - all instantiated in initState
+  late final TurnoverModule turnoverModule;
+  late final List<Module> modules;
+  late final AccountRepository accountRepository;
+  late final BalanceCalculationService balanceCalculationService;
+  late final ArchiveService archiveService;
+  late final LocalStorageService localStorageService;
+  late final EncryptionService encryptionService;
+  late final BackupRepository backupRepository;
+  late final BackupService backupService;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize dependency tree
+    turnoverModule = TurnoverModule();
+    modules = [turnoverModule, SavingsModule(turnoverModule)];
+
+    accountRepository = AccountRepository();
+    balanceCalculationService = BalanceCalculationService(
+      turnoverModule.turnoverRepository,
+      turnoverModule.tagTurnoverRepository,
+    );
+
+    // Backup services
+    archiveService = ArchiveService();
+    localStorageService = LocalStorageService();
+    encryptionService = EncryptionService();
+    backupRepository = BackupRepository(
+      localStorageService: localStorageService,
+    );
+    backupService = BackupService(
+      dbHelper: DatabaseHelper(),
+      backupRepository: backupRepository,
+      archiveService: archiveService,
+      localStorageService: localStorageService,
+      encryptionService: encryptionService,
+    );
+  }
+
+  @override
+  void dispose() {
+    for (var it in modules) {
+      it.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

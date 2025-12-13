@@ -55,6 +55,13 @@ class TurnoverModule implements Module {
   void registerTagListener(TagListener listener) {
     tagListeners.add(listener);
   }
+
+  @override
+  void dispose() {
+    turnoverRepository.dispose();
+    tagRepository.dispose();
+    tagTurnoverRepository.dispose();
+  }
 }
 
 abstract class TagListener {

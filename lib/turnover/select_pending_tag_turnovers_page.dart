@@ -32,7 +32,7 @@ class SelectPendingTagTurnoversPage extends StatefulWidget {
 
 class _SelectPendingTagTurnoversPageState
     extends State<SelectPendingTagTurnoversPage> {
-  List<_TagTurnoverWithTagAndAccount>? _pendingTurnovers;
+  List<_TagTurnoverWithAccount>? _pendingTurnovers;
   final Set<String> _selectedIds = {};
   bool _isLoading = true;
   String? _errorMessage;
@@ -55,32 +55,26 @@ class _SelectPendingTagTurnoversPageState
       final unmatched = await tagTurnoverRepository.getUnmatched();
 
       // Filter out tag turnovers that are already associated with this turnover
-      final existingTagTurnoverIds = widget.cubit.state.tagTurnovers
-          .map((tt) => tt.tagTurnover.id.uuid)
+      final existingTagTurnoverIds = widget
+          .cubit
+          .state
+          .currentTagTurnoversById
+          .keys
           .toSet();
 
       final availableUnmatched = unmatched
-          .where((tt) => !existingTagTurnoverIds.contains(tt.id.uuid))
+          .where((tt) => !existingTagTurnoverIds.contains(tt.id))
           .toList();
 
-      // Load unlinked tag turnovers from the current session
-      final unlinkedIds = widget.cubit.state.unlinkedTagTurnoverIds;
-      final unlinkedTagTurnovers = <TagTurnover>[];
-      for (final idString in unlinkedIds) {
-        final id = UuidValue.fromString(idString);
-        final tagTurnover = await tagTurnoverRepository.getById(id);
-        if (tagTurnover != null) {
-          unlinkedTagTurnovers.add(tagTurnover);
-        }
-      }
-
       // Combine unmatched and unlinked tag turnovers
-      final allAvailable = [...availableUnmatched, ...unlinkedTagTurnovers];
+      final allAvailable = [
+        ...availableUnmatched,
+        ...widget.cubit.state.unlinkedTagTurnovers,
+      ];
 
       final withTagsAndAccounts = allAvailable.map((tt) {
-        return _TagTurnoverWithTagAndAccount(
+        return _TagTurnoverWithAccount(
           tagTurnover: tt,
-          tagId: tt.tagId,
           accountId: tt.accountId,
         );
       }).toList();
@@ -275,7 +269,7 @@ class _SelectPendingTagTurnoversPageState
 }
 
 class _SelectablePendingTurnoverItem extends StatelessWidget {
-  final _TagTurnoverWithTagAndAccount tagTurnoverWithTagAndAccount;
+  final _TagTurnoverWithAccount tagTurnoverWithTagAndAccount;
   final bool isSelected;
   final bool accountDiverges;
   final VoidCallback onTap;
@@ -291,7 +285,7 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tt = tagTurnoverWithTagAndAccount.tagTurnover;
-    final tagId = tagTurnoverWithTagAndAccount.tagId;
+    final tagId = tt.tagId;
     final accountId = tagTurnoverWithTagAndAccount.accountId;
 
     return Card(
@@ -420,14 +414,12 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
   }
 }
 
-class _TagTurnoverWithTagAndAccount {
+class _TagTurnoverWithAccount {
   final TagTurnover tagTurnover;
-  final UuidValue tagId;
   final UuidValue accountId;
 
-  _TagTurnoverWithTagAndAccount({
+  _TagTurnoverWithAccount({
     required this.tagTurnover,
-    required this.tagId,
     required this.accountId,
   });
 }

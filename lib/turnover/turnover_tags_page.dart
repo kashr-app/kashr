@@ -3,11 +3,13 @@ import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/dialogs/discard_changes_dialog.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/delete_turnover_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/edit_turnover_dialog.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/widgets/select_from_pending_tag_turnovers_hint.dart';
@@ -29,7 +31,6 @@ class TurnoverTagsRoute extends GoRouteData with $TurnoverTagsRoute {
     return BlocProvider(
       create: (context) => TurnoverTagsCubit(
         context.read<TagTurnoverRepository>(),
-        context.read<TagCubit>(),
         context.read<TurnoverRepository>(),
         context.read<AccountRepository>(),
       )..loadTurnover(UuidValue.fromString(turnoverId)),
@@ -93,6 +94,9 @@ class TurnoverTagsPage extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               }
 
+              final tagTurnovers = state.currentTagTurnoversById.values
+                  .toList();
+
               return Column(
                 children: [
                   TurnoverInfoCard(turnover: turnover),
@@ -104,15 +108,13 @@ class TurnoverTagsPage extends StatelessWidget {
                   TagSuggestionsRow(
                     suggestions: state.suggestions,
                     onSuggestionTap: (suggestion) {
-                      context.read<TurnoverTagsCubit>().addTag(
-                            suggestion.tag,
-                          );
+                      context.read<TurnoverTagsCubit>().addTag(suggestion.tag);
                     },
                   ),
 
                   // Tag turnovers list
                   Expanded(
-                    child: state.tagTurnovers.isEmpty
+                    child: tagTurnovers.isEmpty
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -127,16 +129,26 @@ class TurnoverTagsPage extends StatelessWidget {
                               ],
                             ),
                           )
-                        : ListView.builder(
-                            itemCount: state.tagTurnovers.length,
-                            itemBuilder: (context, index) {
-                              final tagTurnover = state.tagTurnovers[index];
-                              return TagTurnoverItem(
-                                key: ValueKey(tagTurnover.tagTurnover.id),
-                                tagTurnoverWithTag: tagTurnover,
-                                maxAmountScaled:
-                                    decimalScale(turnover.amountValue) ?? 0,
-                                currencyUnit: turnover.amountUnit,
+                        : BlocBuilder<TagCubit, TagState>(
+                            builder: (context, tagState) {
+                              return ListView.builder(
+                                itemCount: tagTurnovers.length,
+                                itemBuilder: (context, index) {
+                                  final tagTurnover = tagTurnovers[index];
+                                  return TagTurnoverItem(
+                                    key: ValueKey(tagTurnover.id),
+                                    tagTurnover: tagTurnover,
+                                    tag:
+                                        tagState.tagById[tagTurnover.tagId] ??
+                                        Tag(
+                                          id: tagTurnover.tagId,
+                                          name: '(Unknown)',
+                                        ),
+                                    maxAmountScaled:
+                                        decimalScale(turnover.amountValue) ?? 0,
+                                    currencyUnit: turnover.amountUnit,
+                                  );
+                                },
                               );
                             },
                           ),

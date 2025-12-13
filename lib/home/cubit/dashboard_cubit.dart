@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/ingest/ingest.dart';
+import 'package:finanalyzer/core/associate_by.dart';
 import 'package:finanalyzer/core/extensions/decimal_extensions.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/cubit/dashboard_state.dart';
-import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/ingest/ingest.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag_repository.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover_change.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover_change.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,16 +21,23 @@ import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
 /// Cubit for managing the dashboard state.
+///
+/// Automatically refreshes when underlying data changes in repositories.
 class DashboardCubit extends Cubit<DashboardState> {
   final TurnoverRepository _turnoverRepository;
   final TagTurnoverRepository _tagTurnoverRepository;
-  final TagCubit _tagCubit;
+  final TagRepository _tagRepository;
   final _log = Logger();
+
+  StreamSubscription<dynamic>? _changeSubscription;
+  StreamSubscription<TurnoverChange>? _turnoverSubscription;
+  StreamSubscription<TagTurnoverChange>? _turnoverTagSubscription;
+  StreamSubscription<List<Tag>>? _tagsSubscription;
 
   DashboardCubit(
     this._turnoverRepository,
     this._tagTurnoverRepository,
-    this._tagCubit,
+    this._tagRepository,
   ) : super(
         DashboardState(
           selectedPeriod: YearMonth.now(),
@@ -39,7 +51,80 @@ class DashboardCubit extends Cubit<DashboardState> {
           pendingCount: 0,
           pendingTotalAmount: Decimal.zero,
         ),
-      );
+      ) {
+    _setupSubscriptions();
+  }
+
+  /// Sets up subscriptions to all repository changes.
+  void _setupSubscriptions() {
+    _turnoverSubscription = _turnoverRepository.watchChanges().listen(
+      _onTurnoverChanged,
+    );
+    _turnoverTagSubscription = _tagTurnoverRepository.watchChanges().listen(
+      _onTagTurnoverChanged,
+    );
+    _tagsSubscription = _tagRepository.watchTags().listen(_onTagsChanged);
+  }
+
+  void _onTurnoverChanged(TurnoverChange change) {
+    final shouldRefresh = switch (change) {
+      TurnoversInserted(:final turnovers) => turnovers.any(
+        _affectsSelectedMonth,
+      ),
+      TurnoversUpdated(:final turnovers) => turnovers.any(
+        _affectsSelectedMonth,
+      ),
+      TurnoversDeleted() => true, // Conservative: always refresh on deletes
+    };
+
+    if (shouldRefresh) {
+      loadMonthData();
+    }
+  }
+
+  void _onTagTurnoverChanged(TagTurnoverChange change) {
+    final shouldRefresh = switch (change) {
+      TagTurnoversInserted(:final tagTurnovers) => tagTurnovers.any(
+        (tt) => _bookingDateInMonth(tt.bookingDate),
+      ),
+      TagTurnoversUpdated(:final tagTurnovers) => tagTurnovers.any(
+        (tt) => _bookingDateInMonth(tt.bookingDate),
+      ),
+      TagTurnoversDeleted() => true, // Conservative: always refresh on deletes
+    };
+
+    if (shouldRefresh) {
+      loadMonthData();
+    }
+  }
+
+  void _onTagsChanged(List<Tag> tags) {
+    final shouldRefresh = true;
+    if (shouldRefresh) {
+      loadMonthData();
+    }
+  }
+
+  /// Checks if a turnover affects the currently selected month.
+  bool _affectsSelectedMonth(Turnover turnover) {
+    final bookingDate = turnover.bookingDate;
+    return bookingDate != null && _bookingDateInMonth(bookingDate);
+  }
+
+  /// Checks if a booking date falls within the selected month.
+  bool _bookingDateInMonth(DateTime date) {
+    final ym = YearMonth(year: date.year, month: date.month);
+    return ym == state.selectedPeriod;
+  }
+
+  @override
+  Future<void> close() {
+    _changeSubscription?.cancel();
+    _turnoverSubscription?.cancel();
+    _turnoverTagSubscription?.cancel();
+    _tagsSubscription?.cancel();
+    return super.close();
+  }
 
   Future<DataIngestResult> ingestData(DataIngestor ingestor) async {
     void setBankDownloadStatus(Status status) {
@@ -71,7 +156,11 @@ class DashboardCubit extends Cubit<DashboardState> {
   /// Loads cashflow data for the currently selected month.
   Future<void> loadMonthData() async {
     emit(state.copyWith(status: Status.loading));
-    final Map<UuidValue, Tag> tagById = _tagCubit.state.tagById;
+
+    // Get current tags from repository
+    final tags = await _tagRepository.getAllTags();
+    final tagById = tags.associateBy((it) => it.id);
+
     try {
       final turnovers = await _turnoverRepository.getTurnoversForMonth(
         state.selectedPeriod,

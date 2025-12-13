@@ -6,6 +6,7 @@ import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/select_pending_tag_turnovers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 
 class SelectFromPendingTagTurnoversHint extends StatelessWidget {
   final Turnover turnover;
@@ -21,11 +22,8 @@ class SelectFromPendingTagTurnoversHint extends StatelessWidget {
         return _HintContent(
           turnover: turnover,
           tagTurnoverRepository: tagTurnoverRepository,
-          existingTagTurnoverIds: state.tagTurnovers
-              .map((tt) => tt.tagTurnover.id.uuid)
-              .whereType<String>()
-              .toSet(),
-          unlinkedTagTurnoverIds: state.unlinkedTagTurnoverIds,
+          existingTagTurnoverIds: state.currentTagTurnoversById.keys,
+          unlinkedTagTurnoverIds: state.unlinkedTagTurnovers,
         );
       },
     );
@@ -35,8 +33,8 @@ class SelectFromPendingTagTurnoversHint extends StatelessWidget {
 class _HintContent extends StatelessWidget {
   final Turnover turnover;
   final TagTurnoverRepository tagTurnoverRepository;
-  final Set<String> existingTagTurnoverIds;
-  final Set<String> unlinkedTagTurnoverIds;
+  final Iterable<UuidValue> existingTagTurnoverIds;
+  final List<TagTurnover> unlinkedTagTurnoverIds;
 
   const _HintContent({
     required this.turnover,
@@ -57,7 +55,7 @@ class _HintContent extends StatelessWidget {
 
         // Filter out tag turnovers that are already associated with this turnover
         final availablePendingTurnovers = unmatchedFromDb
-            .where((tt) => !existingTagTurnoverIds.contains(tt.id.uuid))
+            .where((tt) => !existingTagTurnoverIds.contains(tt.id))
             .toList();
 
         // Add count of unlinked tag turnovers

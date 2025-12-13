@@ -1,18 +1,34 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover_change.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:uuid/uuid.dart';
 
 class TagTurnoverRepository {
+  final StreamController<TagTurnoverChange> _changeController =
+      StreamController<TagTurnoverChange>.broadcast();
+
+  /// Stream of tag turnover changes for reactive updates.
+  Stream<TagTurnoverChange> watchChanges() => _changeController.stream;
+
+  /// Disposes the repository and closes the change stream.
+  void dispose() {
+    _changeController.close();
+  }
+
   Future<int> createTagTurnover(TagTurnover tagTurnover) async {
     final db = await DatabaseHelper().database;
-    return await db.insert('tag_turnover', tagTurnover.toJson());
+    final result = db.insert('tag_turnover', tagTurnover.toJson());
+    _changeController.add(TagTurnoversInserted([tagTurnover]));
+    return result;
   }
 
   Future<void> createTagTurnoversBatch(List<TagTurnover> tagTurnovers) async {
@@ -23,6 +39,66 @@ class TagTurnoverRepository {
       batch.insert('tag_turnover', tag.toJson());
     }
     await batch.commit(noResult: true);
+    _changeController.add(TagTurnoversInserted(tagTurnovers));
+  }
+
+  /// Batch updates multiple tag turnovers in a single transaction.
+  Future<void> updateTagTurnoversBatch(List<TagTurnover> tagTurnovers) async {
+    if (tagTurnovers.isEmpty) return;
+
+    final db = await DatabaseHelper().database;
+    final batch = db.batch();
+
+    for (final tt in tagTurnovers) {
+      batch.update(
+        'tag_turnover',
+        tt.toJson(),
+        where: 'id = ?',
+        whereArgs: [tt.id.uuid],
+      );
+    }
+
+    await batch.commit(noResult: true);
+    _changeController.add(TagTurnoversUpdated(tagTurnovers));
+  }
+
+  /// Batch deletes multiple tag turnovers by their IDs.
+  Future<void> deleteTagTurnoversBatch(List<UuidValue> ids) async {
+    if (ids.isEmpty) return;
+
+    final db = await DatabaseHelper().database;
+    final batch = db.batch();
+
+    for (final id in ids) {
+      batch.delete('tag_turnover', where: 'id = ?', whereArgs: [id.uuid]);
+    }
+
+    await batch.commit(noResult: true);
+    _changeController.add(TagTurnoversDeleted(ids));
+  }
+
+  /// Unlinks multiple tag turnovers from their turnovers by setting
+  /// turnover_id to null, effectively making them pending tag turnovers.
+  Future<void> unlinkManyFromTurnover(List<TagTurnover> tts) async {
+    if (tts.isEmpty) return;
+
+    final db = await DatabaseHelper().database;
+    final batch = db.batch();
+
+    final result = <TagTurnover>[];
+
+    for (final t in tts) {
+      batch.update(
+        'tag_turnover',
+        {'turnover_id': null},
+        where: 'id = ?',
+        whereArgs: [t.id.uuid],
+      );
+      result.add(t.copyWith(turnoverId: null));
+    }
+
+    await batch.commit(noResult: true);
+    _changeController.add(TagTurnoversUpdated(result));
   }
 
   /// Batch adds a tag to multiple turnovers.
@@ -59,6 +135,7 @@ class TagTurnoverRepository {
 
     // Create batch insert
     final batch = db.batch();
+    final createdTagTurnovers = <TagTurnover>[];
 
     for (final turnover in turnovers) {
       final allocatedAmount =
@@ -80,10 +157,15 @@ class TagTurnoverRepository {
         );
 
         batch.insert('tag_turnover', tagTurnover.toJson());
+        createdTagTurnovers.add(tagTurnover);
       }
     }
 
     await batch.commit(noResult: true);
+
+    if (createdTagTurnovers.isNotEmpty) {
+      _changeController.add(TagTurnoversInserted(createdTagTurnovers));
+    }
   }
 
   /// Batch removes a tag from multiple turnovers.
@@ -109,6 +191,19 @@ class TagTurnoverRepository {
       (_) => '?',
     ).join(',');
 
+    // First, get the IDs of tag_turnovers that will be deleted
+    final toDeleteRows = await db.rawQuery(
+      '''
+      SELECT id FROM tag_turnover
+      WHERE tag_id = ? AND turnover_id IN ($placeholders)
+      ''',
+      [tag.id.uuid, ...turnoverIds],
+    );
+
+    final deletedIds = toDeleteRows
+        .map((row) => UuidValue.fromString(row['id'] as String))
+        .toList();
+
     // Delete all tag_turnover entries for this tag and these turnovers
     await db.rawDelete(
       '''
@@ -117,6 +212,10 @@ class TagTurnoverRepository {
       ''',
       [tag.id.uuid, ...turnoverIds],
     );
+
+    if (deletedIds.isNotEmpty) {
+      _changeController.add(TagTurnoversDeleted(deletedIds));
+    }
   }
 
   Future<List<TagTurnover>> getByTurnover(UuidValue turnoverId) async {
@@ -203,12 +302,17 @@ class TagTurnoverRepository {
   Future<int> unlinkFromTurnover(UuidValue tagTurnoverId) async {
     final db = await DatabaseHelper().database;
 
-    return await db.update(
+    final result = db.update(
       'tag_turnover',
       {'turnover_id': null},
       where: 'id = ?',
       whereArgs: [tagTurnoverId.uuid],
     );
+
+    // Emit as deleted since unlinking removes it from the turnover context
+    _changeController.add(TagTurnoversDeleted([tagTurnoverId]));
+
+    return result;
   }
 
   /// Get TagTurnover by ID
@@ -227,44 +331,92 @@ class TagTurnoverRepository {
   Future<int> updateTagTurnover(TagTurnover tagTurnover) async {
     final db = await DatabaseHelper().database;
 
-    return db.update(
+    final result = db.update(
       'tag_turnover',
       tagTurnover.toJson(),
       where: 'id = ?',
       whereArgs: [tagTurnover.id.uuid],
     );
+
+    _changeController.add(TagTurnoversUpdated([tagTurnover]));
+
+    return result;
   }
 
   Future<int> deleteTagTurnover(UuidValue id) async {
     final db = await DatabaseHelper().database;
 
-    return db.delete('tag_turnover', where: 'id = ?', whereArgs: [id.uuid]);
+    final result = db.delete(
+      'tag_turnover',
+      where: 'id = ?',
+      whereArgs: [id.uuid],
+    );
+
+    _changeController.add(TagTurnoversDeleted([id]));
+
+    return result;
   }
 
   Future<int> deleteAllByTagId(UuidValue tagId) async {
     final db = await DatabaseHelper().database;
 
-    return db.delete(
+    // First get the IDs to notify listeners
+    final toDeleteRows = await db.query(
+      'tag_turnover',
+      columns: ['id'],
+      where: 'tag_id = ?',
+      whereArgs: [tagId.uuid],
+    );
+
+    final deletedIds = toDeleteRows
+        .map((row) => UuidValue.fromString(row['id'] as String))
+        .toList();
+
+    final result = db.delete(
       'tag_turnover',
       where: 'tag_id = ?',
       whereArgs: [tagId.uuid],
     );
+
+    if (deletedIds.isNotEmpty) {
+      _changeController.add(TagTurnoversDeleted(deletedIds));
+    }
+
+    return result;
   }
 
   Future<int> deleteAllForTurnover(UuidValue turnoverId) async {
     final db = await DatabaseHelper().database;
 
-    return db.delete(
+    // First get the IDs to notify listeners
+    final toDeleteRows = await db.query(
+      'tag_turnover',
+      columns: ['id'],
+      where: 'turnover_id = ?',
+      whereArgs: [turnoverId.uuid],
+    );
+
+    final deletedIds = toDeleteRows
+        .map((row) => UuidValue.fromString(row['id'] as String))
+        .toList();
+
+    final result = db.delete(
       'tag_turnover',
       where: 'turnover_id = ?',
       whereArgs: [turnoverId.uuid],
     );
+
+    if (deletedIds.isNotEmpty) {
+      _changeController.add(TagTurnoversDeleted(deletedIds));
+    }
+
+    return result;
   }
 
   Future<int> updateAmount(UuidValue id, Decimal amountValue) async {
     final db = await DatabaseHelper().database;
 
-    return await db.update(
+    return db.update(
       'tag_turnover',
       {'amount_value': amountValue.toString()},
       where: 'id = ?',

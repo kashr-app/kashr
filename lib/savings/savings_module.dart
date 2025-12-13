@@ -39,4 +39,8 @@ class SavingsModule implements Module {
 
     turnoverModule.registerTagListener(SavingsTagListener(savingsCubit));
   }
+  
+  @override
+  void dispose() {
+  }
 }

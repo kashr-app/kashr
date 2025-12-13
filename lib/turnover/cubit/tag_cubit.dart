@@ -1,31 +1,52 @@
+import 'dart:async';
+
 import 'package:finanalyzer/core/associate_by.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uuid/uuid.dart';
 import 'package:logger/logger.dart';
+import 'package:uuid/uuid.dart';
 
 /// Cubit for managing Tag entities.
+///
+/// This cubit acts as a reactive cache that automatically updates
+/// when tags change in the repository.
 class TagCubit extends Cubit<TagState> {
   final TagRepository _repository;
   final _log = Logger();
+  StreamSubscription<List<Tag>>? _subscription;
 
-  TagCubit(this._repository) : super(const TagState());
+  TagCubit(this._repository) : super(const TagState()) {
+    // Subscribe to tag changes from the repository
+    _subscription = _repository.watchTags().listen(_onTagsChanged);
+    // Load initial tags
+    loadTags();
+  }
+
+  void _onTagsChanged(List<Tag> tags) {
+    emit(
+      state.copyWith(
+        tags: tags,
+        tagById: tags.associateBy((t) => t.id),
+        status: Status.success,
+      ),
+    );
+  }
+
+  @override
+  Future<void> close() {
+    _subscription?.cancel();
+    return super.close();
+  }
 
   /// Loads all tags from the repository.
   Future<void> loadTags() async {
     emit(state.copyWith(status: Status.loading));
     try {
       final tags = await _repository.getAllTags();
-      emit(
-        state.copyWith(
-          status: Status.success,
-          tags: tags,
-          tagById: tags.associateBy((t) => t.id),
-        ),
-      );
+      _onTagsChanged(tags);
     } catch (e, s) {
       _log.e('Failed to load tags', error: e, stackTrace: s);
       emit(
@@ -42,7 +63,7 @@ class TagCubit extends Cubit<TagState> {
     try {
       final tagWithId = tag.copyWith(id: tag.id);
       await _repository.createTag(tagWithId);
-      await loadTags();
+      // No need to call loadTags() - the stream will auto-update
     } catch (e, s) {
       _log.e('Failed to create tag', error: e, stackTrace: s);
       emit(
@@ -58,7 +79,7 @@ class TagCubit extends Cubit<TagState> {
   Future<void> updateTag(Tag tag) async {
     try {
       await _repository.updateTag(tag);
-      await loadTags();
+      // No need to call loadTags() - the stream will auto-update
     } catch (e, s) {
       _log.e('Failed to update tag', error: e, stackTrace: s);
       emit(
@@ -74,7 +95,7 @@ class TagCubit extends Cubit<TagState> {
   Future<void> deleteTag(UuidValue id) async {
     try {
       await _repository.deleteTag(id);
-      await loadTags();
+      // No need to call loadTags() - the stream will auto-update
     } catch (e, s) {
       _log.e('Failed to delete tag', error: e, stackTrace: s);
       emit(
@@ -96,7 +117,7 @@ class TagCubit extends Cubit<TagState> {
     emit(state.copyWith(status: Status.loading));
     try {
       await _repository.mergeTags(sourceTagId, targetTagId);
-      await loadTags();
+      // No need to call loadTags() - the stream will auto-update
       _log.i('Successfully merged tags');
     } catch (e, s) {
       _log.e('Failed to merge tags', error: e, stackTrace: s);

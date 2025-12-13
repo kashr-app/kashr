@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:logger/logger.dart';
@@ -6,9 +8,31 @@ import 'package:uuid/uuid.dart';
 class TagRepository {
   final _log = Logger();
 
+  final _tagsController = StreamController<List<Tag>>.broadcast();
+  List<Tag> _cachedTags = [];
+
+  Stream<List<Tag>> watchTags() async* {
+    // Emit cached value immediately for new listeners
+    yield _cachedTags;
+    // Then emit all future updates
+    yield* _tagsController.stream;
+  }
+
+  Future<void> _emitTags() async {
+    final tags = await getAllTags();
+    _cachedTags = tags;
+    _tagsController.add(tags);
+  }
+
+  void dispose() {
+    _tagsController.close();
+  }
+
   Future<int> createTag(Tag tag) async {
     final db = await DatabaseHelper().database;
-    return await db.insert('tag', tag.toJson());
+    final result = db.insert('tag', tag.toJson());
+    await _emitTags();
+    return result;
   }
 
   Future<Tag?> getTagById(UuidValue id) async {
@@ -29,17 +53,21 @@ class TagRepository {
 
   Future<int> updateTag(Tag tag) async {
     final db = await DatabaseHelper().database;
-    return db.update(
+    final result = db.update(
       'tag',
       tag.toJson(),
       where: 'id = ?',
       whereArgs: [tag.id.uuid],
     );
+    await _emitTags();
+    return result;
   }
 
   Future<int> deleteTag(UuidValue id) async {
     final db = await DatabaseHelper().database;
-    return db.delete('tag', where: 'id = ?', whereArgs: [id.uuid]);
+    final result = db.delete('tag', where: 'id = ?', whereArgs: [id.uuid]);
+    await _emitTags();
+    return result;
   }
 
   /// Merges two tags by moving all tag_turnover references from source to target
@@ -144,6 +172,9 @@ class TagRepository {
       _log.i(
         'Successfully merged tag ${sourceTagId.uuid} into ${targetTagId.uuid}',
       );
+
+      // Emit updated tags list to all listeners
+      await _emitTags();
     } catch (e, s) {
       _log.e('Failed to merge tags', error: e, stackTrace: s);
       rethrow;
