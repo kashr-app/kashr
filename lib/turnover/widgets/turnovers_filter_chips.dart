@@ -13,14 +13,14 @@ class TurnoversFilterChips extends StatelessWidget {
     required this.filter,
     required this.sort,
     required this.onFilterChanged,
-    required this.onSortDirectionToggled,
+    required this.onSortChanged,
     super.key,
   });
 
   final TurnoverFilter filter;
   final TurnoverSort sort;
   final ValueChanged<TurnoverFilter> onFilterChanged;
-  final VoidCallback onSortDirectionToggled;
+  final ValueChanged<TurnoverSort> onSortChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -49,15 +49,18 @@ class TurnoversFilterChips extends StatelessWidget {
             runSpacing: 8,
             children: [
               if (sort != TurnoverSort.defaultSort)
-                ActionChip(
+                InputChip(
                   avatar: Icon(
-                    sort.direction == SortDirection.asc
-                        ? Icons.arrow_upward
-                        : Icons.arrow_downward,
                     size: 18,
+                    sort.direction == SortDirection.asc
+                        ? Icons.arrow_downward
+                        : Icons.arrow_upward,
                   ),
                   label: Text(sort.orderBy.label()),
-                  onPressed: onSortDirectionToggled,
+                  onDeleted: () => onSortChanged(TurnoverSort.defaultSort),
+                  onPressed: () {
+                    onSortChanged(sort.toggleDirection());
+                  },
                 ),
               if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty)
                 Chip(

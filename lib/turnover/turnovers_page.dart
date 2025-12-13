@@ -146,14 +146,9 @@ class _TurnoversPageState extends State<TurnoversPage> {
     _refresh();
   }
 
-  void _toggleSortDirection() {
+  void _updateSort(TurnoverSort sort) {
     setState(() {
-      _sort = TurnoverSort(
-        orderBy: _sort.orderBy,
-        direction: _sort.direction == SortDirection.asc
-            ? SortDirection.desc
-            : SortDirection.asc,
-      );
+      _sort = sort;
     });
     _refresh();
   }
@@ -330,7 +325,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
                 filter: _filter,
                 sort: _sort,
                 onFilterChanged: _updateFilter,
-                onSortDirectionToggled: _toggleSortDirection,
+                onSortChanged: _updateSort,
               ),
             Expanded(
               child: RefreshIndicator(

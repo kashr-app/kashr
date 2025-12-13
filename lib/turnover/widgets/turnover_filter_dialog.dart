@@ -86,7 +86,7 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Filter Turnovers', style: theme.textTheme.titleLarge),
+                  Text('Filter', style: theme.textTheme.titleLarge),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
@@ -105,54 +105,15 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Sign filter
-                    Text('Type', style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    RadioGroup<TurnoverSign?>(
-                      groupValue: _sign,
-                      onChanged: (value) {
-                        setState(() {
-                          _sign = value;
-                        });
-                      },
-                      child: Column(
-                        children: [
-                          ListTile(
-                            leading: const Radio<TurnoverSign?>(value: null),
-                            title: const Text('All'),
-                            onTap: () {
-                              setState(() {
-                                _sign = null;
-                              });
-                            },
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          ListTile(
-                            leading: const Radio<TurnoverSign?>(
-                              value: TurnoverSign.income,
-                            ),
-                            title: Row(
-                              children: [
-                                const Icon(
-                                  Icons.arrow_upward,
-                                  color: Colors.green,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('Income'),
-                              ],
-                            ),
-                            onTap: () {
-                              setState(() {
-                                _sign = TurnoverSign.income;
-                              });
-                            },
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          ListTile(
-                            leading: const Radio<TurnoverSign?>(
-                              value: TurnoverSign.expense,
-                            ),
-                            title: Row(
+                    Row(
+                      children: [
+                        Text('Type', style: theme.textTheme.titleMedium),
+                    Spacer(),
+                    DropdownButton<TurnoverSign?>(
+                      value: _sign,
+                      items: [
+                        DropdownMenuItem(value: null, child: Text("All")),
+                        DropdownMenuItem(value: TurnoverSign.expense, child: Row(
                               children: [
                                 const Icon(
                                   Icons.arrow_downward,
@@ -162,24 +123,32 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                                 const SizedBox(width: 8),
                                 const Text('Expense'),
                               ],
-                            ),
-                            onTap: () {
-                              setState(() {
-                                _sign = TurnoverSign.expense;
-                              });
-                            },
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ],
-                      ),
+                            )),
+                        DropdownMenuItem(value: TurnoverSign.income, child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.arrow_upward,
+                                  color: Colors.green,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text('Income'),
+                              ],
+                            )),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _sign = value;
+                        });
+                      },
+                    ),
+                      ],
                     ),
                     const SizedBox(height: 24),
 
                     // Period filter (Year and Month together)
-                    Text('Period', style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 4),
                     CheckboxListTile(
-                      title: const Text('Filter by period'),
+                      title: Text('Filter by period',style: theme.textTheme.titleMedium),
                       value: _period != null,
                       onChanged: (value) {
                         setState(() {
@@ -199,28 +168,31 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                     ),
                     if (_period != null) ...[
                       const SizedBox(height: 8),
-                      DropdownMenu<int>(
-                        key: const ValueKey('year_dropdown'),
-                        initialSelection: _period!.year,
-                        label: const Text('Year'),
-                        expandedInsets: EdgeInsets.zero,
-                        dropdownMenuEntries: List.generate(5, (index) {
-                          final year = DateTime.now().year - index;
-                          return DropdownMenuEntry(
-                            value: year,
-                            label: year.toString(),
-                          );
-                        }),
-                        onSelected: (year) {
-                          if (year != null) {
-                            setState(() {
-                              _period = YearMonth(
-                                year: year,
-                                month: _period!.month,
-                              );
-                            });
-                          }
-                        },
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: DropdownMenu<int>(
+                          key: const ValueKey('year_dropdown'),
+                          initialSelection: _period!.year,
+                          label: const Text('Year'),
+                          expandedInsets: EdgeInsets.zero,
+                          dropdownMenuEntries: List.generate(5, (index) {
+                            final year = DateTime.now().year - index;
+                            return DropdownMenuEntry(
+                              value: year,
+                              label: year.toString(),
+                            );
+                          }),
+                          onSelected: (year) {
+                            if (year != null) {
+                              setState(() {
+                                _period = YearMonth(
+                                  year: year,
+                                  month: _period!.month,
+                                );
+                              });
+                            }
+                          },
+                        ),
                       ),
                       const SizedBox(height: 12),
                       DropdownMenu<int>(
@@ -290,8 +262,9 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
 
                                   return Chip(
                                     label: Text(tag.name),
-                                    backgroundColor:
-                                        tagColor?.withValues(alpha: 0.2),
+                                    backgroundColor: tagColor?.withValues(
+                                      alpha: 0.2,
+                                    ),
                                     side: tagColor != null
                                         ? BorderSide(
                                             color: tagColor,

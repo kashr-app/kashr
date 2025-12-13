@@ -65,4 +65,12 @@ abstract class TurnoverSort with _$TurnoverSort {
 
   factory TurnoverSort.fromJson(Map<String, dynamic> json) =>
       _$TurnoverSortFromJson(json);
+
+  TurnoverSort toggleDirection() {
+    return copyWith(
+      direction: direction == SortDirection.asc
+          ? SortDirection.desc
+          : SortDirection.asc,
+    );
+  }
 }

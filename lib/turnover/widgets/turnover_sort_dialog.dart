@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 
 /// Dialog for editing turnover sort options.
 class TurnoverSortDialog extends StatefulWidget {
-  const TurnoverSortDialog({
-    required this.initialSort,
-    super.key,
-  });
+  const TurnoverSortDialog({required this.initialSort, super.key});
 
   final TurnoverSort initialSort;
 
@@ -26,11 +23,16 @@ class _TurnoverSortDialogState extends State<TurnoverSortDialog> {
   }
 
   void _applySort() {
-    final sort = TurnoverSort(
-      orderBy: _sortField,
-      direction: _sortDirection,
-    );
+    final sort = TurnoverSort(orderBy: _sortField, direction: _sortDirection);
     Navigator.of(context).pop(sort);
+  }
+
+  void _clear() {
+    final sort = TurnoverSort.defaultSort;
+    setState(() {
+      _sortField = sort.orderBy;
+      _sortDirection = sort.direction;
+    });
   }
 
   @override
@@ -49,10 +51,7 @@ class _TurnoverSortDialogState extends State<TurnoverSortDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Sort Turnovers',
-                    style: theme.textTheme.titleLarge,
-                  ),
+                  Text('Sort', style: theme.textTheme.titleLarge),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
@@ -69,10 +68,7 @@ class _TurnoverSortDialogState extends State<TurnoverSortDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Sort by',
-                    style: theme.textTheme.titleMedium,
-                  ),
+                  Text('Sort by', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
                   DropdownMenu<SortField>(
                     key: const ValueKey('sort_field_dropdown'),
@@ -104,10 +100,7 @@ class _TurnoverSortDialogState extends State<TurnoverSortDialog> {
                   const SizedBox(height: 24),
 
                   // Sort direction
-                  Text(
-                    'Direction',
-                    style: theme.textTheme.titleMedium,
-                  ),
+                  Text('Direction', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
                   RadioGroup<SortDirection>(
                     groupValue: _sortDirection,
@@ -126,7 +119,7 @@ class _TurnoverSortDialogState extends State<TurnoverSortDialog> {
                           ),
                           title: Row(
                             children: [
-                              const Icon(Icons.arrow_upward, size: 18),
+                              const Icon(Icons.arrow_downward, size: 18),
                               const SizedBox(width: 8),
                               const Text('Ascending'),
                             ],
@@ -144,7 +137,7 @@ class _TurnoverSortDialogState extends State<TurnoverSortDialog> {
                           ),
                           title: Row(
                             children: [
-                              const Icon(Icons.arrow_downward, size: 18),
+                              const Icon(Icons.arrow_upward, size: 18),
                               const SizedBox(width: 8),
                               const Text('Descending'),
                             ],
@@ -170,6 +163,8 @@ class _TurnoverSortDialogState extends State<TurnoverSortDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  TextButton(onPressed: _clear, child: const Text('Clear')),
+                  Spacer(),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: const Text('Cancel'),
