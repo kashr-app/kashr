@@ -65,38 +65,45 @@ class _SettingsPageState extends State<SettingsPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _SettingsHeadline(label: 'Experience'),
                 BlocBuilder<SettingsCubit, SettingsState>(
-                  builder: (context, state) => ListTile(
-                    title: const Text("Theme Mode"),
-                    subtitle: SegmentedButton<ThemeMode>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(
-                          value: ThemeMode.system,
-                          label: Text("System"),
-                          icon: Icon(Icons.brightness_6),
+                  builder: (context, state) => Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.brightness_6),
+                        title: const Text("Theme Mode"),
+                        subtitle: Text(state.themeMode.name),
+                        onTap: () async {
+                          final newValue = await _showThemeSelectionDialog(
+                            context,
+                          );
+                          if (newValue != null && context.mounted) {
+                            context.read<SettingsCubit>().setTheme(newValue);
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.fast_forward),
+                        title: const Text("Fast Form Mode"),
+                        subtitle: const Text('Tap <here> for explanation'),
+                        trailing: Switch(
+                          value: state.quickTurnoverEntryAutoFlow,
+                          onChanged: (value) {
+                            context
+                                .read<SettingsCubit>()
+                                .setQuickTurnoverEntryAutoFlow(value);
+                          },
                         ),
-                        ButtonSegment(
-                          value: ThemeMode.light,
-                          label: Text("Light"),
-                          icon: Icon(Icons.light_mode),
-                        ),
-                        ButtonSegment(
-                          value: ThemeMode.dark,
-                          label: Text("Dark"),
-                          icon: Icon(Icons.dark_mode),
-                        ),
-                      ],
-                      selected: <ThemeMode>{state.themeMode},
-                      onSelectionChanged: (value) =>
-                          context.read<SettingsCubit>().setTheme(value.first),
-                    ),
+                        onTap: () => _showFastFormModeInfo(context),
+                      ),
+                    ],
                   ),
                 ),
-                const Divider(),
+                _SettingsHeadline(label: 'Configuration'),
                 ListTile(
                   onTap: () => const BanksRoute().go(context),
                   title: Text('Banks'),
@@ -109,14 +116,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   leading: const Icon(Icons.label),
                   subtitle: const Text('Manage tags'),
                 ),
-                const Divider(),
+                _SettingsHeadline(label: 'Maintenance'),
                 ListTile(
                   title: const Text('Backup & Restore'),
                   subtitle: const Text('Manage database backups'),
                   leading: const Icon(Icons.backup),
                   onTap: () => const BackupListRoute().go(context),
                 ),
-                const Divider(),
+                _SettingsHeadline(label: 'System'),
                 ListTile(
                   title: Text('App Version'),
                   subtitle: Text(version),
@@ -142,6 +149,83 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Future<ThemeMode?> _showThemeSelectionDialog(BuildContext context) {
+    return showModalBottomSheet<ThemeMode>(
+      context: context,
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.brightness_6),
+              title: const Text("System"),
+              onTap: () {
+                Navigator.pop(context, ThemeMode.system);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.light_mode),
+              title: const Text("Light"),
+              onTap: () {
+                Navigator.pop(context, ThemeMode.light);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.dark_mode),
+              title: const Text("Dark"),
+              onTap: () {
+                Navigator.pop(context, ThemeMode.dark);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFastFormModeInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Fast Form Mode"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Enable this to save some taps! Instead of tapping each field, the app will automatically walk you through the form, popping up dialogs one by one. Work\'s for:',
+              ),
+              SizedBox(height: 8),
+              Text('- (None)'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Close"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SettingsHeadline extends StatelessWidget {
+  const _SettingsHeadline({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
+      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
     );
   }
 }

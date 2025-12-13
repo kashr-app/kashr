@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:finanalyzer/db/migrations/schema_v12.dart';
-import 'package:finanalyzer/db/migrations/v11.dart';
-import 'package:finanalyzer/db/migrations/v12.dart';
+import 'package:finanalyzer/db/migrations/v13.dart';
 import 'package:finanalyzer/db/sqlite_compat.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart';
@@ -90,8 +89,7 @@ class DatabaseHelper {
 
   final _migrations = <int, Future<void> Function(SqliteDatabase db)>{
     // version => migration function
-    11: v11,
-    12: v12,
+    13: v13,
   };
 
   Future<void> _migrate(sqlite3.Database db3) async {
