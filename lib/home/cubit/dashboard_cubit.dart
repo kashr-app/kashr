@@ -317,37 +317,7 @@ class DashboardCubit extends Cubit<DashboardState> {
           (sum, s) => sum + s.totalAmount.abs(),
         );
 
-    /// TODO introduce transfer entity
-    /// ... because THE CURRENT IMPLEMENTATION DOES NOT WORK in case there are external turnovers with different sign on a single tag
-    ///   example:
-    ///     investment +10
-    ///     investment -600
-    ///     => should be 610, but is (610+590)/2 = 600
-    ///
-    /// SOLUTION: only allow internal transfers
-    /// * users can easily create an virtual account for the counterpart
-    /// * we could also enforce that there is a counter part transaction
-    ///     * store the transfer as entity that matches the in and out tag turnovers
-    ///     * only allow transfer tags when creating transfers
-    ///     * only allow non-transfer tags when creating normal transactions (or ask if user wants to switch to transfer mode)
-    ///     * can end up with tag turnvoers tagged with transfer tag but not being associated to a transfer entity:
-    ///       * user manually tags the turnover
-    ///       * when toggling a tags "isTransfer" attribute, we could end up with tagTurnovers marked as transfer but without Transfer entity => we could ask the user to match them and support it with tooling for good UX
-    ///     * Display only the "positive" sign tag turnover in turnovers list
-    ///
-    /// ALTERNATE SOLUTION: we must know for every transfer tagTurnover if it is internal or external
-    /// i.e. we need for each transfer tagTurnover an entity to track that information.
-    ///     e.g. as fromAccount and toAccount, where one can be null (external) or both are set (internal)
-    ///
-    ///
-    /// BUGGY BEST EFFORTS SOLUTION THAT IS CURRENTLY IMPLEMENTED
-    /// * supports internal turnovers
-    /// * partially supports external turnovers (in case there are not multiple ones that cancel out each other)
-    ///     example:
-    ///       investment +10
-    ///       investment -600
-    ///       => should be 610, but is (610+590)/2 = 600
-
+    // TODO see prds/20251214-transfers.md
     // Transfers can be external (one side tracked only) or internal (between tracked accounts)
     //
     // For internal transfers (between tracked accounts), the amount appears
