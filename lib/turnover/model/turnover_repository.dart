@@ -27,7 +27,7 @@ class TurnoverRepository {
 
   Future<int> createTurnover(Turnover turnover) async {
     final db = await DatabaseHelper().database;
-    final result = db.insert('turnover', turnover.toJson());
+    final result = await db.insert('turnover', turnover.toJson());
     _changeController.add(TurnoversInserted([turnover]));
     return result;
   }
@@ -124,7 +124,7 @@ class TurnoverRepository {
 
   Future<int> updateTurnover(Turnover turnover) async {
     final db = await DatabaseHelper().database;
-    final result = db.update(
+    final result = await db.update(
       'turnover',
       turnover.toJson(),
       where: 'id = ?',
@@ -136,7 +136,7 @@ class TurnoverRepository {
 
   Future<int> deleteTurnover(UuidValue id) async {
     final db = await DatabaseHelper().database;
-    final result = db.delete('turnover', where: 'id = ?', whereArgs: [id.uuid]);
+    final result = await db.delete('turnover', where: 'id = ?', whereArgs: [id.uuid]);
     _changeController.add(TurnoversDeleted([id]));
     return result;
   }

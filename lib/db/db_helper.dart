@@ -7,13 +7,12 @@ import 'package:finanalyzer/db/sqlite_compat.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqlite3/sqlite3.dart' as sqlite3;
 
 const dbFileName = 'app_database.db';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
-  static sqlite3.Database? _database;
+  static SqliteDatabase? _database;
   static Completer<SqliteDatabase>? _initCompleter;
 
   final log = Logger();
@@ -23,7 +22,7 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   Future<SqliteDatabase> get database async {
-    if (_database != null) return SqliteDatabase(_database!);
+    if (_database != null) return _database!;
 
     // If initialization is already in progress, wait for it
     if (_initCompleter != null) {
@@ -34,11 +33,10 @@ class DatabaseHelper {
 
     try {
       _database = await _initDb();
-      _database!.execute('PRAGMA foreign_keys = ON');
-      final dbWrapper = SqliteDatabase(_database!);
-      _initCompleter!.complete(dbWrapper);
+      await _database!.execute('PRAGMA foreign_keys = ON');
+      _initCompleter!.complete(_database!);
       _initCompleter = null;
-      return dbWrapper;
+      return _database!;
     } catch (e) {
       _initCompleter!.completeError(e);
       _initCompleter = null;
@@ -46,7 +44,7 @@ class DatabaseHelper {
     }
   }
 
-  Future<sqlite3.Database> _initDb() async {
+  Future<SqliteDatabase> _initDb() async {
     if (!Platform.isAndroid && !Platform.isIOS) {
       throw UnsupportedError(
         'Only Android and iOS platforms are supported. '
@@ -56,7 +54,7 @@ class DatabaseHelper {
 
     final path = await getDatabasePath();
 
-    final db = sqlite3.sqlite3.open(path);
+    final db = await SqliteDatabase.create(path);
     await _migrate(db);
     return db;
   }
@@ -77,7 +75,7 @@ class DatabaseHelper {
 
   Future<String?> sqlLiteVersion() async {
     final db = await DatabaseHelper().database;
-    final result = db.rawQuery('SELECT sqlite_version()');
+    final result = await db.rawQuery('SELECT sqlite_version()');
     return result.isNotEmpty
         ? result.first['sqlite_version()'] as String?
         : null;
@@ -92,17 +90,16 @@ class DatabaseHelper {
     13: v13,
   };
 
-  Future<void> _migrate(sqlite3.Database db3) async {
-    final oldVersion = _getCurrentVersion(db3);
+  Future<void> _migrate(SqliteDatabase db) async {
+    final oldVersion = await _getCurrentVersion(db);
     final newVersion = dbVersion;
 
     final targetVersion = _migrations.keys.last;
-    final db = SqliteDatabase(db3);
 
     if (oldVersion == 0) {
       log.i('New database installation, creating schema at v$newVersion');
       await createSchemaV12(db);
-      _setVersion(db3, newVersion);
+      await _setVersion(db, newVersion);
       log.i('Database schema created at v$newVersion');
     } else if (oldVersion < targetVersion) {
       for (int i = oldVersion + 1; i <= newVersion; i++) {
@@ -114,7 +111,7 @@ class DatabaseHelper {
         }
         log.i("applying migration v$i");
         await m(db);
-        _setVersion(db3, i);
+        await _setVersion(db, i);
         log.i('Database upgraded to v$i');
       }
     } else if (oldVersion == targetVersion) {
@@ -124,9 +121,9 @@ class DatabaseHelper {
     }
   }
 
-  int _getCurrentVersion(sqlite3.Database db) {
+  Future<int> _getCurrentVersion(SqliteDatabase db) async {
     try {
-      final result = db.select('PRAGMA user_version');
+      final result = await db.rawQuery('PRAGMA user_version');
       if (result.isEmpty) return 0;
       return result.first['user_version'] as int;
     } catch (e) {
@@ -135,8 +132,8 @@ class DatabaseHelper {
     }
   }
 
-  void _setVersion(sqlite3.Database db, int version) {
-    db.execute('PRAGMA user_version = $version');
+  Future<void> _setVersion(SqliteDatabase db, int version) async {
+    await db.execute('PRAGMA user_version = $version');
     log.i('Database version set to $version');
   }
 

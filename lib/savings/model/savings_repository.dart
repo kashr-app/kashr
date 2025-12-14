@@ -44,7 +44,7 @@ class SavingsRepository {
 
   Future<int> update(Savings savings) async {
     final db = await DatabaseHelper().database;
-    return db.update(
+    return await db.update(
       'savings',
       savings.toJson(),
       where: 'id = ?',
@@ -54,7 +54,7 @@ class SavingsRepository {
 
   Future<int> delete(UuidValue id) async {
     final db = await DatabaseHelper().database;
-    return db.delete(
+    return await db.delete(
       'savings',
       where: 'id = ?',
       whereArgs: [id.uuid],

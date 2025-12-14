@@ -7,7 +7,9 @@ class RecentSearchRepository {
   static const int _maxRecentSearches = 10;
 
   /// Get recent search queries, ordered by most recent first
-  Future<List<RecentSearch>> getRecentSearches({int limit = _maxRecentSearches}) async {
+  Future<List<RecentSearch>> getRecentSearches({
+    int limit = _maxRecentSearches,
+  }) async {
     final db = await DatabaseHelper().database;
     final maps = await db.query(
       'recent_search',
@@ -58,11 +60,7 @@ class RecentSearchRepository {
   /// Remove a specific search query
   Future<void> removeRecentSearch(UuidValue id) async {
     final db = await DatabaseHelper().database;
-    await db.delete(
-      'recent_search',
-      where: 'id = ?',
-      whereArgs: [id.uuid],
-    );
+    await db.delete('recent_search', where: 'id = ?', whereArgs: [id.uuid]);
   }
 
   /// Clear all recent searches
@@ -76,19 +74,24 @@ class RecentSearchRepository {
     final db = await DatabaseHelper().database;
 
     // Get count of searches
-    final count = await db.rawQuery('SELECT COUNT(*) as count FROM recent_search');
+    final count = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM recent_search',
+    );
     final totalCount = count.first['count'] as int;
 
     if (totalCount > _maxRecentSearches) {
       // Delete oldest searches
-      await db.rawDelete('''
-        DELETE FROM recent_search
-        WHERE id IN (
-          SELECT id FROM recent_search
-          ORDER BY created_at DESC
-          LIMIT -1 OFFSET ?
-        )
-      ''', [_maxRecentSearches]);
+      await db.delete(
+        'recent_search',
+        where: '''
+          id IN (
+            SELECT id FROM recent_search
+            ORDER BY created_at DESC
+            LIMIT -1 OFFSET ?
+          )
+          ''',
+        whereArgs: [_maxRecentSearches],
+      );
     }
   }
 }

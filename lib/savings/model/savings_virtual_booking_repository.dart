@@ -66,7 +66,7 @@ class SavingsVirtualBookingRepository {
 
   Future<int> update(SavingsVirtualBooking booking) async {
     final db = await DatabaseHelper().database;
-    return db.update(
+    return await db.update(
       'savings_virtual_booking',
       booking.toJson(),
       where: 'id = ?',
@@ -76,7 +76,7 @@ class SavingsVirtualBookingRepository {
 
   Future<int> delete(UuidValue id) async {
     final db = await DatabaseHelper().database;
-    return db.delete(
+    return await db.delete(
       'savings_virtual_booking',
       where: 'id = ?',
       whereArgs: [id.uuid],

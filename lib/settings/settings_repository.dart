@@ -4,7 +4,7 @@ import 'package:finanalyzer/settings/settings_state.dart';
 class SettingsRepository {
   Future<SettingsState> loadAll() async {
     final db = await DatabaseHelper().database;
-    final result = db.query('settings');
+    final result = await db.query('settings');
     final map = <String, Object?>{};
     for (final row in result) {
       final key = row['key'] as String;
@@ -16,7 +16,7 @@ class SettingsRepository {
 
   Future<void> upsertSetting(String key, String? value) async {
     final db = await DatabaseHelper().database;
-    db.execute(
+    await db.execute(
       '''
           INSERT INTO settings
             (key, value)

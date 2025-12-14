@@ -30,7 +30,7 @@ class TagRepository {
 
   Future<int> createTag(Tag tag) async {
     final db = await DatabaseHelper().database;
-    final result = db.insert('tag', tag.toJson());
+    final result = await db.insert('tag', tag.toJson());
     await _emitTags();
     return result;
   }
@@ -53,7 +53,7 @@ class TagRepository {
 
   Future<int> updateTag(Tag tag) async {
     final db = await DatabaseHelper().database;
-    final result = db.update(
+    final result = await db.update(
       'tag',
       tag.toJson(),
       where: 'id = ?',
@@ -65,7 +65,11 @@ class TagRepository {
 
   Future<int> deleteTag(UuidValue id) async {
     final db = await DatabaseHelper().database;
-    final result = db.delete('tag', where: 'id = ?', whereArgs: [id.uuid]);
+    final result = await db.delete(
+      'tag',
+      where: 'id = ?',
+      whereArgs: [id.uuid],
+    );
     await _emitTags();
     return result;
   }
@@ -84,13 +88,11 @@ class TagRepository {
     try {
       await db.transaction((txn) async {
         // Step 1: Update all tag_turnover references from source to target
-        final turnoverCount = await txn.rawUpdate(
-          '''
-          UPDATE tag_turnover
-          SET tag_id = ?
-          WHERE tag_id = ?
-          ''',
-          [targetTagId.uuid, sourceTagId.uuid],
+        final turnoverCount = await txn.update(
+          'tag_turnover',
+          {'tag_id': targetTagId.uuid},
+          where: 'tag_id = ?',
+          whereArgs: [sourceTagId.uuid],
         );
 
         _log.i(
@@ -122,13 +124,11 @@ class TagRepository {
 
           if (sourceSavingsId != null && targetSavingsId != null) {
             // both source and target have savings => transfer source's virtual bookings to target savings and remove source savings
-            final transferredCount = await txn.rawUpdate(
-              '''
-                UPDATE savings_virtual_booking
-                SET savings_id = ?
-                WHERE savings_id = ?
-                ''',
-              [targetSavingsId, sourceSavingsId],
+            final transferredCount = await txn.update(
+              'savings_virtual_booking',
+              {'savings_id': targetSavingsId},
+              where: 'savings_id = ?',
+              whereArgs: [sourceSavingsId],
             );
             _log.i(
               'Transferred $transferredCount virtual bookings from source to target',

@@ -26,7 +26,7 @@ class TagTurnoverRepository {
 
   Future<int> createTagTurnover(TagTurnover tagTurnover) async {
     final db = await DatabaseHelper().database;
-    final result = db.insert('tag_turnover', tagTurnover.toJson());
+    final result = await db.insert('tag_turnover', tagTurnover.toJson());
     _changeController.add(TagTurnoversInserted([tagTurnover]));
     return result;
   }
@@ -205,12 +205,10 @@ class TagTurnoverRepository {
         .toList();
 
     // Delete all tag_turnover entries for this tag and these turnovers
-    await db.rawDelete(
-      '''
-      DELETE FROM tag_turnover
-      WHERE tag_id = ? AND turnover_id IN ($placeholders)
-      ''',
-      [tag.id.uuid, ...turnoverIds],
+    await db.delete(
+      'tag_turnover',
+      where: 'tag_id = ? AND turnover_id IN ($placeholders)',
+      whereArgs: [tag.id.uuid, ...turnoverIds],
     );
 
     if (deletedIds.isNotEmpty) {
@@ -302,7 +300,7 @@ class TagTurnoverRepository {
   Future<int> unlinkFromTurnover(UuidValue tagTurnoverId) async {
     final db = await DatabaseHelper().database;
 
-    final result = db.update(
+    final result = await db.update(
       'tag_turnover',
       {'turnover_id': null},
       where: 'id = ?',
@@ -331,7 +329,7 @@ class TagTurnoverRepository {
   Future<int> updateTagTurnover(TagTurnover tagTurnover) async {
     final db = await DatabaseHelper().database;
 
-    final result = db.update(
+    final result = await db.update(
       'tag_turnover',
       tagTurnover.toJson(),
       where: 'id = ?',
@@ -346,7 +344,7 @@ class TagTurnoverRepository {
   Future<int> deleteTagTurnover(UuidValue id) async {
     final db = await DatabaseHelper().database;
 
-    final result = db.delete(
+    final result = await db.delete(
       'tag_turnover',
       where: 'id = ?',
       whereArgs: [id.uuid],
@@ -372,7 +370,7 @@ class TagTurnoverRepository {
         .map((row) => UuidValue.fromString(row['id'] as String))
         .toList();
 
-    final result = db.delete(
+    final result = await db.delete(
       'tag_turnover',
       where: 'tag_id = ?',
       whereArgs: [tagId.uuid],
@@ -400,7 +398,7 @@ class TagTurnoverRepository {
         .map((row) => UuidValue.fromString(row['id'] as String))
         .toList();
 
-    final result = db.delete(
+    final result = await db.delete(
       'tag_turnover',
       where: 'turnover_id = ?',
       whereArgs: [turnoverId.uuid],
@@ -416,7 +414,7 @@ class TagTurnoverRepository {
   Future<int> updateAmount(UuidValue id, Decimal amountValue) async {
     final db = await DatabaseHelper().database;
 
-    return db.update(
+    return await db.update(
       'tag_turnover',
       {'amount_value': amountValue.toString()},
       where: 'id = ?',

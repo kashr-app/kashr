@@ -8,7 +8,7 @@ import 'package:finanalyzer/db/sqlite_compat.dart';
 /// migrations from v1 to v12.
 Future<void> createSchemaV12(SqliteDatabase db) async {
   // Account table
-  db.execute('''
+  await db.execute('''
     CREATE TABLE account(
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL,
@@ -25,7 +25,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Turnover table
-  db.execute('''
+  await db.execute('''
     CREATE TABLE turnover(
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL,
@@ -44,7 +44,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Tag table
-  db.execute('''
+  await db.execute('''
     CREATE TABLE tag (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -54,7 +54,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Tag turnover table
-  db.execute('''
+  await db.execute('''
     CREATE TABLE tag_turnover(
       id TEXT PRIMARY KEY,
       turnover_id TEXT,
@@ -72,7 +72,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Savings table
-  db.execute('''
+  await db.execute('''
     CREATE TABLE savings (
       id TEXT PRIMARY KEY,
       tag_id TEXT NOT NULL UNIQUE,
@@ -84,7 +84,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Savings virtual booking table
-  db.execute('''
+  await db.execute('''
     CREATE TABLE savings_virtual_booking (
       id TEXT PRIMARY KEY,
       savings_id TEXT NOT NULL,
@@ -100,7 +100,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Backup config table
-  db.execute('''
+  await db.execute('''
     CREATE TABLE backup_config (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       auto_backup_enabled INTEGER NOT NULL,
@@ -113,10 +113,10 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Insert default backup config
-  db.insert('backup_config', BackupConfig.defaultConfig().toJson());
+  await db.insert('backup_config', BackupConfig.defaultConfig().toJson());
 
   // FTS5 virtual table for full-text search
-  db.execute('''
+  await db.execute('''
     CREATE VIRTUAL TABLE turnover_fts USING fts5(
       turnover_id UNINDEXED,
       content,
@@ -125,7 +125,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Recent search table
-  db.execute('''
+  await db.execute('''
     CREATE TABLE recent_search (
       id TEXT PRIMARY KEY,
       query TEXT NOT NULL UNIQUE,
@@ -134,28 +134,28 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Create indices
-  db.execute(
+  await db.execute(
     'CREATE INDEX idx_tag_turnover_account ON tag_turnover(account_id)',
   );
-  db.execute(
+  await db.execute(
     'CREATE INDEX idx_tag_turnover_booking_date ON tag_turnover(booking_date)',
   );
-  db.execute('''
+  await db.execute('''
     CREATE INDEX idx_tag_turnover_unmatched
       ON tag_turnover(turnover_id)
       WHERE turnover_id IS NULL
   ''');
-  db.execute(
+  await db.execute(
     'CREATE INDEX idx_savings_virtual_booking_account_id ON savings_virtual_booking(account_id)',
   );
-  db.execute(
+  await db.execute(
     'CREATE INDEX idx_savings_virtual_booking_savings_id ON savings_virtual_booking(savings_id)',
   );
 
   // Create FTS triggers to keep turnover_fts in sync
 
   // Trigger: When a new turnover is inserted
-  db.execute('''
+  await db.execute('''
     CREATE TRIGGER turnover_fts_insert AFTER INSERT ON turnover
     BEGIN
       INSERT INTO turnover_fts(turnover_id, content)
@@ -181,7 +181,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Trigger: When a turnover is updated
-  db.execute('''
+  await db.execute('''
     CREATE TRIGGER turnover_fts_update AFTER UPDATE ON turnover
     BEGIN
       DELETE FROM turnover_fts WHERE turnover_id = OLD.id;
@@ -208,7 +208,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Trigger: When a turnover is deleted
-  db.execute('''
+  await db.execute('''
     CREATE TRIGGER turnover_fts_delete AFTER DELETE ON turnover
     BEGIN
       DELETE FROM turnover_fts WHERE turnover_id = OLD.id;
@@ -216,7 +216,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Trigger: When a tag_turnover is inserted/updated/deleted, update the FTS entry
-  db.execute('''
+  await db.execute('''
     CREATE TRIGGER tag_turnover_fts_insert AFTER INSERT ON tag_turnover
     BEGIN
       DELETE FROM turnover_fts WHERE turnover_id = NEW.turnover_id;
@@ -244,7 +244,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
     END
   ''');
 
-  db.execute('''
+  await db.execute('''
     CREATE TRIGGER tag_turnover_fts_update AFTER UPDATE ON tag_turnover
     BEGIN
       DELETE FROM turnover_fts WHERE turnover_id = NEW.turnover_id;
@@ -272,7 +272,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
     END
   ''');
 
-  db.execute('''
+  await db.execute('''
     CREATE TRIGGER tag_turnover_fts_delete AFTER DELETE ON tag_turnover
     BEGIN
       DELETE FROM turnover_fts WHERE turnover_id = OLD.turnover_id;
@@ -301,7 +301,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Trigger: When a tag is updated (name changed), update FTS for all related turnovers
-  db.execute('''
+  await db.execute('''
     CREATE TRIGGER tag_fts_update AFTER UPDATE ON tag
     BEGIN
       DELETE FROM turnover_fts
