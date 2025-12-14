@@ -56,10 +56,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      final autoFlowEnabled = context
-          .read<SettingsCubit>()
-          .state
-          .fastFormMode;
+      final autoFlowEnabled = context.read<SettingsCubit>().state.fastFormMode;
       if (autoFlowEnabled) {
         _runAutoFlow();
       }
@@ -97,7 +94,11 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
 
   /// Returns if updated (true) or canceled (false)
   Future<bool> _selectTag() async {
-    final selectedTag = await AddTagDialog.show(context);
+    final selectedTag = await AddTagDialog.show(
+      context,
+      filter: (tag) => tag.isTransfer,
+      defaultSemantic: TagSemantic.transfer,
+    );
     if (selectedTag != null && mounted) {
       setState(() {
         _selectedTag = selectedTag;

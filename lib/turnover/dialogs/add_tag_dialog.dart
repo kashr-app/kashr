@@ -11,13 +11,24 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// Allows searching existing tags or creating a new tag if no exact match
 /// is found. Returns the selected/created [Tag] or null if cancelled.
 class AddTagDialog extends StatefulWidget {
-  const AddTagDialog({super.key});
+  final bool Function(Tag)? filter;
+  final TagSemantic? defaultSemantic;
+
+  const AddTagDialog({super.key, this.filter, this.defaultSemantic});
 
   /// Shows the dialog and returns the selected/created tag or null if cancelled.
-  static Future<Tag?> show(BuildContext context) {
+  ///
+  /// If [filter] is provided, only tags matching the filter will be shown.
+  /// If [defaultSemantic] is provided, new tags will be created with that semantic.
+  static Future<Tag?> show(
+    BuildContext context, {
+    bool Function(Tag)? filter,
+    TagSemantic? defaultSemantic,
+  }) {
     return showDialog<Tag>(
       context: context,
-      builder: (context) => const AddTagDialog(),
+      builder: (context) =>
+          AddTagDialog(filter: filter, defaultSemantic: defaultSemantic),
     );
   }
 
@@ -42,13 +53,22 @@ class _AddTagDialogState extends State<AddTagDialog> {
 
   List<Tag> _getFilteredTags(List<Tag> allTags) {
     final query = _searchController.text;
-    if (query.isEmpty) {
-      return allTags;
+    var filtered = allTags;
+
+    // Apply custom filter if specified
+    if (widget.filter != null) {
+      filtered = filtered.where(widget.filter!).toList();
     }
-    final lowerQuery = query.toLowerCase();
-    return allTags
-        .where((tag) => tag.name.toLowerCase().contains(lowerQuery))
-        .toList();
+
+    // Filter by search query
+    if (query.isNotEmpty) {
+      final lowerQuery = query.toLowerCase();
+      filtered = filtered
+          .where((tag) => tag.name.toLowerCase().contains(lowerQuery))
+          .toList();
+    }
+
+    return filtered;
   }
 
   @override
@@ -92,6 +112,7 @@ class _AddTagDialogState extends State<AddTagDialog> {
                       final newTag = await TagEditBottomSheet.show(
                         context,
                         initialName: searchQuery,
+                        initialSemantic: widget.defaultSemantic,
                       );
                       if (context.mounted && newTag != null) {
                         Navigator.of(context).pop(newTag);

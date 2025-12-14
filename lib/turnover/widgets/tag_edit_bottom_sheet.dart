@@ -12,11 +12,13 @@ import 'package:uuid/uuid.dart';
 class TagEditBottomSheet extends StatefulWidget {
   final Tag? tag;
   final String? initialName;
+  final TagSemantic? initialSemantic;
 
   const TagEditBottomSheet({
     super.key,
     this.tag,
     this.initialName,
+    this.initialSemantic,
   });
 
   /// Shows the bottom sheet and returns the created/edited tag or null if
@@ -25,6 +27,7 @@ class TagEditBottomSheet extends StatefulWidget {
     BuildContext context, {
     Tag? tag,
     String? initialName,
+    TagSemantic? initialSemantic,
   }) {
     return showModalBottomSheet<Tag>(
       context: context,
@@ -32,6 +35,7 @@ class TagEditBottomSheet extends StatefulWidget {
       builder: (context) => TagEditBottomSheet(
         tag: tag,
         initialName: initialName,
+        initialSemantic: initialSemantic,
       ),
     );
   }
@@ -71,7 +75,7 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
       text: widget.tag?.name ?? widget.initialName ?? '',
     );
     _selectedColor = ColorUtils.parseColor(widget.tag?.color);
-    _selectedSemantic = widget.tag?.semantic;
+    _selectedSemantic = widget.tag?.semantic ?? widget.initialSemantic;
   }
 
   @override
@@ -102,9 +106,7 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                     border: Border(
-                      bottom: BorderSide(
-                        color: Theme.of(context).dividerColor,
-                      ),
+                      bottom: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                   ),
                   child: Row(
@@ -163,9 +165,9 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
                                   shape: BoxShape.circle,
                                   border: isSelected
                                       ? Border.all(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
                                           width: 3,
                                         )
                                       : null,
@@ -175,7 +177,8 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
                                         Icons.check,
                                         color:
                                             ColorUtils.getContrastingTextColor(
-                                                color),
+                                              color,
+                                            ),
                                       )
                                     : null,
                               ),
@@ -215,9 +218,7 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                     border: Border(
-                      top: BorderSide(
-                        color: Theme.of(context).dividerColor,
-                      ),
+                      top: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                   ),
                   child: Row(

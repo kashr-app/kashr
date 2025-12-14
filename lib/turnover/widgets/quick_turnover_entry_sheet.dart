@@ -56,10 +56,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      final autoFlowEnabled = context
-          .read<SettingsCubit>()
-          .state
-          .fastFormMode;
+      final autoFlowEnabled = context.read<SettingsCubit>().state.fastFormMode;
       if (autoFlowEnabled) {
         _runAutoFlow();
       }
@@ -97,7 +94,10 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
 
   /// Returns if udpated (true) or canceled (false)
   Future<bool> _selectTag() async {
-    final selectedTag = await AddTagDialog.show(context);
+    final selectedTag = await AddTagDialog.show(
+      context,
+      filter: (tag) => tag.isNormal,
+    );
     if (selectedTag != null && mounted) {
       setState(() {
         _selectedTag = selectedTag;
