@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
+import 'package:finanalyzer/core/constants.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/status.dart';
@@ -111,8 +112,8 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: minDate,
+      lastDate: maxDate,
     );
 
     if (picked != null && mounted) {

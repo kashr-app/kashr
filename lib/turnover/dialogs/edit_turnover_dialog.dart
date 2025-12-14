@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
+import 'package:finanalyzer/core/constants.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
@@ -58,8 +59,8 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: _bookingDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      firstDate: minDate,
+      lastDate: maxDate,
     );
 
     if (pickedDate != null) {

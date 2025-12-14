@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/account_selector_dialog.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
+import 'package:finanalyzer/core/constants.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/savings/model/savings.dart';
@@ -121,8 +122,8 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
     final selectedDate = await showDatePicker(
       context: context,
       initialDate: _bookingDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      firstDate: minDate,
+      lastDate: maxDate,
     );
 
     if (selectedDate != null) {

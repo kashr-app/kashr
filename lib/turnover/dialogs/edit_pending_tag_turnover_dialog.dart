@@ -4,6 +4,7 @@ import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/core/amount_dialog.dart';
+import 'package:finanalyzer/core/constants.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
@@ -151,8 +152,8 @@ class _EditPendingTagTurnoverDialogState
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: _bookingDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      firstDate: minDate,
+      lastDate: maxDate,
     );
 
     if (pickedDate != null) {
