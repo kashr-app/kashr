@@ -9,8 +9,8 @@ import 'package:finanalyzer/core/module.dart';
 import 'package:finanalyzer/core/secure_storage.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nested/nested.dart';
 import 'package:provider/provider.dart';
+import 'package:provider/single_child_widget.dart';
 
 class BackupModule implements Module {
   late final BackupService backupService;
