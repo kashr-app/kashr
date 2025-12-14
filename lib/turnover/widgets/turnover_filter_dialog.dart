@@ -273,7 +273,7 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                                         : null,
                                     onDeleted: () {
                                       setState(() {
-                                        _selectedTagIds.remove(tag.id.uuid);
+                                        _selectedTagIds.remove(tag.id);
                                       });
                                     },
                                   );
