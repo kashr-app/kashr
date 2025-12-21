@@ -116,6 +116,7 @@ class TurnoverTagsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -132,154 +133,197 @@ class TurnoverTagsPage extends StatelessWidget {
           Navigator.of(context).pop();
         }
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Turnover Tags'),
-          actions: [
-            BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
-              builder: (context, state) {
-                if (!state.isManualAccount) return const SizedBox.shrink();
+      child: BlocListener<TurnoverTagsCubit, TurnoverTagsState>(
+        listener: (context, state) {
+          if (state.status.isError && state.errorMessage != null) {
+            state.status.snack(context, state.errorMessage!);
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Turnover Tags'),
+            actions: [
+              BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
+                builder: (context, state) {
+                  final isLoading = state.status.isLoading;
+                  if (isLoading) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 1),
+                      ),
+                    );
+                  }
 
-                return Row(
+                  if (!state.isManualAccount) return const SizedBox.shrink();
+
+                  return Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        tooltip: 'Edit Turnover',
+                        onPressed: isLoading
+                            ? null
+                            : () => _showEditDialog(context),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        tooltip: 'Delete Turnover',
+                        onPressed: isLoading
+                            ? null
+                            : () => _showDeleteDialog(context),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+          body: SafeArea(
+            child: BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
+              builder: (context, state) {
+                final isLoading = state.status.isLoading;
+
+                final turnover = state.turnover;
+                if (turnover == null || isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final tagTurnovers = state.currentTagTurnoversById.values
+                    .toList();
+
+                return Column(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      tooltip: 'Edit Turnover',
-                      onPressed: () => _showEditDialog(context),
+                    TurnoverInfoCard(turnover: turnover),
+
+                    if (state.status.isError)
+                      Container(
+                        color: theme.colorScheme.errorContainer,
+                        margin: EdgeInsets.symmetric(vertical: 6),
+                        alignment: Alignment.center,
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          state.errorMessage ?? 'Unknown error',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    // Hint for selecting from pending tag turnovers
+                    SelectFromPendingTagTurnoversHint(turnover: turnover),
+
+                    // Tag suggestions
+                    TagSuggestionsRow(
+                      suggestions: state.suggestions,
+                      onSuggestionTap: (suggestion) {
+                        context.read<TurnoverTagsCubit>().addTag(
+                          suggestion.tag,
+                        );
+                      },
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      tooltip: 'Delete Turnover',
-                      onPressed: () => _showDeleteDialog(context),
+
+                    // Tag turnovers list
+                    Expanded(
+                      child: tagTurnovers.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('No tags assigned yet'),
+                                  const SizedBox(height: 16),
+                                  FilledButton.icon(
+                                    onPressed: () => _showAddTagDialog(context),
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Add Tag'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : BlocBuilder<TagCubit, TagState>(
+                              builder: (context, tagState) {
+                                return ListView.builder(
+                                  itemCount: tagTurnovers.length,
+                                  itemBuilder: (context, index) {
+                                    final tagTurnover = tagTurnovers[index];
+                                    final transferDetails =
+                                        state
+                                            .transferByTagTurnoverId[tagTurnover
+                                            .id];
+                                    return TagTurnoverItem(
+                                      key: ValueKey(tagTurnover.id),
+                                      tagTurnover: tagTurnover,
+                                      tag:
+                                          tagState.tagById[tagTurnover.tagId] ??
+                                          Tag(
+                                            id: tagTurnover.tagId,
+                                            name: '(Unknown)',
+                                          ),
+                                      maxAmountScaled:
+                                          decimalScale(turnover.amountValue) ??
+                                          0,
+                                      currencyUnit: turnover.amountUnit,
+                                      transferWithDetails: transferDetails,
+                                      onTransferAction: () =>
+                                          _handleTransferAction(
+                                            context,
+                                            tagTurnover,
+                                          ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+
+                    // Status message and save button
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: StatusMessage(
+                              state: state,
+                              turnover: turnover,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: FilledButton.tonalIcon(
+                                  onPressed: () => _showAddTagDialog(context),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Add Tag'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed:
+                                      (state.isAmountExceeded || !state.isDirty)
+                                      ? null
+                                      : () async {
+                                          await context
+                                              .read<TurnoverTagsCubit>()
+                                              .saveAll();
+                                          if (context.mounted) {
+                                            Navigator.of(context).pop();
+                                          }
+                                        },
+                                  child: const Text('Save'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 );
               },
             ),
-          ],
-        ),
-        body: SafeArea(
-          child: BlocBuilder<TurnoverTagsCubit, TurnoverTagsState>(
-            builder: (context, state) {
-              final turnover = state.turnover;
-              if (turnover == null) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final tagTurnovers = state.currentTagTurnoversById.values
-                  .toList();
-
-              return Column(
-                children: [
-                  TurnoverInfoCard(turnover: turnover),
-
-                  // Hint for selecting from pending tag turnovers
-                  SelectFromPendingTagTurnoversHint(turnover: turnover),
-
-                  // Tag suggestions
-                  TagSuggestionsRow(
-                    suggestions: state.suggestions,
-                    onSuggestionTap: (suggestion) {
-                      context.read<TurnoverTagsCubit>().addTag(suggestion.tag);
-                    },
-                  ),
-
-                  // Tag turnovers list
-                  Expanded(
-                    child: tagTurnovers.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('No tags assigned yet'),
-                                const SizedBox(height: 16),
-                                FilledButton.icon(
-                                  onPressed: () => _showAddTagDialog(context),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Add Tag'),
-                                ),
-                              ],
-                            ),
-                          )
-                        : BlocBuilder<TagCubit, TagState>(
-                            builder: (context, tagState) {
-                              return ListView.builder(
-                                itemCount: tagTurnovers.length,
-                                itemBuilder: (context, index) {
-                                  final tagTurnover = tagTurnovers[index];
-                                  final transferDetails = state
-                                      .transferByTagTurnoverId[tagTurnover.id];
-                                  return TagTurnoverItem(
-                                    key: ValueKey(tagTurnover.id),
-                                    tagTurnover: tagTurnover,
-                                    tag:
-                                        tagState.tagById[tagTurnover.tagId] ??
-                                        Tag(
-                                          id: tagTurnover.tagId,
-                                          name: '(Unknown)',
-                                        ),
-                                    maxAmountScaled:
-                                        decimalScale(turnover.amountValue) ?? 0,
-                                    currencyUnit: turnover.amountUnit,
-                                    transferWithDetails: transferDetails,
-                                    onTransferAction: () =>
-                                        _handleTransferAction(
-                                          context,
-                                          tagTurnover,
-                                        ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                  ),
-
-                  // Status message and save button
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: StatusMessage(
-                            state: state,
-                            turnover: turnover,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: FilledButton.tonalIcon(
-                                onPressed: () => _showAddTagDialog(context),
-                                icon: const Icon(Icons.add),
-                                label: const Text('Add Tag'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: FilledButton(
-                                onPressed:
-                                    (state.isAmountExceeded || !state.isDirty)
-                                    ? null
-                                    : () async {
-                                        await context
-                                            .read<TurnoverTagsCubit>()
-                                            .saveAll();
-                                        if (context.mounted) {
-                                          Navigator.of(context).pop();
-                                        }
-                                      },
-                                child: const Text('Save'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
           ),
         ),
       ),
@@ -305,7 +349,7 @@ class TurnoverTagsPage extends StatelessWidget {
     );
 
     if (updatedTurnover != null && context.mounted) {
-      cubit.updateTurnover(updatedTurnover);
+      await cubit.updateTurnover(updatedTurnover);
     }
   }
 

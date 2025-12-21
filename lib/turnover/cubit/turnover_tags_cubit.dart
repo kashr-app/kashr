@@ -207,7 +207,6 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
 
   /// Updates the tag turnover locally (not saved to DB yet).
   void updateTagTurnover(TagTurnover tagTurnover) {
-
     // we copy first to keep order
     final copy = {...state.currentTagTurnoversById};
     copy[tagTurnover.id] = tagTurnover;
@@ -378,67 +377,83 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
   /// If the sign changes and any tag turnovers are linked to transfers,
   /// sets an error state requiring manual unlink first (per O2).
   Future<void> updateTurnover(Turnover updatedTurnover) async {
-    final currentTurnover = state.turnover;
-    if (currentTurnover == null) return;
+    try {
+      emit(state.copyWith(status: Status.loading));
 
-    final oldAmount = currentTurnover.amountValue;
-    final newAmount = updatedTurnover.amountValue;
+      final currentTurnover = state.turnover;
+      if (currentTurnover == null) return;
 
-    // Determine if sign has changed
-    final oldIsNegative = oldAmount < Decimal.zero;
-    final newIsNegative = newAmount < Decimal.zero;
-    final signChanged = oldIsNegative != newIsNegative;
+      final oldAmount = currentTurnover.amountValue;
+      final newAmount = updatedTurnover.amountValue;
 
-    // O2: Check if any tagTurnovers are part of a Transfer before allowing sign change
-    if (signChanged && state.currentTagTurnoversById.isNotEmpty) {
-      final tagTurnoverIds = state.currentTagTurnoversById.keys.toList();
-      final linkedTransfers = await _transferRepository
-          .getTransferIdsForTagTurnovers(tagTurnoverIds);
+      // Determine if sign has changed
+      final oldIsNegative = oldAmount < Decimal.zero;
+      final newIsNegative = newAmount < Decimal.zero;
+      final signChanged = oldIsNegative != newIsNegative;
 
-      if (linkedTransfers.isNotEmpty) {
-        emit(
-          state.copyWith(
-            status: Status.error,
-            errorMessage:
-                'Cannot change sign: ${linkedTransfers.length} '
-                'tag turnover(s) are linked to transfers. Please unlink them '
-                'from the transfers first.',
-          ),
-        );
-        return;
+      // O2: Check if any tagTurnovers are part of a Transfer before allowing sign change
+      if (signChanged && state.currentTagTurnoversById.isNotEmpty) {
+        final tagTurnoverIds = state.currentTagTurnoversById.keys.toList();
+        final linkedTransfers = await _transferRepository
+            .getTransferIdsForTagTurnovers(tagTurnoverIds);
+
+        if (linkedTransfers.isNotEmpty) {
+          emit(
+            state.copyWith(
+              status: Status.error,
+              errorMessage:
+                  'Cannot change sign: ${linkedTransfers.length} '
+                  'tag turnover(s) are linked to transfers. Please unlink them '
+                  'from the transfers first.',
+            ),
+          );
+          return;
+        }
       }
-    }
 
-    final newAbsAmount = newAmount.abs();
-    final totalTagAmount = state.totalTagAmount.abs();
+      final newAbsAmount = newAmount.abs();
+      final totalTagAmount = state.totalTagAmount.abs();
 
-    var updatedTagTurnovers = state.currentTagTurnoversById.values;
+      var updatedTagTurnovers = state.currentTagTurnoversById.values;
 
-    // If sign changed, flip all tag turnover signs
-    if (signChanged && state.currentTagTurnoversById.isNotEmpty) {
-      updatedTagTurnovers = updatedTagTurnovers.map(
-        (it) => it.copyWith(amountValue: -it.amountValue),
+      // If sign changed, flip all tag turnover signs
+      if (signChanged && state.currentTagTurnoversById.isNotEmpty) {
+        updatedTagTurnovers = updatedTagTurnovers.map(
+          (it) => it.copyWith(amountValue: -it.amountValue),
+        );
+        _log.i('Flipped tag turnover signs to match turnover sign change');
+      }
+
+      // Scale down tag turnovers if they would exceed the new amount
+      if (totalTagAmount > newAbsAmount && updatedTagTurnovers.isNotEmpty) {
+        updatedTagTurnovers = _scaleToFit(
+          tagTurnovers: updatedTagTurnovers.toList(),
+          targetAbsAmount: newAbsAmount,
+          targetIsNegative: newIsNegative,
+        );
+
+        _log.i('Scaled tag turnovers to fit new amount');
+      }
+
+      emit(
+        state.copyWith(
+          status: Status.success,
+          turnover: updatedTurnover,
+          currentTagTurnoversById: updatedTagTurnovers.associateBy(
+            (it) => it.id,
+          ),
+        ),
       );
-      _log.i('Flipped tag turnover signs to match turnover sign change');
-    }
-
-    // Scale down tag turnovers if they would exceed the new amount
-    if (totalTagAmount > newAbsAmount && updatedTagTurnovers.isNotEmpty) {
-      updatedTagTurnovers = _scaleToFit(
-        tagTurnovers: updatedTagTurnovers.toList(),
-        targetAbsAmount: newAbsAmount,
-        targetIsNegative: newIsNegative,
+      _log.i('Successfully updated turnover');
+    } catch (e, s) {
+      _log.e('Failed to update turnover', error: e, stackTrace: s);
+      emit(
+        state.copyWith(
+          status: Status.error,
+          errorMessage: 'Failed to update turnover: $e',
+        ),
       );
-
-      _log.i('Scaled tag turnovers to fit new amount');
     }
-
-    emit(
-      state.copyWith(
-        turnover: updatedTurnover,
-        currentTagTurnoversById: updatedTagTurnovers.associateBy((it) => it.id),
-      ),
-    );
   }
 
   /// Associates pending tag turnovers with the current turnover.
