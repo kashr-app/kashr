@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
@@ -195,19 +198,35 @@ class TurnoverMatchingService {
   /// and confusing for users.
   ///
   /// The confidence is calculated using:
-  /// - Amount match (50% weight): How closely the amounts match
-  /// - Date proximity (50% weight): How close the booking dates are
+  /// - Amount match (80% weight): How closely the amounts match
+  /// - Date proximity (20% weight): How close the booking dates are
   double _calculateConfidence(TagTurnover tt, Turnover t) {
     double confidence = 0.0;
 
-    // Amount match (50% weight)
-    final amountWeight = 0.5;
+    // Amount match (80% weight)
+    // Perfect matches get 100%, any difference immediately drops to max 85%,
+    // then continues to decay gradually with pow(2)
+    final amountWeight = 0.8;
     final amountDiff = (tt.amountValue - t.amountValue).abs();
-    final amountRatio = amountDiff / t.amountValue.abs();
-    confidence += (1.0 - amountRatio.toDouble()).clamp(0.0, 1.0) * amountWeight;
+    final amountRatio = (amountDiff / t.amountValue.abs()).toDouble();
 
-    // Date proximity (50% weight)
-    final dateWeight = 0.5;
+    if (amountDiff <= Decimal.zero) {
+      // Perfect match
+      confidence += 1.0 * amountWeight;
+    } else {
+      // Any non-zero difference: start at 85% and decay with pow(2)
+      const baseScore = 0.85;
+      final decayScore = pow(
+        // For amounRatio>1 the 1-amountRatio would be <0, but the squard
+        // number would turn positive resulting in terriable matches
+        (1.0 - amountRatio).clamp(0, 1),
+        3,
+      );
+      confidence += baseScore * decayScore * amountWeight;
+    }
+
+    // Date proximity (20% weight)
+    final dateWeight = 0.2;
     final daysDiff = tt.bookingDate.difference(t.bookingDate!).inDays.abs();
     final dateSimilarity =
         (dateMatchingWindow - daysDiff) / dateMatchingWindow.toDouble();
