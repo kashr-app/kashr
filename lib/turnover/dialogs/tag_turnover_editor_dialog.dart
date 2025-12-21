@@ -389,27 +389,32 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: _isDeleting ? null : _delete,
-            color: theme.colorScheme.error,
-            tooltip: 'Delete',
-          ),
-          const Spacer(),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          BlocBuilder<AccountCubit, AccountState>(
-            builder: (context, accountState) {
-              final account = accountState.accountById[_selectedAccountId];
-              return FilledButton(
-                onPressed: account != null && _isDirty
-                    ? () => _save(account)
-                    : null,
-                child: const Text('Save'),
-              );
-            },
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                onPressed: _isDeleting ? null : _delete,
+                color: theme.colorScheme.error,
+                tooltip: 'Delete',
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              SizedBox(width: 8),
+              BlocBuilder<AccountCubit, AccountState>(
+                builder: (context, accountState) {
+                  final account = accountState.accountById[_selectedAccountId];
+                  return FilledButton(
+                    onPressed: account != null && _isDirty
+                        ? () => _save(account)
+                        : null,
+                    child: const Text('Save'),
+                  );
+                },
+              ),
+            ],
           ),
         ],
       ),
