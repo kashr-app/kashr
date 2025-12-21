@@ -104,7 +104,7 @@ class TurnoverMatchingService {
 
   /// Confirm a match: link TagTurnover to Turnover
   Future<void> confirmMatch(TagTurnoverMatch match) async {
-    await _tagTurnoverRepository.linkToTurnover(
+    await _tagTurnoverRepository.allocateToTurnover(
       match.tagTurnover.id,
       match.turnover.id,
     );
@@ -178,7 +178,7 @@ class TurnoverMatchingService {
       return false;
     }
 
-    await _tagTurnoverRepository.unlinkFromTurnover(tagTurnoverId);
+    await _tagTurnoverRepository.unallocateFromTurnover(tagTurnoverId);
     return true;
   }
 

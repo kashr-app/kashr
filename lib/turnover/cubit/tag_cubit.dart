@@ -16,23 +16,23 @@ import 'package:uuid/uuid.dart';
 class TagCubit extends Cubit<TagState> {
   final TagRepository _repository;
   final _log = Logger();
-  StreamSubscription<List<Tag>>? _subscription;
+  StreamSubscription<List<Tag>?>? _subscription;
 
   TagCubit(this._repository) : super(const TagState()) {
     // Subscribe to tag changes from the repository
     _subscription = _repository.watchTags().listen(_onTagsChanged);
-    // Load initial tags
-    loadTags();
   }
 
-  void _onTagsChanged(List<Tag> tags) {
-    emit(
-      state.copyWith(
-        tags: tags,
-        tagById: tags.associateBy((t) => t.id),
-        status: Status.success,
-      ),
-    );
+  void _onTagsChanged(List<Tag>? tags) {
+    if (tags != null) {
+      emit(
+        state.copyWith(
+          tags: tags,
+          tagById: tags.associateBy((t) => t.id),
+          status: Status.success,
+        ),
+      );
+    }
   }
 
   @override
@@ -41,12 +41,12 @@ class TagCubit extends Cubit<TagState> {
     return super.close();
   }
 
-  /// Loads all tags from the repository.
-  Future<void> loadTags() async {
+  /// Loads all tags from cache or the repository.
+  Future<void> loadTags({bool invalidateCache = false}) async {
     emit(state.copyWith(status: Status.loading));
     try {
-      final tags = await _repository.getAllTags();
-      _onTagsChanged(tags);
+      await _repository.getAllTagsCached(invalidate: invalidateCache);
+      // state is upated by watching the repository
     } catch (e, s) {
       _log.e('Failed to load tags', error: e, stackTrace: s);
       emit(

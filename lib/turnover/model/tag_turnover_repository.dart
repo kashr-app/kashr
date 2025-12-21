@@ -4,9 +4,12 @@ import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/db/db_helper.dart';
+import 'package:finanalyzer/turnover/model/fts.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_change.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover_sort.dart';
+import 'package:finanalyzer/turnover/model/tag_turnovers_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
@@ -110,21 +113,24 @@ class TagTurnoverRepository {
     final db = await DatabaseHelper().database;
 
     // Get all turnover IDs
-    final turnoverIds = turnovers.map((t) => t.id.uuid).toList();
+    final turnoverIds = turnovers.map((t) => t.id).toList();
 
     if (turnoverIds.isEmpty) return;
 
     // Fetch all existing tag turnovers for these turnovers in one query
-    final placeholders = List.generate(
-      turnoverIds.length,
-      (_) => '?',
-    ).join(',');
-    final existingTagTurnovers = await db.rawQuery('''
+    final (placeholders, args) = db.inClause(
+      turnoverIds,
+      toArg: (it) => it.uuid,
+    );
+    final existingTagTurnovers = await db.rawQuery(
+      '''
       SELECT turnover_id, SUM(amount_value) as total
       FROM tag_turnover
       WHERE turnover_id IN ($placeholders)
       GROUP BY turnover_id
-      ''', turnoverIds);
+      ''',
+      [...args],
+    );
 
     // Build a map of turnover ID to allocated amount
     final allocatedByTurnover = <String, Decimal>{};
@@ -150,6 +156,7 @@ class TagTurnoverRepository {
           tagId: tag.id,
           amountValue: remainingAmount,
           amountUnit: turnover.amountUnit,
+          counterPart: turnover.counterPart,
           note: null,
           createdAt: DateTime.now(),
           bookingDate: turnover.bookingDate ?? DateTime.now(),
@@ -186,10 +193,7 @@ class TagTurnoverRepository {
     if (turnoverIds.isEmpty) return;
 
     // Build the SQL query with placeholders
-    final placeholders = List.generate(
-      turnoverIds.length,
-      (_) => '?',
-    ).join(',');
+    final (placeholders, _) = db.inClause(turnoverIds);
 
     // First, get the IDs of tag_turnovers that will be deleted
     final toDeleteRows = await db.rawQuery(
@@ -216,16 +220,38 @@ class TagTurnoverRepository {
     }
   }
 
-  Future<List<TagTurnover>> getByTurnover(UuidValue turnoverId) async {
+  Future<Map<UuidValue, Map<UuidValue, TagTurnover>>> getByTurnoverIds(
+    Iterable<UuidValue> turnoverIds,
+  ) async {
     final db = await DatabaseHelper().database;
 
+    final (placeholders, args) = db.inClause(
+      turnoverIds,
+      toArg: (it) => it.uuid,
+    );
     final maps = await db.query(
       'tag_turnover',
-      where: 'turnover_id = ?',
-      whereArgs: [turnoverId.uuid],
+      where: 'turnover_id IN ($placeholders)',
+      whereArgs: args.toList(),
     );
 
-    return maps.map((e) => TagTurnover.fromJson(e)).toList();
+    Map<UuidValue, Map<UuidValue, TagTurnover>> result = {};
+    for (final ttMap in maps) {
+      final tt = TagTurnover.fromJson(ttMap);
+      // can guarantee turnoverId to be not null here because we queried by the turnover_id being set.
+      final turnoverId = tt.turnoverId!;
+      result.putIfAbsent(turnoverId, () => <UuidValue, TagTurnover>{})[tt.id] =
+          tt;
+    }
+
+    return result;
+  }
+
+  Future<Map<UuidValue, TagTurnover>> getByTurnover(
+    UuidValue turnoverId,
+  ) async {
+    final byId = await (getByTurnoverIds([turnoverId]));
+    return byId[turnoverId] ?? {};
   }
 
   Future<List<TagTurnover>> getByTag(UuidValue tagId) async {
@@ -282,7 +308,7 @@ class TagTurnoverRepository {
   }
 
   /// Link an unmatched TagTurnover to a Turnover (confirm match)
-  Future<int> linkToTurnover(
+  Future<int> allocateToTurnover(
     UuidValue tagTurnoverId,
     UuidValue turnoverId,
   ) async {
@@ -297,7 +323,7 @@ class TagTurnoverRepository {
   }
 
   /// Unlink a matched TagTurnover from its Turnover
-  Future<int> unlinkFromTurnover(UuidValue tagTurnoverId) async {
+  Future<int> unallocateFromTurnover(UuidValue tagTurnoverId) async {
     final db = await DatabaseHelper().database;
 
     final result = await db.update(
@@ -324,6 +350,28 @@ class TagTurnoverRepository {
 
     if (maps.isEmpty) return null;
     return TagTurnover.fromJson(maps.first);
+  }
+
+  /// Get TagTurnover by IDs
+  Future<Map<UuidValue, TagTurnover>> getByIds(Iterable<UuidValue> ids) async {
+    if (ids.isEmpty) return {};
+
+    final db = await DatabaseHelper().database;
+
+    final (placeholders, args) = db.inClause(ids, toArg: (it) => it.uuid);
+
+    final result = await db.query(
+      'tag_turnover',
+      where: 'id IN ($placeholders)',
+      whereArgs: args.toList(),
+    );
+
+    final res = <UuidValue, TagTurnover>{};
+    for (final map in result) {
+      final tt = TagTurnover.fromJson(map);
+      res[tt.id] = tt;
+    }
+    return res;
   }
 
   Future<int> updateTagTurnover(TagTurnover tagTurnover) async {
@@ -464,25 +512,6 @@ class TagTurnoverRepository {
     );
 
     return _unscale(result.first['total']);
-  }
-
-  /// Fetches transfer tag summaries for a month.
-  /// Only includes tags with semantic = 'transfer'.
-  Future<Map<TurnoverSign, List<TagSummary>>> getTransferTagSummariesForMonth(
-    YearMonth yearMonth,
-  ) async {
-    return {
-      TurnoverSign.income: await getTagSummariesForMonth(
-        yearMonth,
-        TurnoverSign.income,
-        semantic: TagSemantic.transfer,
-      ),
-      TurnoverSign.expense: await getTagSummariesForMonth(
-        yearMonth,
-        TurnoverSign.expense,
-        semantic: TagSemantic.transfer,
-      ),
-    };
   }
 
   /// Fetches tag summaries for a month and sign.
@@ -672,6 +701,141 @@ class TagTurnoverRepository {
     return result
         .map((m) => UuidValue.fromString(m['account_id'] as String))
         .toList();
+  }
+
+  /// Fetches tag turnovers with associated tag and account details.
+  /// Supports pagination, filtering, and sorting.
+  Future<List<TagTurnover>> getTagTurnoversPaginated({
+    required int limit,
+    required int offset,
+    required TagTurnoversFilter filter,
+    required TagTurnoverSort sort,
+  }) async {
+    final db = await DatabaseHelper().database;
+
+    final whereClauses = <String>[];
+    final whereArgs = <Object>[];
+
+    // Filter by has transfer tag
+    if (filter.transferTagOnly == true) {
+      whereClauses.add('''
+        EXISTS (
+          SELECT 1 FROM tag t
+          WHERE t.id = tt.tag_id
+            AND t.semantic = 'transfer'
+        )
+      ''');
+    }
+
+    // Filter to only show tag turnovers not part of a finished transfer
+    // (includes unlinked ones and those linked to transfers with only one side)
+    if (filter.unfinishedTransfersOnly == true) {
+      whereClauses.add('''
+        tt.id NOT IN (
+          SELECT tag_turnover_id
+          FROM transfer_tag_turnover
+          WHERE transfer_id IN (
+            SELECT transfer_id
+            FROM transfer_tag_turnover
+            GROUP BY transfer_id
+            HAVING COUNT(*) = 2
+          )
+        )
+      ''');
+    }
+
+    // Filter by period
+    if (filter.period != null) {
+      final startDate = Jiffy.parseFromDateTime(filter.period!.toDateTime());
+      final endDate = startDate.add(months: 1);
+      whereClauses.add('tt.booking_date >= ?');
+      whereClauses.add('tt.booking_date < ?');
+      whereArgs.add(startDate.format(pattern: isoDateFormat));
+      whereArgs.add(endDate.format(pattern: isoDateFormat));
+    }
+
+    // Filter by tag IDs
+    if (filter.tagIds?.isNotEmpty == true) {
+      final (placeholders, args) = db.inClause(
+        filter.tagIds!,
+        toArg: (id) => id.uuid,
+      );
+      whereClauses.add('tt.tag_id IN ($placeholders)');
+      whereArgs.addAll(args);
+    }
+
+    // Filter by account IDs
+    if (filter.accountIds?.isNotEmpty == true) {
+      final (placeholders, args) = db.inClause(
+        filter.accountIds!,
+        toArg: (id) => id.uuid,
+      );
+      whereClauses.add('tt.account_id IN ($placeholders)');
+      whereArgs.addAll(args);
+    }
+
+    // Filter by sign
+    if (filter.sign != null) {
+      switch (filter.sign!) {
+        case TurnoverSign.income:
+          whereClauses.add('tt.amount_value >= 0');
+          break;
+        case TurnoverSign.expense:
+          whereClauses.add('tt.amount_value < 0');
+          break;
+      }
+    }
+
+    // Filter by matched/pending status
+    if (filter.isMatched != null) {
+      whereClauses.add(
+        filter.isMatched!
+            ? 'tt.turnover_id IS NOT NULL'
+            : 'tt.turnover_id IS NULL',
+      );
+    }
+
+    // Search query
+    if (filter.searchQuery?.isNotEmpty == true) {
+      whereClauses.add('''
+        EXISTS (
+          SELECT 1 FROM tag_turnover_fts
+          WHERE tag_turnover_fts.tag_turnover_id = tt.id
+          AND tag_turnover_fts MATCH ?
+        )
+      ''');
+      whereArgs.add(sanitizeFts5Query(filter.searchQuery!));
+    }
+
+    // Filter by excluded
+    if (filter.excludeTagTurnoverIds?.isNotEmpty == true) {
+      final (placeholders, args) = db.inClause(
+        filter.excludeTagTurnoverIds!,
+        toArg: (it) => it.uuid,
+      );
+      whereClauses.add('tt.id NOT IN ($placeholders)');
+      whereArgs.addAll(args);
+    }
+
+    final whereClause = whereClauses.isEmpty
+        ? ''
+        : 'WHERE ${whereClauses.join(' AND ')}';
+
+    final orderByClause = sort.toSqlOrderBy();
+
+    final query =
+        '''
+      SELECT
+        tt.*
+      FROM tag_turnover tt
+      $whereClause
+      ORDER BY $orderByClause
+      LIMIT ? OFFSET ?
+    ''';
+
+    final result = await db.rawQuery(query, [...whereArgs, limit, offset]);
+
+    return result.map((map) => TagTurnover.fromJson(map)).toList();
   }
 }
 

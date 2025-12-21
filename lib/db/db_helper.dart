@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:finanalyzer/db/migrations/schema_v12.dart';
 import 'package:finanalyzer/db/migrations/v13.dart';
+import 'package:finanalyzer/db/migrations/v14.dart';
 import 'package:finanalyzer/db/sqlite_compat.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart';
@@ -88,10 +89,11 @@ class DatabaseHelper {
   final _migrations = <int, Future<void> Function(SqliteDatabase db)>{
     // version => migration function
     13: v13,
+    14: v14,
   };
 
   Future<void> _migrate(SqliteDatabase db) async {
-    final oldVersion = await _getCurrentVersion(db);
+    var oldVersion = await _getCurrentVersion(db);
     final newVersion = dbVersion;
 
     final targetVersion = _migrations.keys.last;
@@ -99,9 +101,11 @@ class DatabaseHelper {
     if (oldVersion == 0) {
       log.i('New database installation, creating schema at v$newVersion');
       await createSchemaV12(db);
-      await _setVersion(db, newVersion);
+      await _setVersion(db, 12);
+      oldVersion = 12;
       log.i('Database schema created at v$newVersion');
-    } else if (oldVersion < targetVersion) {
+    }
+    if (oldVersion < targetVersion) {
       for (int i = oldVersion + 1; i <= newVersion; i++) {
         final m = _migrations[i];
 

@@ -3,16 +3,16 @@ import 'package:finanalyzer/turnover/model/recent_search_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// Full-screen modal dialog for searching turnovers.
+/// Full-screen modal dialog for searching.
 /// Shows recent searches and allows entering new search queries.
-class TurnoverSearchDialog extends StatefulWidget {
-  const TurnoverSearchDialog({super.key});
+class SearchDialog extends StatefulWidget {
+  const SearchDialog({super.key});
 
   @override
-  State<TurnoverSearchDialog> createState() => _TurnoverSearchDialogState();
+  State<SearchDialog> createState() => _SearchDialogState();
 }
 
-class _TurnoverSearchDialogState extends State<TurnoverSearchDialog> {
+class _SearchDialogState extends State<SearchDialog> {
   final _searchController = TextEditingController();
   final _focusNode = FocusNode();
   late final RecentSearchRepository _repository;
@@ -113,7 +113,7 @@ class _TurnoverSearchDialogState extends State<TurnoverSearchDialog> {
           controller: _searchController,
           focusNode: _focusNode,
           decoration: const InputDecoration(
-            hintText: 'Search turnovers...',
+            hintText: 'Search ...',
             border: InputBorder.none,
           ),
           textInputAction: TextInputAction.search,
@@ -159,7 +159,7 @@ class _TurnoverSearchDialogState extends State<TurnoverSearchDialog> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Enter a search query above to find turnovers',
+              'Enter a search query above',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               ),

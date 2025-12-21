@@ -41,6 +41,28 @@ class SqliteDatabase {
     }
   }
 
+  /// Generates [placeholders] and [args] for the given [iterable] to be used
+  /// in an IN SQL clause.
+  ///
+  /// [A] must be a type that is supported by SQLite.
+  /// If [toArg] is not provided [T] must be supported by SQLite.
+  ///
+  /// Example:
+  /// ```dart
+  /// List<UuidValue> ids = ...;
+  /// final (placeholders, args) = inClause(ids, (it) => it.uuid);
+  /// whereClauses.add('id IN ($placeholders)');
+  /// whereArgs.addAll(args);
+  /// ```
+  (String placeholders, Iterable<A> args) inClause<T, A>(
+    Iterable<T> iterable, {
+    A Function(T it)? toArg,
+  }) {
+    final placeholders = List.filled(iterable.length, '?').join(',');
+    final args = toArg != null ? iterable.map(toArg) : (iterable.cast<A>());
+    return (placeholders, args);
+  }
+
   /// Inserts a row into the specified table.
   ///
   /// Returns the row ID of the inserted row.

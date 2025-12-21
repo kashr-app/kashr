@@ -1,6 +1,11 @@
-import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
+import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid_value.dart';
 
 /// Displays the turnovers list content including error, empty, and list states.
 class TurnoversListContent extends StatelessWidget {
@@ -16,20 +21,22 @@ class TurnoversListContent extends StatelessWidget {
     required this.onItemLongPress,
     required this.onRetry,
     required this.onLoadMore,
+    this.transferByTagTurnoverId,
     super.key,
   });
 
-  final List<TurnoverWithTags> items;
+  final List<TurnoverWithTagTurnovers> items;
   final bool isLoading;
   final bool hasMore;
   final String? error;
   final ScrollController scrollController;
   final Set<String> selectedIds;
   final bool isBatchMode;
-  final void Function(TurnoverWithTags) onItemTap;
-  final void Function(TurnoverWithTags) onItemLongPress;
+  final void Function(TurnoverWithTagTurnovers) onItemTap;
+  final void Function(TurnoverWithTagTurnovers) onItemLongPress;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
+  final Map<UuidValue, TransferWithDetails>? transferByTagTurnoverId;
 
   @override
   Widget build(BuildContext context) {
@@ -41,42 +48,74 @@ class TurnoversListContent extends StatelessWidget {
       return const _EmptyState();
     }
 
-    return ListView.builder(
-      controller: scrollController,
-      itemCount: items.length + (hasMore || isLoading ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index >= items.length) {
-          if (error != null) {
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Center(
-                child: ElevatedButton.icon(
-                  onPressed: onLoadMore,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                ),
-              ),
+    return BlocBuilder<TagCubit, TagState>(
+      builder: (context, tagState) {
+        final tagById = tagState.tagById;
+        return ListView.builder(
+          controller: scrollController,
+          itemCount: items.length + (hasMore || isLoading ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index >= items.length) {
+              if (error != null) {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Center(
+                    child: ElevatedButton.icon(
+                      onPressed: onLoadMore,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+                  ),
+                );
+              }
+              return const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final turnoverWithTags = items[index];
+            final turnoverId = turnoverWithTags.turnover.id.uuid;
+            final isSelected = selectedIds.contains(turnoverId);
+
+            // Calculate transfer flags for this turnover
+            bool hasTransfer = false;
+            bool transferNeedsReview = false;
+
+            for (final tagTurnover in turnoverWithTags.tagTurnovers) {
+              final tagTurnoverId = tagTurnover.id;
+              final isTransferTag =
+                  tagById[tagTurnover.tagId]?.isTransfer ?? false;
+              final transferDetails = transferByTagTurnoverId?[tagTurnoverId];
+
+              // Show transfer badge if tag has transfer semantic OR is linked to a transfer
+              if (isTransferTag || transferDetails != null) {
+                hasTransfer = true;
+
+                // Unlinked transfer tags need review
+                final isUnlinkedTransfer =
+                    isTransferTag && transferDetails == null;
+                if (isUnlinkedTransfer ||
+                    transferDetails?.needsReview != null) {
+                  transferNeedsReview = true;
+                  break; // No need to check further
+                }
+              }
+            }
+
+            return TurnoverCard(
+              turnoverWithTags: turnoverWithTags,
+              isSelected: isSelected,
+              isBatchMode: isBatchMode,
+              hasTransfer: hasTransfer,
+              transferNeedsReview: transferNeedsReview,
+              onTap: () {
+                onItemTap(turnoverWithTags);
+              },
+              onLongPress: () {
+                onItemLongPress(turnoverWithTags);
+              },
             );
-          }
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final turnoverWithTags = items[index];
-        final turnoverId = turnoverWithTags.turnover.id.uuid;
-        final isSelected = selectedIds.contains(turnoverId);
-
-        return TurnoverCard(
-          turnoverWithTags: turnoverWithTags,
-          isSelected: isSelected,
-          isBatchMode: isBatchMode,
-          onTap: () {
-            onItemTap(turnoverWithTags);
-          },
-          onLongPress: () {
-            onItemLongPress(turnoverWithTags);
           },
         );
       },
@@ -139,15 +178,15 @@ class _EmptyState extends StatelessWidget {
           Text(
             'No turnovers found',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'Your turnovers will appear here',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

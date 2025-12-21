@@ -21,8 +21,10 @@ abstract class TurnoverFilter with _$TurnoverFilter {
 
     /// Filter by specific tag IDs
     /// If provided, only turnovers with ALL these tags are shown
-    @UUIDListNullableJsonConverter()
-    List<UuidValue>? tagIds,
+    @UUIDListNullableJsonConverter() List<UuidValue>? tagIds,
+
+    // Filter by account
+    @UUIDNullableJsonConverter() UuidValue? accountId,
 
     /// Filter by turnover sign (income/expense)
     /// If null, shows both income and expenses
@@ -40,6 +42,7 @@ abstract class TurnoverFilter with _$TurnoverFilter {
       unallocatedOnly == true ||
       period != null ||
       (tagIds != null && tagIds!.isNotEmpty) ||
+      accountId != null ||
       sign != null ||
       (searchQuery != null && searchQuery!.isNotEmpty);
 

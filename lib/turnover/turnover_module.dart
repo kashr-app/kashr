@@ -1,11 +1,13 @@
 import 'package:finanalyzer/core/module.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/services/transfer_service.dart';
 import 'package:finanalyzer/turnover/services/turnover_service.dart';
 import 'package:finanalyzer/turnover/listeners/tag_turnover_tag_listener.dart';
 import 'package:finanalyzer/turnover/model/recent_search_repository.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/transfer_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:flutter/widgets.dart';
@@ -17,9 +19,11 @@ class TurnoverModule implements Module {
   final turnoverRepository = TurnoverRepository();
   final tagRepository = TagRepository();
   final tagTurnoverRepository = TagTurnoverRepository();
+  final transferRepository = TransferRepository();
   final recentSearchRepository = RecentSearchRepository();
 
   late final TurnoverService turnoverService;
+  late final TransferService transferService;
   late final TurnoverMatchingService turnoverMatchingService;
 
   @override
@@ -28,23 +32,35 @@ class TurnoverModule implements Module {
   late final List<TagListener> tagListeners = [];
 
   TurnoverModule() {
-    turnoverService = TurnoverService(turnoverRepository);
+    turnoverService = TurnoverService(
+      turnoverRepository,
+      tagTurnoverRepository,
+    );
+    transferService = TransferService(
+      transferRepository: transferRepository,
+      tagTurnoverRepository: tagTurnoverRepository,
+      tagRepository: tagRepository,
+    );
     turnoverMatchingService = TurnoverMatchingService(
       tagTurnoverRepository,
       turnoverRepository,
     );
 
+    final tagCubit = TagCubit(tagRepository);
+    // Starts loading tags asynchronously (no await)
+    // Note that we use the tagCubit instead of the repository in order to set the cubits loading state
+    tagCubit.loadTags();
+
     providers = [
       Provider<TurnoverRepository>.value(value: turnoverRepository),
       Provider<TagRepository>.value(value: tagRepository),
       Provider<TagTurnoverRepository>.value(value: tagTurnoverRepository),
+      Provider<TransferRepository>.value(value: transferRepository),
       Provider<RecentSearchRepository>.value(value: recentSearchRepository),
       Provider<TurnoverService>.value(value: turnoverService),
+      Provider<TransferService>.value(value: transferService),
       Provider<TurnoverMatchingService>.value(value: turnoverMatchingService),
-      BlocProvider(
-        lazy: false,
-        create: (_) => TagCubit(tagRepository)..loadTags(),
-      ),
+      BlocProvider.value(value: tagCubit),
     ];
 
     registerTagListener(
@@ -61,6 +77,7 @@ class TurnoverModule implements Module {
     turnoverRepository.dispose();
     tagRepository.dispose();
     tagTurnoverRepository.dispose();
+    transferRepository.dispose();
   }
 }
 

@@ -11,6 +11,9 @@ import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/transfer.dart';
+import 'package:finanalyzer/turnover/model/transfer_repository.dart';
+import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
@@ -18,6 +21,7 @@ import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 
 class QuickTransferEntrySheet extends StatefulWidget {
   final Account fromAccount;
@@ -153,19 +157,25 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
       final Decimal amount = decimalUnscale(_amountScaled)!;
       final note = _noteController.text.trim();
       final counterpart = _counterpartController.text.trim();
+      final tag = _selectedTag!;
 
       final tagTurnoverRepository = context.read<TagTurnoverRepository>();
       final turnoverRepository = context.read<TurnoverRepository>();
       final matchingService = context.read<TurnoverMatchingService>();
+      final transferRepository = context.read<TransferRepository>();
 
-      await createTurnoverAndTagTurnoverOnAccount(
+      // Create both tag turnovers and link them via Transfer entity
+      final (
+        fromTurnover,
+        fromTagTurnover,
+      ) = await createTurnoverAndTagTurnoverOnAccount(
         router,
         widget.fromAccount,
         -amount,
         note,
         counterpart,
         _selectedDate,
-        _selectedTag!,
+        tag,
         turnoverRepository,
         tagTurnoverRepository,
         scaffoldMessenger,
@@ -173,20 +183,41 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
         matchingService,
       );
 
-      await createTurnoverAndTagTurnoverOnAccount(
+      final (
+        toTurnover,
+        toTagTurnover,
+      ) = await createTurnoverAndTagTurnoverOnAccount(
         router,
         widget.toAccount,
         amount,
         note,
         counterpart,
         _selectedDate,
-        _selectedTag!,
+        tag,
         turnoverRepository,
         tagTurnoverRepository,
         scaffoldMessenger,
         theme,
         matchingService,
       );
+
+      // Create Transfer entity linking the two tagTurnovers
+      final transfer = Transfer(
+        id: const Uuid().v4obj(),
+        fromTagTurnoverId: fromTagTurnover.id,
+        toTagTurnoverId: toTagTurnover.id,
+        createdAt: DateTime.now(),
+      );
+
+      final transferWithDetails = TransferWithDetails(
+        transfer: transfer,
+        fromTagTurnover: fromTagTurnover,
+        toTagTurnover: toTagTurnover,
+        fromTag: tag,
+        toTag: tag,
+      );
+
+      await transferRepository.createTransfer(transferWithDetails);
 
       if (mounted) {
         Navigator.of(context).pop(true);

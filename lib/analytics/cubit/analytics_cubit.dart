@@ -25,7 +25,7 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
       emit(state.copyWith(status: Status.loading));
 
       // Load all tags
-      final allTags = await _tagRepository.getAllTags();
+      final allTags = await _tagRepository.getAllTagsCached();
 
       // If no tags are selected yet, select all tags
       final selectedTagIds = isInitialLoad && state.selectedTagIds.isEmpty

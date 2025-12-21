@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/core/color_utils.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:flutter/material.dart';
@@ -22,9 +23,9 @@ class TagSummaryRow extends StatelessWidget {
     this.onTap,
     super.key,
   }) : assert(
-          tag != null || isUnallocated,
-          'Either tag must be provided or isUnallocated must be true',
-        );
+         tag != null || isUnallocated,
+         'Either tag must be provided or isUnallocated must be true',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -45,10 +46,7 @@ class TagSummaryRow extends StatelessWidget {
               Container(
                 width: 16,
                 height: 16,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -114,12 +112,7 @@ class TagSummaryRow extends StatelessWidget {
       return Colors.grey.shade400;
     }
 
-    try {
-      final hexColor = colorString.replaceAll('#', '');
-      return Color(int.parse('FF$hexColor', radix: 16));
-    } catch (e) {
-      return Colors.grey.shade400;
-    }
+    return ColorUtils.parseColor(colorString) ?? Colors.grey.shade400;
   }
 
   String _getLabel() {

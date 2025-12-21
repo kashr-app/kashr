@@ -1,16 +1,24 @@
 import 'package:finanalyzer/core/color_utils.dart';
 import 'package:finanalyzer/theme.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
 import 'package:finanalyzer/turnover/widgets/tag_amount_bar.dart';
+import 'package:finanalyzer/turnover/widgets/transfer_issue_badge.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// A beautiful card widget for displaying a turnover with its tag allocations.
 class TurnoverCard extends StatelessWidget {
-  final TurnoverWithTags turnoverWithTags;
+  final TurnoverWithTagTurnovers turnoverWithTags;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool isSelected;
   final bool isBatchMode;
+  final bool hasTransfer;
+  final bool transferNeedsReview;
 
   const TurnoverCard({
     required this.turnoverWithTags,
@@ -18,6 +26,8 @@ class TurnoverCard extends StatelessWidget {
     this.onLongPress,
     this.isSelected = false,
     this.isBatchMode = false,
+    this.hasTransfer = false,
+    this.transferNeedsReview = false,
     super.key,
   });
 
@@ -65,6 +75,19 @@ class TurnoverCard extends StatelessWidget {
                     ),
                   ),
                 ),
+              // Transfer badges
+              if (hasTransfer) ...[
+                Row(
+                  children: [
+                    const TransferBadge.badge(),
+                    if (transferNeedsReview) ...[
+                      const SizedBox(width: 8),
+                      TransferBadge.needsReview(),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
               // Header: Counter party and amount
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -104,33 +127,57 @@ class TurnoverCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               if (turnoverWithTags.tagTurnovers.isNotEmpty) ...[
-                TagAmountBar(
-                  totalAmount: turnover.amountValue,
-                  tagTurnovers: turnoverWithTags.tagTurnovers,
-                ),
-                const SizedBox(height: 8),
-                ...turnoverWithTags.tagTurnovers
-                    .where((tt) => tt.tagTurnover.note?.isNotEmpty == true)
-                    .map((tt) => TagNoteDisplay(tagTurnover: tt)),
-                // Tag chips
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: turnoverWithTags.tagTurnovers.map((tagTurnover) {
-                    return Chip(
-                      label: Text(
-                        '${tagTurnover.tag.name}: ${tagTurnover.tagTurnover.format()}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      backgroundColor:
-                          ColorUtils.parseColor(
-                            tagTurnover.tag.color,
-                          )?.withValues(alpha: 0.1) ??
-                          Colors.grey.shade400,
+                BlocBuilder<TagCubit, TagState>(
+                  builder: (context, tagState) {
+                    final tagById = tagState.tagById;
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        TagAmountBar(
+                          totalAmount: turnover.amountValue,
+                          tagTurnovers: turnoverWithTags.tagTurnovers,
+                          tagById: tagById,
+                        ),
+                        const SizedBox(height: 8),
+                        ...turnoverWithTags.tagTurnovers
+                            .where((tt) => tt.note?.isNotEmpty == true)
+                            .map(
+                              (tt) => TagNoteDisplay(
+                                tagTurnover: tt,
+                                tag: tagById[tt.tagId],
+                              ),
+                            ),
+                        // Tag chips
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: turnoverWithTags.tagTurnovers.map((
+                            tagTurnover,
+                          ) {
+                            final tag = tagById[tagTurnover.tagId];
+                            final tagName = tag?.name ?? '(Unknown)';
+                            final tagColor =
+                                ColorUtils.parseColor(
+                                  tag?.color,
+                                )?.withValues(alpha: 0.1) ??
+                                Colors.grey.shade400;
+                            return Chip(
+                              label: Text(
+                                '$tagName: ${tagTurnover.format()}',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              backgroundColor: tagColor,
+                            );
+                          }).toList(),
+                        ),
+                      ],
                     );
-                  }).toList(),
+                  },
                 ),
               ] else ...[
                 Container(
@@ -169,9 +216,14 @@ class TurnoverCard extends StatelessWidget {
 }
 
 class TagNoteDisplay extends StatelessWidget {
-  const TagNoteDisplay({super.key, required this.tagTurnover});
+  const TagNoteDisplay({
+    super.key,
+    required this.tagTurnover,
+    required this.tag,
+  });
 
-  final TagTurnoverWithTag tagTurnover;
+  final TagTurnover tagTurnover;
+  final Tag? tag;
 
   @override
   Widget build(BuildContext context) {
@@ -192,13 +244,13 @@ class TagNoteDisplay extends StatelessWidget {
               Icons.note,
               size: 16,
               color:
-                  ColorUtils.parseColor(tagTurnover.tag.color) ??
+                  ColorUtils.parseColor(tag?.color) ??
                   colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '${tagTurnover.tagTurnover.note}',
+                '${tagTurnover.note}',
                 style: theme.textTheme.bodySmall,
               ),
             ),

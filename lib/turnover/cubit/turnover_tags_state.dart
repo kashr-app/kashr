@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/model/tag_suggestion.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
@@ -23,6 +24,7 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     @Default(false) bool isManualAccount,
     @Default([]) List<TagTurnover> associatedPendingTagTurnovers,
     @Default([]) List<TagTurnover> unlinkedTagTurnovers,
+    @Default({}) Map<UuidValue, TransferWithDetails> transferByTagTurnoverId,
   }) = _TurnoverTagsState;
 
   /// Returns the sum of all tag turnover amounts.

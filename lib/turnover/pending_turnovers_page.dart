@@ -6,8 +6,7 @@ import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/dialogs/edit_pending_tag_turnover_dialog.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/dialogs/tag_turnover_editor_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
@@ -36,7 +35,7 @@ class PendingTurnoversPage extends StatefulWidget {
 }
 
 class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
-  List<TagTurnoverWithTagAndAccount>? _pendingTurnovers;
+  List<TagTurnover>? _pendingTurnovers;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -57,16 +56,8 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
 
       final unmatched = await tagTurnoverRepository.getUnmatched();
 
-      final withTagsAndAccounts = unmatched.map((tt) {
-        return TagTurnoverWithTagAndAccount(
-          tagTurnover: tt,
-          tagId: tt.tagId,
-          accountId: tt.accountId,
-        );
-      }).toList();
-
       setState(() {
-        _pendingTurnovers = withTagsAndAccounts;
+        _pendingTurnovers = unmatched;
         _isLoading = false;
       });
     } catch (e) {
@@ -99,26 +90,20 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
     }
   }
 
-  Future<void> _editPendingTurnover(
-    TagTurnover tagTurnover,
-    Account account,
-    Tag tag,
-  ) async {
+  Future<void> _editPendingTurnover(TagTurnover tagTurnover) async {
     if (!mounted) return;
 
-    final result = await EditPendingTagTurnoverDialog.show(
+    final result = await TagTurnoverEditorDialog.show(
       context,
       tagTurnover: tagTurnover,
-      account: account,
-      tag: tag,
     );
 
     if (!mounted || result == null) return;
 
     switch (result) {
-      case EditPendingTagTurnoverDeleted():
+      case EditTagTurnoverDeleted():
         await _deletePendingTurnover(tagTurnover);
-      case EditPendingTagTurnoverUpdated(:final tagTurnover):
+      case EditTagTurnoverUpdated(:final tagTurnover):
         try {
           final tagTurnoverRepository = context.read<TagTurnoverRepository>();
           await tagTurnoverRepository.updateTagTurnover(tagTurnover);
@@ -235,7 +220,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
       await turnoverRepository.createTurnover(newTurnover);
 
       // Link the tag turnover to the new turnover
-      await tagTurnoverRepository.linkToTurnover(
+      await tagTurnoverRepository.allocateToTurnover(
         tagTurnover.id,
         newTurnover.id,
       );
@@ -255,7 +240,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
     }
   }
 
-  Future<void> _findMatch(TagTurnover tagTurnover, Account account) async {
+  Future<void> _findMatch(TagTurnover tagTurnover) async {
     if (!mounted) return;
 
     setState(() {
@@ -422,38 +407,24 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
                       itemBuilder: (context, index) {
                         final item = _pendingTurnovers![index];
                         final account = state.accountById[item.accountId];
-                        return BlocBuilder<TagCubit, TagState>(
-                          builder: (context, tagState) {
-                            final tag = tagState.tagById[item.tagId];
-                            return _PendingTurnoverItem(
-                              tagTurnoverWithTagAndAccount: item,
-                              onEdit: account != null && tag != null
-                                  ? () => _editPendingTurnover(
-                                      item.tagTurnover,
-                                      account,
-                                      tag,
-                                    )
-                                  : null,
-                              onUnmatch: item.tagTurnover.isMatched
-                                  ? () => _unmatchTurnover(item.tagTurnover)
-                                  : null,
-                              onMaterialize:
-                                  account != null &&
-                                      account.syncSource == SyncSource.manual &&
-                                      !item.tagTurnover.isMatched
-                                  ? () => _materializeTurnover(
-                                      item.tagTurnover,
-                                      account,
-                                    )
-                                  : null,
-                              onFindMatch:
-                                  account != null &&
-                                      account.syncSource != SyncSource.manual &&
-                                      !item.tagTurnover.isMatched
-                                  ? () => _findMatch(item.tagTurnover, account)
-                                  : null,
-                            );
-                          },
+                        return _PendingTurnoverItem(
+                          tagTurnover: item,
+                          onEdit: () => _editPendingTurnover(item),
+                          onUnmatch: item.isMatched
+                              ? () => _unmatchTurnover(item)
+                              : null,
+                          onMaterialize:
+                              account != null &&
+                                  account.syncSource == SyncSource.manual &&
+                                  !item.isMatched
+                              ? () => _materializeTurnover(item, account)
+                              : null,
+                          onFindMatch:
+                              account != null &&
+                                  account.syncSource != SyncSource.manual &&
+                                  !item.isMatched
+                              ? () => _findMatch(item)
+                              : null,
                         );
                       },
                     ),
@@ -466,14 +437,14 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
 }
 
 class _PendingTurnoverItem extends StatelessWidget {
-  final TagTurnoverWithTagAndAccount tagTurnoverWithTagAndAccount;
+  final TagTurnover tagTurnover;
   final VoidCallback? onEdit;
   final VoidCallback? onUnmatch;
   final VoidCallback? onMaterialize;
   final VoidCallback? onFindMatch;
 
   const _PendingTurnoverItem({
-    required this.tagTurnoverWithTagAndAccount,
+    required this.tagTurnover,
     this.onEdit,
     this.onUnmatch,
     this.onMaterialize,
@@ -483,9 +454,9 @@ class _PendingTurnoverItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tt = tagTurnoverWithTagAndAccount.tagTurnover;
-    final tagId = tagTurnoverWithTagAndAccount.tagId;
-    final accountId = tagTurnoverWithTagAndAccount.accountId;
+    final tt = tagTurnover;
+    final tagId = tagTurnover.tagId;
+    final accountId = tagTurnover.accountId;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -748,16 +719,4 @@ class _TurnoverMatchDetails extends StatelessWidget {
       ),
     );
   }
-}
-
-class TagTurnoverWithTagAndAccount {
-  final TagTurnover tagTurnover;
-  final UuidValue tagId;
-  final UuidValue accountId;
-
-  TagTurnoverWithTagAndAccount({
-    required this.tagTurnover,
-    required this.tagId,
-    required this.accountId,
-  });
 }

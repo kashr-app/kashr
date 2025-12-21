@@ -11,10 +11,12 @@ import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_change.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/transfer_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_change.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
+import 'package:finanalyzer/turnover/services/turnover_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:logger/logger.dart';
@@ -25,19 +27,23 @@ import 'package:uuid/uuid.dart';
 /// Automatically refreshes when underlying data changes in repositories.
 class DashboardCubit extends Cubit<DashboardState> {
   final TurnoverRepository _turnoverRepository;
+  final TurnoverService _turnoverService;
   final TagTurnoverRepository _tagTurnoverRepository;
   final TagRepository _tagRepository;
+  final TransferRepository _transferRepository;
   final _log = Logger();
 
   StreamSubscription<dynamic>? _changeSubscription;
   StreamSubscription<TurnoverChange>? _turnoverSubscription;
   StreamSubscription<TagTurnoverChange>? _turnoverTagSubscription;
-  StreamSubscription<List<Tag>>? _tagsSubscription;
+  StreamSubscription<List<Tag>?>? _tagsSubscription;
 
   DashboardCubit(
     this._turnoverRepository,
+    this._turnoverService,
     this._tagTurnoverRepository,
     this._tagRepository,
+    this._transferRepository,
   ) : super(
         DashboardState(
           selectedPeriod: YearMonth.now(),
@@ -46,10 +52,11 @@ class DashboardCubit extends Cubit<DashboardState> {
           totalTransfers: Decimal.zero,
           unallocatedIncome: Decimal.zero,
           unallocatedExpenses: Decimal.zero,
-          unallocatedTurnovers: const [],
+          firstUnallocatedTurnover: null,
           unallocatedCount: 0,
           pendingCount: 0,
           pendingTotalAmount: Decimal.zero,
+          transfersNeedingReviewCount: 0,
         ),
       ) {
     _setupSubscriptions();
@@ -98,7 +105,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     }
   }
 
-  void _onTagsChanged(List<Tag> tags) {
+  void _onTagsChanged(List<Tag>? tags) {
     final shouldRefresh = true;
     if (shouldRefresh) {
       loadMonthData();
@@ -158,7 +165,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     emit(state.copyWith(status: Status.loading));
 
     // Get current tags from repository
-    final tags = await _tagRepository.getAllTags();
+    final tags = await _tagRepository.getAllTagsCached();
     final tagById = tags.associateBy((it) => it.id);
 
     try {
@@ -180,15 +187,15 @@ class DashboardCubit extends Cubit<DashboardState> {
             semantic: null, // excludes transfers
           );
 
-      final (
-        transferTagSummaries,
-        totalTransfers,
-        totalTransferIncome,
-        totalTransferExpenses,
-      ) = await _loadTransfersSummary();
+      final (transferTagSummaries, totalTransfers) =
+          await _loadTransfersSummary();
 
-      final unallocatedTurnovers = await _turnoverRepository
-          .getUnallocatedTurnoversForMonth(state.selectedPeriod, limit: 1);
+      final firstUnallocatedTurnovers = (await _turnoverRepository
+          .getUnallocatedTurnoversForMonth(state.selectedPeriod, limit: 1));
+      final firstUnallocatedTurnover =
+          (await _turnoverService.getTurnoversWithTags(
+            firstUnallocatedTurnovers,
+          )).first;
 
       final unallocatedCount = await _turnoverRepository
           .countUnallocatedTurnoversForMonth(state.selectedPeriod);
@@ -263,6 +270,8 @@ class DashboardCubit extends Cubit<DashboardState> {
       final totalExpenses = totalAllExpensesAbs + unallocatedExpenses;
 
       final (pendingCount, pendingTotalAmount) = await _pending();
+      final transfersNeedingReviewCount = await _transferRepository
+          .countTransfersNeedingReview();
 
       emit(
         state.copyWith(
@@ -275,10 +284,11 @@ class DashboardCubit extends Cubit<DashboardState> {
           incomeTagSummaries: incomeTagSummaries,
           expenseTagSummaries: expenseTagSummaries,
           transferTagSummaries: transferTagSummaries,
-          unallocatedTurnovers: unallocatedTurnovers,
+          firstUnallocatedTurnover: firstUnallocatedTurnover,
           unallocatedCount: unallocatedCount,
           pendingCount: pendingCount,
           pendingTotalAmount: pendingTotalAmount,
+          transfersNeedingReviewCount: transfersNeedingReviewCount,
         ),
       );
     } catch (e, s) {
@@ -301,76 +311,34 @@ class DashboardCubit extends Cubit<DashboardState> {
     return (count, totalAmount);
   }
 
-  Future<(List<TagSummary>, Decimal, Decimal, Decimal)>
-  _loadTransfersSummary() async {
-    final transferTagSummariesBySign = await _tagTurnoverRepository
-        .getTransferTagSummariesForMonth(state.selectedPeriod);
+  Future<(List<TagSummary>, Decimal)> _loadTransfersSummary() async {
+    // LOGIC per prds/20251214-transfers.md O4:
+    // Only use 'from' side (TurnoverSign.expense) for calculations.
+    // The 'from' side has negative amounts and represents the transfer out.
+    // The 'to' side (TurnoverSign.income) is ignored to avoid double-counting.
 
-    // Sum of all transfer tags (inflow)
-    final totalTransferIncome = transferTagSummariesBySign[TurnoverSign.income]!
-        .fold<Decimal>(Decimal.zero, (sum, s) => sum + s.totalAmount);
-
-    // Sum of all transfer tags (outflow)
-    final totalTransferExpenses =
-        transferTagSummariesBySign[TurnoverSign.expense]!.fold<Decimal>(
-          Decimal.zero,
-          (sum, s) => sum + s.totalAmount.abs(),
+    final expenseSummaries = await _tagTurnoverRepository
+        .getTagSummariesForMonth(
+          state.selectedPeriod,
+          TurnoverSign.expense,
+          semantic: TagSemantic.transfer,
         );
 
-    // TODO see prds/20251214-transfers.md
-    // Transfers can be external (one side tracked only) or internal (between tracked accounts)
-    //
-    // For internal transfers (between tracked accounts), the amount appears
-    // twice (once negative, once positive).
-    // For external transfers (to/from untracked accounts), they appear once.
-    //
-    // => total amount of transfers = externals.sumAbs() + internals.sumAbs()/2
-    //
-    // Which we can calculate as:
-    // sumWithSign = sum of all tagTurnovers amounts = net sum that doesn't canacel (ie. some external)
-    // sumOfAbs = sum of all tagTurnovers absolute amounts
-    // External amount = abs(sumWithSign) = net sum (of values with sign) that doesn cancel
-    // Internal amount = (sumOfAbs - abs(sumWithSign)) / 2
-    // Total amount: external + internal/2 = (sumOfAbs + abs(sumWithSign)) / 2
-    //
-    // We apply that logic per tag
-    final transferTagSummaries = transferTagSummariesBySign.values
-        .expand((it) => it)
-        .fold(<UuidValue, TagSummary>{}, (all, it) {
-          final ts1 = all[it.tagId];
-          if (ts1 == null) {
-            // a tag can either occur once or twice (income, expense)
-            // if it occurs only once, we just keep it with sign and later ensure to .abs() all values
-            all[it.tagId] = it; // keep sign initially
-            return all;
-          }
-          // if tha tag occurs twice, we calculate the total abs value according to the above formula.
-          final ts2 = it;
+    // Total transfer amount = sum of absolute values from 'from' side
+    final totalTransferExpenses = expenseSummaries.fold<Decimal>(
+      Decimal.zero,
+      (sum, s) => sum + s.totalAmount.abs(),
+    );
 
-          final sumWithSign = ts1.totalAmount + ts2.totalAmount;
-          final sumOfAbs = ts1.totalAmount.abs() + ts2.totalAmount.abs();
-          final totalAmount =
-              ((sumOfAbs + sumWithSign.abs()) / Decimal.fromInt(2)).toDecimal(
-                scaleOnInfinitePrecision: 2,
-              );
-
-          all[it.tagId] = it.copyWith(totalAmount: totalAmount);
-          return all;
-        })
-        .values
-        .map((it) => it.copyWith(totalAmount: it.totalAmount.abs()))
+    // For display: only show expense summaries (the 'from' sides)
+    final transferTagSummaries = expenseSummaries
+        .map((s) => s.copyWith(totalAmount: s.totalAmount.abs()))
         .toList();
 
-    final totalTransfers = transferTagSummaries.fold<Decimal>(
-      Decimal.zero,
-      (sum, it) => sum + it.totalAmount.abs(),
-    );
-    return (
-      transferTagSummaries,
-      totalTransfers,
-      totalTransferIncome,
-      totalTransferExpenses,
-    );
+    // Total transfers = sum of 'from' side amounts
+    final totalTransfers = totalTransferExpenses;
+
+    return (transferTagSummaries, totalTransfers);
   }
 
   /// Navigates to the previous month.

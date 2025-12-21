@@ -1,13 +1,12 @@
 import 'dart:async';
 
 import 'package:decimal/decimal.dart';
+import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/fts.dart';
 import 'package:finanalyzer/turnover/model/turnover_change.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:uuid/uuid.dart';
@@ -54,7 +53,7 @@ class TurnoverRepository {
       where: 'api_id IN (${List.filled(apiIds.length, '?').join(',')})',
       whereArgs: apiIds.map((id) => id.uuid).toList(),
     );
-    return result.map((e) => Turnover.fromJson(e)).toList();
+    return result.map(Turnover.fromJson).toList();
   }
 
   /// Fetches turnovers for a specific month and year.
@@ -74,7 +73,7 @@ class TurnoverRepository {
       orderBy: 'booking_date DESC',
     );
 
-    return maps.map((map) => Turnover.fromJson(map)).toList();
+    return maps.map(Turnover.fromJson).toList();
   }
 
   // Custom method to find accountId and apiId by a list of API IDs
@@ -83,17 +82,16 @@ class TurnoverRepository {
   ) async {
     final db = await DatabaseHelper().database;
 
-    // Create placeholders for the IN clause
-    final placeholders = List.generate(apiIds.length, (_) => '?').join(',');
+    final (placeholders, args) = db.inClause(apiIds);
 
     // Query the database
     final results = await db.rawQuery('''
       SELECT account_id, api_id
       FROM turnover
       WHERE api_id IN ($placeholders)
-    ''', apiIds.map((e) => e).toList());
+    ''', args.toList());
 
-    return results.map((e) => TurnoverAccountIdAndApiId.fromJson(e)).toList();
+    return results.map(TurnoverAccountIdAndApiId.fromJson).toList();
   }
 
   // Example method to store a list of turnovers (already shown before)
@@ -136,7 +134,11 @@ class TurnoverRepository {
 
   Future<int> deleteTurnover(UuidValue id) async {
     final db = await DatabaseHelper().database;
-    final result = await db.delete('turnover', where: 'id = ?', whereArgs: [id.uuid]);
+    final result = await db.delete(
+      'turnover',
+      where: 'id = ?',
+      whereArgs: [id.uuid],
+    );
     _changeController.add(TurnoversDeleted([id]));
     return result;
   }
@@ -155,7 +157,7 @@ class TurnoverRepository {
           'account_id = ? AND api_id IN (${List.filled(apiIds.length, '?').join(',')})',
       whereArgs: [accountId.uuid, ...apiIds],
     );
-    return result.map((e) => Turnover.fromJson(e)).toList();
+    return result.map(Turnover.fromJson).toList();
   }
 
   /// Counts unallocated turnovers for a specific month and year.
@@ -192,7 +194,7 @@ class TurnoverRepository {
   /// A turnover is considered unallocated if:
   /// - It has no tag_turnover entries, OR
   /// - The sum of tag_turnover amounts doesn't equal the turnover amount
-  Future<List<TurnoverWithTags>> getUnallocatedTurnoversForMonth(
+  Future<List<Turnover>> getUnallocatedTurnoversForMonth(
     YearMonth yearMonth, {
     int limit = 5,
   }) async {
@@ -230,118 +232,23 @@ class TurnoverRepository {
     final turnovers = turnoverMaps
         .map((map) => Turnover.fromJson(map))
         .toList();
-    final turnoverIds = turnovers.map((t) => t.id.uuid).toList();
 
-    if (turnoverIds.isEmpty) {
-      return turnovers
-          .map((t) => TurnoverWithTags(turnover: t, tagTurnovers: []))
-          .toList();
-    }
-
-    // Fetch all tag_turnovers for these turnovers with their tags in one query
-    final placeholders = List.generate(
-      turnoverIds.length,
-      (_) => '?',
-    ).join(',');
-    final tagTurnoverMaps = await db.rawQuery('''
-      SELECT
-        tt.id as tt_id,
-        tt.turnover_id as tt_turnover_id,
-        tt.tag_id as tt_tag_id,
-        tt.amount_value as tt_amount_value,
-        tt.amount_unit as tt_amount_unit,
-        tt.note as tt_note,
-        tt.created_at as tt_created_at,
-        tt.booking_date as tt_booking_date,
-        tt.account_id as tt_account_id,
-        tt.recurring_rule_id as tt_recurring_rule_id,
-        t.id as t_id,
-        t.name as t_name,
-        t.color as t_color
-      FROM tag_turnover tt
-      LEFT JOIN tag t ON tt.tag_id = t.id
-      WHERE tt.turnover_id IN ($placeholders)
-      ORDER BY tt.amount_value DESC
-      ''', turnoverIds);
-
-    // Group tag turnovers by turnover ID
-    final tagTurnoversByTurnoverId = <String, List<TagTurnoverWithTag>>{};
-    for (final map in tagTurnoverMaps) {
-      final turnoverId = map['tt_turnover_id'] as String?;
-      if (turnoverId == null) continue;
-
-      final tagTurnover = TagTurnover(
-        id: UuidValue.fromString(map['tt_id'] as String),
-        turnoverId: UuidValue.fromString(turnoverId),
-        tagId: UuidValue.fromString(map['tt_tag_id'] as String),
-        amountValue:
-            (Decimal.fromInt(map['tt_amount_value'] as int) /
-                    Decimal.fromInt(100))
-                .toDecimal(),
-        amountUnit: map['tt_amount_unit'] as String,
-        note: map['tt_note'] as String?,
-        createdAt: DateTime.parse(map['tt_created_at'] as String),
-        bookingDate: DateTime.parse(map['tt_booking_date'] as String),
-        accountId: UuidValue.fromString(map['tt_account_id'] as String),
-        recurringRuleId: map['tt_recurring_rule_id'] != null
-            ? UuidValue.fromString(map['tt_recurring_rule_id'] as String)
-            : null,
-      );
-
-      final tag = Tag(
-        id: UuidValue.fromString(map['t_id'] as String),
-        name: map['t_name'] as String,
-        color: map['t_color'] as String?,
-      );
-
-      final tagTurnoverWithTag = TagTurnoverWithTag(
-        tagTurnover: tagTurnover,
-        tag: tag,
-      );
-
-      tagTurnoversByTurnoverId
-          .putIfAbsent(turnoverId, () => [])
-          .add(tagTurnoverWithTag);
-    }
-
-    // Combine turnovers with their tag turnovers
-    return turnovers.map((turnover) {
-      final turnoverId = turnover.id.uuid;
-      return TurnoverWithTags(
-        turnover: turnover,
-        tagTurnovers:
-            tagTurnoversByTurnoverId[turnoverId] ?? <TagTurnoverWithTag>[],
-      );
-    }).toList();
+    return turnovers;
   }
 
-  /// Get all turnovers for a specific account
-  /// Optionally filter by date range
-  /// [startDateInclusive] filters turnovers with bookingDate >= startDate
+  /// Sumes all turnovers for a specific account up until
   /// [endDateInclusive] filters turnovers with bookingDate <= endDate
-  Future<List<Turnover>> getTurnoversForAccount({
+  Future<Decimal> sumTurnoversForAccount({
     required UuidValue accountId,
-    DateTime? startDateInclusive,
     DateTime? endDateInclusive,
-    int? limit,
-    SortDirection direction = SortDirection.asc,
   }) async {
     final db = await DatabaseHelper().database;
 
-    final whereClauses = ['account_id = ?'];
+    final whereClauses = ['t.account_id = ?'];
     final whereArgs = <Object>[accountId.uuid];
 
-    if (startDateInclusive != null) {
-      whereClauses.add('booking_date >= ?');
-      whereArgs.add(
-        Jiffy.parseFromDateTime(
-          startDateInclusive,
-        ).format(pattern: isoDateFormat),
-      );
-    }
-
     if (endDateInclusive != null) {
-      whereClauses.add('booking_date <= ?');
+      whereClauses.add('t.booking_date <= ?');
       whereArgs.add(
         Jiffy.parseFromDateTime(
           endDateInclusive,
@@ -349,15 +256,15 @@ class TurnoverRepository {
       );
     }
 
-    final maps = await db.query(
-      'turnover',
-      where: whereClauses.join(' AND '),
-      whereArgs: whereArgs,
-      orderBy: 'booking_date ${direction.name}',
-      limit: limit,
-    );
+    final whereClause = 'WHERE ${whereClauses.join(' AND ')}';
 
-    return maps.map((e) => Turnover.fromJson(e)).toList();
+    final maps = await db.rawQuery('''
+        SELECT SUM(t.amount_value) as total
+        FROM turnover t
+        $whereClause
+      ''', whereArgs);
+
+    return decimalUnscale(maps.first['total'] as int)!;
   }
 
   /// Returns the ids of turnovers that are unmatched.
@@ -373,8 +280,7 @@ class TurnoverRepository {
     final db = await DatabaseHelper().database;
 
     // Create placeholders: (?, ?, ?, ...)
-    final placeholders = List.filled(turnoverIds.length, '?').join(', ');
-    final args = turnoverIds.map((id) => id.uuid).toList();
+    final (placeholders, args) = db.inClause(turnoverIds, toArg: (id) => id.uuid);
 
     final maps = await db.rawQuery(
       '''
@@ -385,7 +291,7 @@ class TurnoverRepository {
       GROUP BY t.id
       HAVING COUNT(tt.id) = 0
       ''',
-      [args],
+      [...args],
     );
 
     return maps.map((it) => UuidValue.fromString(it['id'] as String));
@@ -445,9 +351,8 @@ class TurnoverRepository {
     return maps.map((e) => Turnover.fromJson(e)).toList();
   }
 
-  /// Fetches a paginated list of turnovers with their associated tags.
-  /// This method efficiently loads all data in a single query to avoid N+1 problems.
-  Future<List<TurnoverWithTags>> getTurnoversWithTagsPaginated({
+  /// Fetches a paginated list of turnovers.
+  Future<List<Turnover>> getTurnoversPaginated({
     required int limit,
     required int offset,
     TurnoverFilter filter = TurnoverFilter.empty,
@@ -472,7 +377,7 @@ class TurnoverRepository {
     if (filter.sign != null) {
       switch (filter.sign!) {
         case TurnoverSign.income:
-          whereClauses.add('t.amount_value > 0');
+          whereClauses.add('t.amount_value >= 0');
           break;
         case TurnoverSign.expense:
           whereClauses.add('t.amount_value < 0');
@@ -489,13 +394,14 @@ class TurnoverRepository {
           AND turnover_fts MATCH ?
         )
       ''');
-      whereArgs.add(_sanitizeFts5Query(filter.searchQuery!));
+      whereArgs.add(sanitizeFts5Query(filter.searchQuery!));
     }
 
     // Tag filter - turnovers must have ALL specified tags
     if (filter.tagIds != null && filter.tagIds!.isNotEmpty) {
       // For each tag, ensure the turnover has a tag_turnover entry with that tagId
       for (final tagId in filter.tagIds!) {
+        // "AND" semantics need an EXISTS per tag
         whereClauses.add('''
           EXISTS (
             SELECT 1 FROM tag_turnover tt_filter
@@ -507,21 +413,17 @@ class TurnoverRepository {
     }
 
     // Query based on filters
+
     final List<Map<String, Object?>> turnoverMaps;
+
+    final whereClause = whereClauses.isNotEmpty
+        ? 'WHERE ${whereClauses.join(' AND ')}'
+        : '';
+
+    final orderBy = sort.toSqlOrderBy();
 
     if (filter.unallocatedOnly == true) {
       // Use the unallocated query logic
-      final whereClause = whereClauses.isNotEmpty
-          ? 'WHERE ${whereClauses.join(' AND ')}'
-          : '';
-
-      // For unallocated, use custom sort or default to amount DESC
-      final orderBy =
-          sort.orderBy == SortField.bookingDate &&
-              sort.direction == SortDirection.desc
-          ? 'ABS(t.amount_value) DESC, t.booking_date DESC NULLS FIRST'
-          : sort.toSqlOrderBy();
-
       turnoverMaps = await db.rawQuery(
         '''
         SELECT DISTINCT t.*
@@ -539,11 +441,6 @@ class TurnoverRepository {
       );
     } else {
       // Regular query - need to use raw query to support tag filtering
-      final whereClause = whereClauses.isNotEmpty
-          ? 'WHERE ${whereClauses.join(' AND ')}'
-          : '';
-      final orderBy = sort.toSqlOrderBy();
-
       turnoverMaps = await db.rawQuery(
         '''
         SELECT t.*
@@ -556,131 +453,6 @@ class TurnoverRepository {
       );
     }
 
-    if (turnoverMaps.isEmpty) {
-      return [];
-    }
-
-    final turnovers = turnoverMaps
-        .map((map) => Turnover.fromJson(map))
-        .toList();
-    final turnoverIds = turnovers.map((t) => t.id.uuid).toList();
-
-    if (turnoverIds.isEmpty) {
-      // Return turnovers without tags if no valid IDs
-      return turnovers
-          .map((t) => TurnoverWithTags(turnover: t, tagTurnovers: []))
-          .toList();
-    }
-
-    // Fetch all tag_turnovers for these turnovers with their tags in one query
-    final placeholders = List.generate(
-      turnoverIds.length,
-      (_) => '?',
-    ).join(',');
-    final tagTurnoverMaps = await db.rawQuery('''
-      SELECT
-        tt.id as tt_id,
-        tt.turnover_id as tt_turnover_id,
-        tt.tag_id as tt_tag_id,
-        tt.amount_value as tt_amount_value,
-        tt.amount_unit as tt_amount_unit,
-        tt.note as tt_note,
-        tt.created_at as tt_created_at,
-        tt.booking_date as tt_booking_date,
-        tt.account_id as tt_account_id,
-        tt.recurring_rule_id as tt_recurring_rule_id,
-        t.id as t_id,
-        t.name as t_name,
-        t.color as t_color
-      FROM tag_turnover tt
-      LEFT JOIN tag t ON tt.tag_id = t.id
-      WHERE tt.turnover_id IN ($placeholders)
-      ORDER BY tt.amount_value DESC
-      ''', turnoverIds);
-
-    // Group tag turnovers by turnover ID
-    final tagTurnoversByTurnoverId = <String, List<TagTurnoverWithTag>>{};
-    for (final map in tagTurnoverMaps) {
-      final turnoverId = map['tt_turnover_id'] as String?;
-      if (turnoverId == null) continue;
-
-      final tagTurnover = TagTurnover(
-        id: UuidValue.fromString(map['tt_id'] as String),
-        turnoverId: UuidValue.fromString(turnoverId),
-        tagId: UuidValue.fromString(map['tt_tag_id'] as String),
-        amountValue:
-            (Decimal.fromInt(map['tt_amount_value'] as int) /
-                    Decimal.fromInt(100))
-                .toDecimal(),
-        amountUnit: map['tt_amount_unit'] as String,
-        note: map['tt_note'] as String?,
-        createdAt: DateTime.parse(map['tt_created_at'] as String),
-        bookingDate: DateTime.parse(map['tt_booking_date'] as String),
-        accountId: UuidValue.fromString(map['tt_account_id'] as String),
-        recurringRuleId: map['tt_recurring_rule_id'] != null
-            ? UuidValue.fromString(map['tt_recurring_rule_id'] as String)
-            : null,
-      );
-
-      final tag = Tag(
-        id: UuidValue.fromString(map['t_id'] as String),
-        name: map['t_name'] as String,
-        color: map['t_color'] as String?,
-      );
-
-      final tagTurnoverWithTag = TagTurnoverWithTag(
-        tagTurnover: tagTurnover,
-        tag: tag,
-      );
-
-      tagTurnoversByTurnoverId
-          .putIfAbsent(turnoverId, () => [])
-          .add(tagTurnoverWithTag);
-    }
-
-    // Combine turnovers with their tag turnovers
-    return turnovers.map((turnover) {
-      final turnoverId = turnover.id.uuid;
-      return TurnoverWithTags(
-        turnover: turnover,
-        tagTurnovers: tagTurnoversByTurnoverId[turnoverId] ?? [],
-      );
-    }).toList();
-  }
-
-  /// Sanitizes a user input string for use with SQLite FTS5 MATCH queries.
-  ///
-  /// This function escapes all user input as literal text, with the exception
-  /// of a single trailing `*` which enables prefix search (e.g., "foo*" matches
-  /// "food", "football", etc.).
-  ///
-  /// All tokens are quoted to prevent FTS5 syntax interpretation. Internal
-  /// quotes are escaped by doubling them per FTS5 convention.
-  String _sanitizeFts5Query(String query) {
-    if (query.trim().isEmpty) return query;
-
-    final tokens = <String>[];
-
-    for (var token in query.split(RegExp(r'\s+'))) {
-      if (token.isEmpty) continue;
-
-      // Check if token has a trailing asterisk (prefix search)
-      final hasTrailingStar = token.endsWith('*');
-
-      // Remove trailing asterisk for escaping
-      final tokenWithoutStar = hasTrailingStar
-          ? token.substring(0, token.length - 1)
-          : token;
-
-      if (tokenWithoutStar.isEmpty) continue;
-
-      // Escape internal quotes by doubling them (FTS5 convention)
-      final escaped = tokenWithoutStar.replaceAll('"', '""');
-
-      // Quote the token, add trailing * outside quotes if needed
-      tokens.add(hasTrailingStar ? '"$escaped"*' : '"$escaped"');
-    }
-
-    return tokens.join(' ');
+    return turnoverMaps.map((map) => Turnover.fromJson(map)).toList();
   }
 }

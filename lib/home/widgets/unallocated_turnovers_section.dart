@@ -1,6 +1,6 @@
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
@@ -9,13 +9,13 @@ import 'package:flutter/material.dart';
 
 /// A section widget that displays unallocated turnovers requiring user attention.
 class UnallocatedTurnoversSection extends StatelessWidget {
-  final List<TurnoverWithTags> unallocatedTurnovers;
+  final TurnoverWithTagTurnovers? firstUnallocatedTurnover;
   final int unallocatedCount;
   final VoidCallback onRefresh;
   final YearMonth selectedPeriod;
 
   const UnallocatedTurnoversSection({
-    required this.unallocatedTurnovers,
+    required this.firstUnallocatedTurnover,
     required this.unallocatedCount,
     required this.onRefresh,
     required this.selectedPeriod,
@@ -25,8 +25,9 @@ class UnallocatedTurnoversSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final turnover = firstUnallocatedTurnover;
 
-    if (unallocatedTurnovers.isEmpty) {
+    if (turnover == null) {
       return const SizedBox.shrink();
     }
 
@@ -70,11 +71,10 @@ class UnallocatedTurnoversSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        // Display only ONE TurnoverCard (the first item, which is highest amount)
         TurnoverCard(
-          turnoverWithTags: unallocatedTurnovers.first,
+          turnoverWithTags: turnover,
           onTap: () async {
-            final turnoverId = unallocatedTurnovers.first.turnover.id;
+            final turnoverId = turnover.turnover.id;
             await TurnoverTagsRoute(turnoverId: turnoverId.uuid).push(context);
             onRefresh();
           },

@@ -2,14 +2,18 @@ import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/transfer_repository.dart';
+import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
+import 'package:finanalyzer/turnover/services/transfer_service.dart';
+import 'package:finanalyzer/turnover/services/turnover_service.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/widgets/batch_tag_dialog.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_filter_dialog.dart';
-import 'package:finanalyzer/turnover/widgets/turnover_search_dialog.dart';
+import 'package:finanalyzer/turnover/widgets/search_dialog.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_sort_dialog.dart';
 import 'package:finanalyzer/turnover/widgets/turnovers_filter_chips.dart';
 import 'package:finanalyzer/turnover/widgets/turnovers_list_content.dart';
@@ -18,6 +22,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid_value.dart';
 
 class TurnoversRoute extends GoRouteData with $TurnoversRoute {
   const TurnoversRoute({this.filter, this.sort});
@@ -51,7 +56,8 @@ class TurnoversPage extends StatefulWidget {
 class _TurnoversPageState extends State<TurnoversPage> {
   final _log = Logger();
   final _scrollController = ScrollController();
-  final List<TurnoverWithTags> _items = [];
+  final List<TurnoverWithTagTurnovers> _items = [];
+  final Map<UuidValue, TransferWithDetails> _transferByTagTurnoverId = {};
 
   static const _pageSize = 10;
   int _currentOffset = 0;
@@ -67,12 +73,16 @@ class _TurnoversPageState extends State<TurnoversPage> {
 
   late final TurnoverRepository _repository;
   late final TagTurnoverRepository _tagTurnoverRepository;
+  late final TransferService _transferService;
+  late final TurnoverService _turnoverService;
 
   @override
   void initState() {
     super.initState();
     _repository = context.read<TurnoverRepository>();
     _tagTurnoverRepository = context.read<TagTurnoverRepository>();
+    _transferService = context.read<TransferService>();
+    _turnoverService = context.read<TurnoverService>();
     _filter = widget.initialFilter;
     _sort = widget.initialSort;
     _scrollController.addListener(_onScroll);
@@ -105,15 +115,22 @@ class _TurnoversPageState extends State<TurnoversPage> {
     });
 
     try {
-      final newItems = await _repository.getTurnoversWithTagsPaginated(
+      final newItems = await _repository.getTurnoversPaginated(
         limit: _pageSize,
         offset: _currentOffset,
         filter: _filter,
         sort: _sort,
       );
 
+      final turnoversWithTT = await _turnoverService.getTurnoversWithTags(
+        newItems,
+      );
+
+      // Fetch transfer information for new items
+      await _loadTransfersForItems(turnoversWithTT);
+
       setState(() {
-        _items.addAll(newItems);
+        _items.addAll(turnoversWithTT);
         _currentOffset += newItems.length;
         _hasMore = newItems.length >= _pageSize;
         _isLoading = false;
@@ -131,9 +148,56 @@ class _TurnoversPageState extends State<TurnoversPage> {
     }
   }
 
+  /// Loads transfer information for tag turnovers within the given turnovers.
+  Future<void> _loadTransfersForItems(
+    List<TurnoverWithTagTurnovers> items,
+  ) async {
+    try {
+      // Collect all tag turnover IDs from the turnovers
+      final tagTurnoverIds = <UuidValue>[];
+      for (final turnoverWithTT in items) {
+        for (final tagTurnover in turnoverWithTT.tagTurnovers) {
+          tagTurnoverIds.add(tagTurnover.id);
+        }
+      }
+
+      if (tagTurnoverIds.isEmpty) return;
+
+      // Get transfer IDs for these tag turnovers
+      final transferRepository = context.read<TransferRepository>();
+      final transferIdByTagTurnoverId = await transferRepository
+          .getTransferIdsForTagTurnovers(tagTurnoverIds);
+
+      if (transferIdByTagTurnoverId.isEmpty) return;
+
+      // Fetch transfer details
+      final transferIds = transferIdByTagTurnoverId.values.toSet().toList();
+      final transfersWithDetails = await _transferService
+          .getTransfersWithDetails(transferIds);
+
+      // Map transfers back to tag turnover IDs
+      for (final entry in transferIdByTagTurnoverId.entries) {
+        final tagTurnoverId = entry.key;
+        final transferId = entry.value;
+        final transferDetails = transfersWithDetails[transferId];
+        if (transferDetails != null) {
+          _transferByTagTurnoverId[tagTurnoverId] = transferDetails;
+        }
+      }
+    } catch (error, stackTrace) {
+      _log.e(
+        'Error loading transfers for turnovers',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      // Don't fail the whole operation if transfer loading fails
+    }
+  }
+
   Future<void> _refresh() async {
     setState(() {
       _items.clear();
+      _transferByTagTurnoverId.clear();
       _currentOffset = 0;
       _hasMore = true;
       _error = null;
@@ -175,7 +239,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
   Future<void> _openSearchDialog() async {
     final searchQuery = await Navigator.of(context).push<String>(
       MaterialPageRoute(
-        builder: (context) => const TurnoverSearchDialog(),
+        builder: (context) => const SearchDialog(),
         fullscreenDialog: true,
       ),
     );
@@ -199,7 +263,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
     setState(() => _selectedTurnoverIds.clear());
   }
 
-  List<TurnoverWithTags> get _selectedTurnovers => _items
+  List<TurnoverWithTagTurnovers> get _selectedTurnovers => _items
       .where((item) => _selectedTurnoverIds.contains(item.turnover.id.uuid))
       .toList();
 
@@ -221,27 +285,29 @@ class _TurnoversPageState extends State<TurnoversPage> {
   Future<void> _batchRemoveTag() async {
     if (_selectedTurnoverIds.isEmpty) return;
 
-    final tagsMap = <UuidValue, Tag>{};
+    final tagIds = <UuidValue>[];
     for (final turnoverWithTags in _selectedTurnovers) {
       for (final tagTurnover in turnoverWithTags.tagTurnovers) {
-        final tag = tagTurnover.tag;
-        tagsMap[tag.id] = tag;
+        tagIds.add(tagTurnover.tagId);
       }
     }
 
-    if (tagsMap.isEmpty) {
+    if (tagIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No tags found on selected turnovers')),
       );
       return;
     }
+    final tagById = context.read<TagCubit>().state.tagById;
+
+    final availableTags = tagIds.map((it) => tagById[it]).nonNulls.toList();
 
     if (!mounted) return;
 
     final selectedTag = await showDialog<Tag>(
       context: context,
       builder: (context) => BatchTagDialog(
-        availableTags: tagsMap.values.toList(),
+        availableTags: availableTags,
         mode: BatchTagMode.remove,
       ),
     );
@@ -294,7 +360,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
     }
   }
 
-  void _handleItemTap(TurnoverWithTags item) async {
+  void _handleItemTap(TurnoverWithTagTurnovers item) async {
     final id = item.turnover.id;
 
     if (_isBatchMode) {
@@ -305,7 +371,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
     }
   }
 
-  void _handleItemLongPress(TurnoverWithTags item) {
+  void _handleItemLongPress(TurnoverWithTagTurnovers item) {
     final id = item.turnover.id;
     _toggleTurnoverSelection(id.uuid);
   }
@@ -342,6 +408,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
                   onItemLongPress: _handleItemLongPress,
                   onRetry: _refresh,
                   onLoadMore: _loadMore,
+                  transferByTagTurnoverId: _transferByTagTurnoverId,
                 ),
               ),
             ),
@@ -367,7 +434,9 @@ class _TurnoversPageState extends State<TurnoversPage> {
           tooltip: 'Sort',
         ),
         IconButton(
-          icon: const Icon(Icons.filter_list),
+          icon: Icon(
+            _filter.hasFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+          ),
           onPressed: _openFilterDialog,
           tooltip: 'Filter',
         ),

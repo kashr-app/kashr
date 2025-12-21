@@ -6,11 +6,15 @@ import 'package:finanalyzer/core/extensions/map_extensios.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag_repository.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/transfer_repository.dart';
+import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/services/tag_suggestion_service.dart';
+import 'package:finanalyzer/turnover/services/transfer_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
@@ -20,13 +24,17 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
   final TagTurnoverRepository _tagTurnoverRepository;
   final TurnoverRepository _turnoverRepository;
   final AccountRepository _accountRepository;
+  final TransferRepository _transferRepository;
+  final TagRepository _tagRepository;
   final TagSuggestionService _suggestionService;
   final _log = Logger();
 
   TurnoverTagsCubit(
     this._tagTurnoverRepository,
     this._turnoverRepository,
-    this._accountRepository, {
+    this._accountRepository,
+    this._transferRepository,
+    this._tagRepository, {
     TagSuggestionService? suggestionService,
   }) : _suggestionService = suggestionService ?? TagSuggestionService(),
        super(const TurnoverTagsState());
@@ -51,11 +59,8 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       );
       final isManual = account?.syncSource == SyncSource.manual;
 
-      final tagTurnovers = await _tagTurnoverRepository.getByTurnover(
-        turnoverId,
-      );
-
-      final currentTagTurnoversById = tagTurnovers.associateBy((it) => it.id);
+      final currentTagTurnoversById = await _tagTurnoverRepository
+          .getByTurnover(turnoverId);
 
       emit(
         state.copyWith(
@@ -63,10 +68,13 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
           turnover: turnover,
           initialTurnover: turnover,
           currentTagTurnoversById: currentTagTurnoversById,
-          initialTagTurnovers: tagTurnovers,
+          initialTagTurnovers: currentTagTurnoversById.values.toList(),
           isManualAccount: isManual,
         ),
       );
+
+      // Load transfers asynchronously (don't block the UI)
+      loadTransfers();
 
       // Load suggestions asynchronously (don't block the UI)
       _loadSuggestions(turnover);
@@ -111,6 +119,55 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
     }
   }
 
+  /// Loads transfer information for the tag turnovers.
+  ///
+  /// Called after the turnover is loaded. Runs in the background to avoid
+  /// blocking the UI. Loads transfer details for any tag turnovers with transfer semantics.
+  Future<void> loadTransfers() async {
+    try {
+      final tagTurnovers = state.currentTagTurnoversById.values.toList();
+      if (tagTurnovers.isEmpty) return;
+
+      final tagTurnoverIds = tagTurnovers.map((item) => item.id).toList();
+
+      // Get transfer IDs for these tag turnovers
+      final transferIdByTagTurnoverId = await _transferRepository
+          .getTransferIdsForTagTurnovers(tagTurnoverIds);
+
+      if (transferIdByTagTurnoverId.isEmpty) {
+        emit(state.copyWith(transferByTagTurnoverId: {}));
+        return;
+      }
+
+      // Fetch transfer details
+      final transferService = TransferService(
+        transferRepository: _transferRepository,
+        tagTurnoverRepository: _tagTurnoverRepository,
+        tagRepository: _tagRepository,
+      );
+      final transferIds = transferIdByTagTurnoverId.values.toSet().toList();
+      final transfersWithDetails = await transferService
+          .getTransfersWithDetails(transferIds);
+
+      // Map transfers back to tag turnover IDs
+      final transferByTagTurnoverId = <UuidValue, TransferWithDetails>{};
+      for (final entry in transferIdByTagTurnoverId.entries) {
+        final tagTurnoverId = entry.key;
+        final transferId = entry.value;
+        final transferDetails = transfersWithDetails[transferId];
+        if (transferDetails != null) {
+          transferByTagTurnoverId[tagTurnoverId] = transferDetails;
+        }
+      }
+
+      emit(state.copyWith(transferByTagTurnoverId: transferByTagTurnoverId));
+    } catch (e, s) {
+      _log.e('Failed to load transfers', error: e, stackTrace: s);
+      // Don't emit error state - transfers are optional
+      emit(state.copyWith(transferByTagTurnoverId: {}));
+    }
+  }
+
   /// Adds a tag to the turnover with the remaining non-allocated amount.
   void addTag(Tag tag) {
     final t = state.turnover;
@@ -125,6 +182,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       tagId: tag.id,
       amountValue: remainingAmount,
       amountUnit: t.amountUnit,
+      counterPart: t.counterPart,
       note: null,
       createdAt: DateTime.now(),
       bookingDate: t.bookingDate ?? DateTime.now(),
@@ -145,6 +203,16 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
         suggestions: updatedSuggestions,
       ),
     );
+  }
+
+  /// Updates the tag turnover locally (not saved to DB yet).
+  void updateTagTurnover(TagTurnover tagTurnover) {
+
+    // we copy first to keep order
+    final copy = {...state.currentTagTurnoversById};
+    copy[tagTurnover.id] = tagTurnover;
+
+    emit(state.copyWith(currentTagTurnoversById: copy));
   }
 
   /// Updates the amount of a tag turnover locally (not saved to DB yet).
@@ -305,7 +373,11 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
   ///
   /// The turnover is NOT persisted immediately - only the in-memory state is
   /// updated. Persistence happens when the user saves via [saveAll].
-  void updateTurnover(Turnover updatedTurnover) {
+  /// Updates the turnover amount and adjusts associated tag turnovers.
+  ///
+  /// If the sign changes and any tag turnovers are linked to transfers,
+  /// sets an error state requiring manual unlink first (per O2).
+  Future<void> updateTurnover(Turnover updatedTurnover) async {
     final currentTurnover = state.turnover;
     if (currentTurnover == null) return;
 
@@ -316,6 +388,26 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
     final oldIsNegative = oldAmount < Decimal.zero;
     final newIsNegative = newAmount < Decimal.zero;
     final signChanged = oldIsNegative != newIsNegative;
+
+    // O2: Check if any tagTurnovers are part of a Transfer before allowing sign change
+    if (signChanged && state.currentTagTurnoversById.isNotEmpty) {
+      final tagTurnoverIds = state.currentTagTurnoversById.keys.toList();
+      final linkedTransfers = await _transferRepository
+          .getTransferIdsForTagTurnovers(tagTurnoverIds);
+
+      if (linkedTransfers.isNotEmpty) {
+        emit(
+          state.copyWith(
+            status: Status.error,
+            errorMessage:
+                'Cannot change sign: ${linkedTransfers.length} '
+                'tag turnover(s) are linked to transfers. Please unlink them '
+                'from the transfers first.',
+          ),
+        );
+        return;
+      }
+    }
 
     final newAbsAmount = newAmount.abs();
     final totalTagAmount = state.totalTagAmount.abs();
@@ -430,8 +522,8 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       if (makePending) {
         // Set turnoverId to null for all tag turnovers
         final tagTurnovers = await _tagTurnoverRepository.getByTurnover(t.id);
-        for (final tagTurnover in tagTurnovers) {
-          await _tagTurnoverRepository.unlinkFromTurnover(tagTurnover.id);
+        for (final tagTurnover in tagTurnovers.values) {
+          await _tagTurnoverRepository.unallocateFromTurnover(tagTurnover.id);
         }
       } else {
         // Delete all tag turnovers

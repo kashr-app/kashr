@@ -22,21 +22,31 @@ import 'package:finanalyzer/home/widgets/cashflow_card.dart';
 import 'package:finanalyzer/home/widgets/income_summary_card.dart';
 import 'package:finanalyzer/home/widgets/load_bank_data_section.dart';
 import 'package:finanalyzer/home/widgets/pending_turnovers_hint.dart';
+import 'package:finanalyzer/home/widgets/transfers_need_review_hint.dart';
 import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
 import 'package:finanalyzer/home/widgets/transfer_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
 import 'package:finanalyzer/settings/banks_page.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover_sort.dart';
+import 'package:finanalyzer/turnover/model/tag_turnovers_filter.dart';
+import 'package:finanalyzer/turnover/model/transfer_repository.dart';
+import 'package:finanalyzer/turnover/model/transfers_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/services/turnover_service.dart';
+import 'package:finanalyzer/turnover/tag_turnovers_page.dart';
 import 'package:finanalyzer/turnover/widgets/quick_transfer_entry_sheet.dart';
 import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/tags_page.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/pending_turnovers_page.dart';
+import 'package:finanalyzer/turnover/transfer_editor_page.dart';
+import 'package:finanalyzer/turnover/transfers_page.dart';
 import 'package:finanalyzer/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -61,10 +71,18 @@ part '../_gen/home/home_page.g.dart';
           ],
         ),
         TypedGoRoute<TagsRoute>(path: 'tags'),
+        TypedGoRoute<TagTurnoversRoute>(path: 'tagturnovers'),
       ],
     ),
-    TypedGoRoute<AnalyticsRoute>(path: 'analytics'),
+    TypedGoRoute<TurnoversRoute>(
+      path: 'turnovers',
+      routes: [TypedGoRoute<TurnoverTagsRoute>(path: ':turnoverId/tags')],
+    ),
     TypedGoRoute<PendingTurnoversRoute>(path: 'pending-turnovers'),
+    TypedGoRoute<TransfersRoute>(
+      path: 'transfers',
+      routes: [TypedGoRoute<TransferEditorRoute>(path: ':transferId/edit')],
+    ),
     TypedGoRoute<AccountsRoute>(
       path: 'accounts',
       routes: [
@@ -78,14 +96,11 @@ part '../_gen/home/home_page.g.dart';
         ),
       ],
     ),
-    TypedGoRoute<TurnoversRoute>(
-      path: 'turnovers',
-      routes: [TypedGoRoute<TurnoverTagsRoute>(path: ':turnoverId/tags')],
-    ),
     TypedGoRoute<SavingsRoute>(
       path: 'savings',
       routes: [TypedGoRoute<SavingsDetailRoute>(path: ':savingsId')],
     ),
+    TypedGoRoute<AnalyticsRoute>(path: 'analytics'),
   ],
 )
 class HomeRoute extends GoRouteData with $HomeRoute {
@@ -96,8 +111,10 @@ class HomeRoute extends GoRouteData with $HomeRoute {
     return BlocProvider(
       create: (context) => DashboardCubit(
         context.read<TurnoverRepository>(),
+        context.read<TurnoverService>(),
         context.read<TagTurnoverRepository>(),
         context.read<TagRepository>(),
+        context.read<TransferRepository>(),
       )..loadMonthData(),
       child: const HomePage(),
     );
@@ -197,11 +214,19 @@ class HomePage extends StatelessWidget {
                     onMonthSelected: (yearMonth) =>
                         context.read<DashboardCubit>().selectMonth(yearMonth),
                   ),
-                  const SizedBox(height: 8),
-                  PendingTurnoversHint(
-                    count: state.pendingCount,
-                    totalAmount: state.pendingTotalAmount,
-                  ),
+                  if (state.pendingCount > 0) ...[
+                    const SizedBox(height: 8),
+                    PendingTurnoversHint(
+                      count: state.pendingCount,
+                      totalAmount: state.pendingTotalAmount,
+                    ),
+                  ],
+                  if (state.transfersNeedingReviewCount > 0) ...[
+                    const SizedBox(height: 8),
+                    TransfersNeedReviewHint(
+                      count: state.transfersNeedingReviewCount,
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   const LoadBankDataSection(),
                   const SizedBox(height: 8),
@@ -211,7 +236,7 @@ class HomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   UnallocatedTurnoversSection(
-                    unallocatedTurnovers: state.unallocatedTurnovers,
+                    firstUnallocatedTurnover: state.firstUnallocatedTurnover,
                     unallocatedCount: state.unallocatedCount,
                     onRefresh: () =>
                         context.read<DashboardCubit>().loadMonthData(),
@@ -304,14 +329,14 @@ class HomePage extends StatelessWidget {
     BuildContext context,
     Account account,
   ) async {
-    final result = await showModalBottomSheet<bool>(
+    final result = await showModalBottomSheet<TagTurnover>(
       context: context,
       isScrollControlled: true,
       builder: (context) => QuickTurnoverEntrySheet(account: account),
     );
 
     // Refresh dashboard if turnover was saved
-    if (result == true && context.mounted) {
+    if (result != null && context.mounted) {
       context.read<DashboardCubit>().loadMonthData();
     }
   }

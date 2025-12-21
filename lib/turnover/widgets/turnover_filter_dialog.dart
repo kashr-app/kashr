@@ -1,3 +1,4 @@
+import 'package:finanalyzer/core/widgets/period_selector.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/dialogs/tag_picker_dialog.dart';
@@ -108,56 +109,62 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                     Row(
                       children: [
                         Text('Type', style: theme.textTheme.titleMedium),
-                    Spacer(),
-                    DropdownButton<TurnoverSign?>(
-                      value: _sign,
-                      items: [
-                        DropdownMenuItem(value: null, child: Text("All")),
-                        DropdownMenuItem(value: TurnoverSign.expense, child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.arrow_downward,
-                                  color: Colors.red,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('Expense'),
-                              ],
-                            )),
-                        DropdownMenuItem(value: TurnoverSign.income, child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.arrow_upward,
-                                  color: Colors.green,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('Income'),
-                              ],
-                            )),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _sign = value;
-                        });
-                      },
-                    ),
+                        Spacer(),
+                        DropdownButton<TurnoverSign?>(
+                          value: _sign,
+                          items: [
+                            DropdownMenuItem(value: null, child: Text("All")),
+                            DropdownMenuItem(
+                              value: TurnoverSign.expense,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.arrow_downward,
+                                    color: Colors.red,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Expense'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: TurnoverSign.income,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.arrow_upward,
+                                    color: Colors.green,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Income'),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _sign = value;
+                            });
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
 
                     // Period filter (Year and Month together)
                     CheckboxListTile(
-                      title: Text('Filter by period',style: theme.textTheme.titleMedium),
+                      title: Text(
+                        'Filter by period',
+                        style: theme.textTheme.titleMedium,
+                      ),
                       value: _period != null,
                       onChanged: (value) {
                         setState(() {
                           if (value == true) {
                             // Enable filter with current date if not already set
-                            _period = YearMonth(
-                              year: DateTime.now().year,
-                              month: DateTime.now().month,
-                            );
+                            _period = YearMonth.now();
                           } else {
                             // Disable filter
                             _period = null;
@@ -168,55 +175,25 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                     ),
                     if (_period != null) ...[
                       const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: DropdownMenu<int>(
-                          key: const ValueKey('year_dropdown'),
-                          initialSelection: _period!.year,
-                          label: const Text('Year'),
-                          expandedInsets: EdgeInsets.zero,
-                          dropdownMenuEntries: List.generate(5, (index) {
-                            final year = DateTime.now().year - index;
-                            return DropdownMenuEntry(
-                              value: year,
-                              label: year.toString(),
-                            );
-                          }),
-                          onSelected: (year) {
-                            if (year != null) {
-                              setState(() {
-                                _period = YearMonth(
-                                  year: year,
-                                  month: _period!.month,
-                                );
-                              });
-                            }
-                          },
+                      InkWell(
+                        onTap: () =>
+                            MonthPickerDialog.show(context, _period!).then((v) {
+                              if (v != null) {
+                                setState(() {
+                                  _period = v;
+                                });
+                              }
+                            }),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Period',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_month),
+                          ),
+                          child: Text(
+                            '${_period!.year} ${_getMonthName(_period!.month)}',
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownMenu<int>(
-                        key: const ValueKey('month_dropdown'),
-                        initialSelection: _period!.month,
-                        label: const Text('Month'),
-                        expandedInsets: EdgeInsets.zero,
-                        dropdownMenuEntries: List.generate(12, (index) {
-                          final month = index + 1;
-                          return DropdownMenuEntry(
-                            value: month,
-                            label: _getMonthName(month),
-                          );
-                        }),
-                        onSelected: (month) {
-                          if (month != null) {
-                            setState(() {
-                              _period = YearMonth(
-                                year: _period!.year,
-                                month: month,
-                              );
-                            });
-                          }
-                        },
                       ),
                     ],
                     const SizedBox(height: 24),

@@ -10,9 +10,18 @@ import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/delete_turnover_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/edit_turnover_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag_repository.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/tag_turnovers_filter.dart';
+import 'package:finanalyzer/turnover/model/transfer_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/services/transfer_service.dart';
+import 'package:finanalyzer/turnover/tag_turnovers_page.dart';
+import 'package:finanalyzer/turnover/transfer_editor_page.dart';
 import 'package:finanalyzer/turnover/widgets/select_from_pending_tag_turnovers_hint.dart';
+import 'package:finanalyzer/turnover/widgets/source_card.dart';
 import 'package:finanalyzer/turnover/widgets/status_message.dart';
 import 'package:finanalyzer/turnover/widgets/tag_suggestions_row.dart';
 import 'package:finanalyzer/turnover/widgets/tag_turnover_item.dart';
@@ -33,6 +42,8 @@ class TurnoverTagsRoute extends GoRouteData with $TurnoverTagsRoute {
         context.read<TagTurnoverRepository>(),
         context.read<TurnoverRepository>(),
         context.read<AccountRepository>(),
+        context.read<TransferRepository>(),
+        context.read<TagRepository>(),
       )..loadTurnover(UuidValue.fromString(turnoverId)),
       child: const TurnoverTagsPage(),
     );
@@ -41,6 +52,67 @@ class TurnoverTagsRoute extends GoRouteData with $TurnoverTagsRoute {
 
 class TurnoverTagsPage extends StatelessWidget {
   const TurnoverTagsPage({super.key});
+
+  Future<void> _handleTransferAction(
+    BuildContext context,
+    TagTurnover tagTurnover,
+  ) async {
+    final cubit = context.read<TurnoverTagsCubit>();
+    final transferDetails = cubit.state.transferByTagTurnoverId[tagTurnover.id];
+    final tagRepository = context.read<TagRepository>();
+    final tagById = await tagRepository.getByIdsCached();
+    final tag = tagById[tagTurnover.tagId];
+    final isTransferTag = tag?.isTransfer ?? false;
+    final isUnlinkedTransfer = isTransferTag && transferDetails == null;
+
+    if (!context.mounted) return;
+
+    if (transferDetails != null) {
+      // Navigate to TransferEditorPage if transfer exists
+      await TransferEditorRoute(
+        transferId: transferDetails.transfer.id.uuid,
+      ).push(context);
+      if (context.mounted) cubit.loadTransfers();
+    } else if (isUnlinkedTransfer) {
+      // Determine the required sign for the counterpart
+      final requiredSign = tagTurnover.sign == TurnoverSign.expense
+          ? TurnoverSign.income
+          : TurnoverSign.expense;
+
+      // Open TagTurnoversPage for selection with appropriate filters
+      final selectedTagTurnover = await TagTurnoversPage.openForSelection(
+        context: context,
+        header: SourceCard(tagTurnover: tagTurnover, tag: tag!),
+        filter: TagTurnoversFilter(sign: requiredSign),
+        lockedFilters: TagTurnoversFilter(
+          transferTagOnly: true,
+          unfinishedTransfersOnly: true,
+          excludeTagTurnoverIds: [tagTurnover.id],
+        ),
+      );
+
+      if (context.mounted && selectedTagTurnover != null) {
+        final transferService = context.read<TransferService>();
+
+        // Create the transfer using the service
+        final (transferId, conflict) = await transferService
+            .linkTransferTagTurnovers(
+              sourceTagTurnover: tagTurnover,
+              selectedTagTurnover: selectedTagTurnover,
+            );
+
+        if (!context.mounted) return;
+        await conflict?.showAsDialog(context);
+        if (!context.mounted) return;
+
+        if (transferId != null) {
+          // Navigate to transfer editor page for review
+          await TransferEditorRoute(transferId: transferId.uuid).push(context);
+        }
+        if (context.mounted) cubit.loadTransfers();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +207,8 @@ class TurnoverTagsPage extends StatelessWidget {
                                 itemCount: tagTurnovers.length,
                                 itemBuilder: (context, index) {
                                   final tagTurnover = tagTurnovers[index];
+                                  final transferDetails = state
+                                      .transferByTagTurnoverId[tagTurnover.id];
                                   return TagTurnoverItem(
                                     key: ValueKey(tagTurnover.id),
                                     tagTurnover: tagTurnover,
@@ -147,6 +221,12 @@ class TurnoverTagsPage extends StatelessWidget {
                                     maxAmountScaled:
                                         decimalScale(turnover.amountValue) ?? 0,
                                     currencyUnit: turnover.amountUnit,
+                                    transferWithDetails: transferDetails,
+                                    onTransferAction: () =>
+                                        _handleTransferAction(
+                                          context,
+                                          tagTurnover,
+                                        ),
                                   );
                                 },
                               );

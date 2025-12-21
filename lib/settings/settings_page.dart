@@ -4,7 +4,9 @@ import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/settings/banks_page.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/settings/settings_state.dart';
+import 'package:finanalyzer/turnover/tag_turnovers_page.dart';
 import 'package:finanalyzer/turnover/tags_page.dart';
+import 'package:finanalyzer/turnover/transfers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -93,9 +95,9 @@ class _SettingsPageState extends State<SettingsPage> {
                         trailing: Switch(
                           value: state.fastFormMode,
                           onChanged: (value) {
-                            context
-                                .read<SettingsCubit>()
-                                .setFastFormMode(value);
+                            context.read<SettingsCubit>().setFastFormMode(
+                              value,
+                            );
                           },
                         ),
                         onTap: () => _showFastFormModeInfo(context),
@@ -103,7 +105,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ],
                   ),
                 ),
-                _SettingsHeadline(label: 'Configuration'),
+                _SettingsHeadline(label: 'Configuration and Data'),
                 ListTile(
                   onTap: () => const BanksRoute().go(context),
                   title: Text('Banks'),
@@ -115,6 +117,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: Text('Tags'),
                   leading: const Icon(Icons.label),
                   subtitle: const Text('Manage tags'),
+                ),
+                ListTile(
+                  onTap: () => const TagTurnoversRoute().go(context),
+                  title: Text('TagTurnovers'),
+                  leading: const Icon(Icons.my_library_books_outlined),
+                  subtitle: const Text('Manage TagTurnovers'),
+                ),
+                ListTile(
+                  onTap: () => const TransfersRoute().go(context),
+                  title: Text('Transfers'),
+                  leading: const Icon(Icons.swap_horiz),
+                  subtitle: const Text('Manage Transfers'),
                 ),
                 _SettingsHeadline(label: 'Maintenance'),
                 ListTile(

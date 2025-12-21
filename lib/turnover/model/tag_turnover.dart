@@ -1,6 +1,7 @@
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/uuid_json_converter.dart';
+import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:decimal/decimal.dart';
@@ -25,6 +26,7 @@ abstract class TagTurnover with _$TagTurnover {
     @DecimalJsonConverter() required Decimal amountValue,
 
     required String amountUnit,
+    String? counterPart,
     String? note,
     required DateTime createdAt,
     required DateTime bookingDate,
@@ -43,4 +45,6 @@ abstract class TagTurnover with _$TagTurnover {
 
   factory TagTurnover.fromJson(Map<String, dynamic> json) =>
       _$TagTurnoverFromJson(json);
+
+  TurnoverSign get sign => TurnoverSign.fromDecimal(amountValue);
 }

@@ -1,5 +1,8 @@
+import 'package:finanalyzer/core/color_utils.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
+import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
+import 'package:finanalyzer/turnover/cubit/tag_state.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_sort.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
@@ -44,45 +47,52 @@ class TurnoversFilterChips extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              if (sort != TurnoverSort.defaultSort)
-                InputChip(
-                  avatar: Icon(
-                    size: 18,
-                    sort.direction == SortDirection.asc
-                        ? Icons.arrow_downward
-                        : Icons.arrow_upward,
-                  ),
-                  label: Text(sort.orderBy.label()),
-                  onDeleted: () => onSortChanged(TurnoverSort.defaultSort),
-                  onPressed: () {
-                    onSortChanged(sort.toggleDirection());
-                  },
-                ),
-              if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty)
-                Chip(
-                  avatar: const Icon(Icons.search, size: 18),
-                  label: Text(filter.searchQuery!),
-                  onDeleted: () =>
-                      onFilterChanged(filter.copyWith(searchQuery: null)),
-                ),
-              if (filter.unallocatedOnly == true)
-                Chip(
-                  label: const Text('Unallocated'),
-                  onDeleted: () =>
-                      onFilterChanged(filter.copyWith(unallocatedOnly: null)),
-                ),
-              if (filter.tagIds != null)
-                ...filter.tagIds!.map(
-                  (tagId) => _TagFilterChip(
-                    tagId: tagId,
-                    onDeleted: () => _removeTagFilter(tagId),
-                  ),
-                ),
-            ],
+          BlocBuilder<TagCubit, TagState>(
+            builder: (context, tagState) {
+              final tagById = tagState.tagById;
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (sort != TurnoverSort.defaultSort)
+                    InputChip(
+                      avatar: Icon(
+                        size: 18,
+                        sort.direction == SortDirection.asc
+                            ? Icons.arrow_downward
+                            : Icons.arrow_upward,
+                      ),
+                      label: Text(sort.orderBy.label()),
+                      onDeleted: () => onSortChanged(TurnoverSort.defaultSort),
+                      onPressed: () {
+                        onSortChanged(sort.toggleDirection());
+                      },
+                    ),
+                  if (filter.searchQuery != null &&
+                      filter.searchQuery!.isNotEmpty)
+                    Chip(
+                      avatar: const Icon(Icons.search, size: 18),
+                      label: Text(filter.searchQuery!),
+                      onDeleted: () =>
+                          onFilterChanged(filter.copyWith(searchQuery: null)),
+                    ),
+                  if (filter.unallocatedOnly == true)
+                    Chip(
+                      label: const Text('Unallocated'),
+                      onDeleted: () => onFilterChanged(
+                        filter.copyWith(unallocatedOnly: null),
+                      ),
+                    ),
+                  if (filter.tagIds != null)
+                    ...filter.tagIds!.map(
+                      (tagId) => _TagFilterChip(
+                        tag: tagById[tagId],
+                        onDeleted: () => _removeTagFilter(tagId),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -115,31 +125,21 @@ class TurnoversFilterChips extends StatelessWidget {
 }
 
 class _TagFilterChip extends StatelessWidget {
-  const _TagFilterChip({required this.tagId, required this.onDeleted});
+  const _TagFilterChip({required this.tag, required this.onDeleted});
 
-  final UuidValue tagId;
+  final Tag? tag;
   final VoidCallback onDeleted;
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: context.read<TagRepository>().getTagById(tagId),
-      builder: (context, snapshot) {
-        final tag = snapshot.data;
-        final tagName = tag?.name ?? 'Unkown';
-        final tagColor = tag?.color != null
-            ? Color(int.parse(tag!.color!.replaceFirst('#', '0xff')))
-            : null;
+    final tagName = tag?.name ?? 'Unkown';
+    final tagColor = ColorUtils.parseColor(tag?.color) ?? Colors.grey;
 
-        return Chip(
-          label: Text(tagName),
-          backgroundColor: tagColor?.withValues(alpha: 0.2),
-          side: tagColor != null
-              ? BorderSide(color: tagColor, width: 1.5)
-              : null,
-          onDeleted: onDeleted,
-        );
-      },
+    return Chip(
+      label: Text(tagName),
+      backgroundColor: tagColor.withValues(alpha: 0.2),
+      side: BorderSide(color: tagColor, width: 1.5),
+      onDeleted: onDeleted,
     );
   }
 }

@@ -64,6 +64,8 @@ abstract class Turnover with _$Turnover {
     final bd = bookingDate;
     return bd != null ? dateFormat.format(bd) : null;
   }
+
+  TurnoverSign get sign => TurnoverSign.fromDecimal(amountValue);
 }
 
 @freezed

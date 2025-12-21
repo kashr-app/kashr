@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
 import 'package:finanalyzer/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -21,24 +21,39 @@ abstract class DashboardState with _$DashboardState {
     required Decimal unallocatedExpenses,
     required int pendingCount,
     required Decimal pendingTotalAmount,
+
     // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TagSummary> incomeTagSummaries,
+
     // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TagSummary> expenseTagSummaries,
+
     // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default([])
     List<TagSummary> transferTagSummaries,
+
     // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)
-    @Default([])
-    List<TurnoverWithTags> unallocatedTurnovers,
-    @Default(0) int unallocatedCount,
-    String? errorMessage,
+    @Default(null)
+    TurnoverWithTagTurnovers? firstUnallocatedTurnover,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(includeFromJson: false, includeToJson: false)
+    @Default(0)
+    int unallocatedCount,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(includeFromJson: false, includeToJson: false)
+    @Default(0)
+    int transfersNeedingReviewCount,
+
+    // ignore: invalid_annotation_target
+    @JsonKey(includeFromJson: false, includeToJson: false) String? errorMessage,
   }) = _DashboardState;
 
   factory DashboardState.fromJson(Map<String, dynamic> json) =>

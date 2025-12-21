@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:finanalyzer/core/associate_by.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:logger/logger.dart';
@@ -9,19 +10,27 @@ class TagRepository {
   final _log = Logger();
 
   final _tagsController = StreamController<List<Tag>>.broadcast();
-  List<Tag> _cachedTags = [];
+  List<Tag>? _cachedTags;
 
-  Stream<List<Tag>> watchTags() async* {
+  /// Initial value is null in case tags have not yet been loaded from the DB.
+  Stream<List<Tag>?> watchTags() async* {
     // Emit cached value immediately for new listeners
     yield _cachedTags;
     // Then emit all future updates
     yield* _tagsController.stream;
   }
 
-  Future<void> _emitTags() async {
-    final tags = await getAllTags();
+  void _emitTags(List<Tag> tags) {
     _cachedTags = tags;
     _tagsController.add(tags);
+  }
+
+  Future<List<Tag>> _reloadAndEmitTags() async {
+    final db = await DatabaseHelper().database;
+    final maps = await db.query('tag', orderBy: 'name ASC');
+    final tags = maps.map((e) => Tag.fromJson(e)).toList();
+    _emitTags(tags);
+    return tags;
   }
 
   void dispose() {
@@ -31,24 +40,22 @@ class TagRepository {
   Future<int> createTag(Tag tag) async {
     final db = await DatabaseHelper().database;
     final result = await db.insert('tag', tag.toJson());
-    await _emitTags();
+    await _reloadAndEmitTags();
     return result;
   }
 
-  Future<Tag?> getTagById(UuidValue id) async {
-    final db = await DatabaseHelper().database;
-    final maps = await db.query('tag', where: 'id = ?', whereArgs: [id.uuid]);
-
-    if (maps.isNotEmpty) {
-      return Tag.fromJson(maps.first);
-    }
-    return null;
+  /// Loads the tags from the cache unless the cache was not initialized
+  /// or [invalidate] is true (defaults to false).
+  Future<List<Tag>> getAllTagsCached({bool invalidate = false}) async {
+    if (!invalidate && _cachedTags != null) return _cachedTags!;
+    return await _reloadAndEmitTags();
   }
 
-  Future<List<Tag>> getAllTags() async {
-    final db = await DatabaseHelper().database;
-    final maps = await db.query('tag', orderBy: 'name ASC');
-    return maps.map((e) => Tag.fromJson(e)).toList();
+  /// Returns all tags indexed by their ID from the cache.
+  /// If [invalidate] is true, reloads from database first.
+  Future<Map<UuidValue, Tag>> getByIdsCached({bool invalidate = false}) async {
+    final tags = await getAllTagsCached(invalidate: invalidate);
+    return tags.associateBy((it) => it.id);
   }
 
   Future<int> updateTag(Tag tag) async {
@@ -59,7 +66,7 @@ class TagRepository {
       where: 'id = ?',
       whereArgs: [tag.id.uuid],
     );
-    await _emitTags();
+    await _reloadAndEmitTags();
     return result;
   }
 
@@ -70,7 +77,7 @@ class TagRepository {
       where: 'id = ?',
       whereArgs: [id.uuid],
     );
-    await _emitTags();
+    await _reloadAndEmitTags();
     return result;
   }
 
@@ -174,7 +181,7 @@ class TagRepository {
       );
 
       // Emit updated tags list to all listeners
-      await _emitTags();
+      await _reloadAndEmitTags();
     } catch (e, s) {
       _log.e('Failed to merge tags', error: e, stackTrace: s);
       rethrow;

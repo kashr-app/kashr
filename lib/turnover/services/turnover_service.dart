@@ -1,14 +1,37 @@
+import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
 class TurnoverService {
   final TurnoverRepository turnoverRepository;
+  final TagTurnoverRepository tagTurnoverRepository;
 
   final log = Logger();
 
-  TurnoverService(this.turnoverRepository);
+  TurnoverService(this.turnoverRepository, this.tagTurnoverRepository);
+
+  Future<List<TurnoverWithTagTurnovers>> getTurnoversWithTags(
+    Iterable<Turnover> turnovers,
+  ) async {
+    final turnoverIds = turnovers.map((it) => it.id);
+
+    final tagTurnoversByTurnoverId = await tagTurnoverRepository
+        .getByTurnoverIds(turnoverIds);
+
+    final turnoversWithTT = <TurnoverWithTagTurnovers>[];
+    for (final turnover in turnovers) {
+      final tagTurnovers =
+          tagTurnoversByTurnoverId[turnover.id]?.values.toList() ?? [];
+      turnoversWithTT.add(
+        TurnoverWithTagTurnovers(turnover: turnover, tagTurnovers: tagTurnovers),
+      );
+    }
+
+    return turnoversWithTT;
+  }
 
   /// Upserts turnovers by inserting new ones and updating existing ones.
   /// Uses apiId to determine if a turnover already exists for the account.

@@ -1,6 +1,5 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/account/model/account.dart';
-import 'package:finanalyzer/core/extensions/decimal_extensions.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 
@@ -20,12 +19,10 @@ class BalanceCalculationService {
     DateTime? asOf,
   }) async {
     // Get all turnovers up to cutoff date
-    final turnovers = await _turnoverRepository.getTurnoversForAccount(
+    final turnoverSum = await _turnoverRepository.sumTurnoversForAccount(
       accountId: account.id,
       endDateInclusive: asOf,
     );
-
-    final turnoverSum = turnovers.sum((t) => t.amountValue);
 
     return account.openingBalance + turnoverSum;
   }
@@ -41,6 +38,7 @@ class BalanceCalculationService {
   }) async {
     final current = await calculateCurrentBalance(account, asOf: asOf);
 
+    // TODO sum on DB instead
     // Get unmatched TagTurnovers (pending expenses) up to the asOf date
     final unmatched = await _tagTurnoverRepository.getUnmatched(
       accountId: account.id,

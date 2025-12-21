@@ -1,18 +1,22 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:finanalyzer/turnover/model/tag_turnover.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 /// A horizontal bar widget that visualizes tag amounts as percentages.
 /// Each tag's portion is colored according to the tag's color.
 /// The remainder (unallocated amount) is shown in grey.
 class TagAmountBar extends StatelessWidget {
   final Decimal totalAmount;
-  final List<TagTurnoverWithTag> tagTurnovers;
+  final List<TagTurnover> tagTurnovers;
   final double height;
+  final Map<UuidValue, Tag> tagById;
 
   const TagAmountBar({
     required this.totalAmount,
     required this.tagTurnovers,
+    required this.tagById,
     this.height = 8.0,
     super.key,
   });
@@ -39,10 +43,7 @@ class TagAmountBar extends StatelessWidget {
           children: segments.map((segment) {
             return Expanded(
               flex: (segment.percentage * 1000).toInt(),
-              child: Container(
-                color: segment.color,
-                child: null,
-              ),
+              child: Container(color: segment.color, child: null),
             );
           }).toList(),
         ),
@@ -75,15 +76,13 @@ class TagAmountBar extends StatelessWidget {
 
     // Create segments for each tag
     for (final tagTurnover in tagTurnovers) {
-      final amount = tagTurnover.tagTurnover.amountValue.abs();
+      final amount = tagTurnover.amountValue.abs();
       final percentage = (amount / absoluteTotal).toDouble();
 
       if (percentage > 0) {
-        final color = _parseColor(tagTurnover.tag.color);
-        segments.add(_BarSegment(
-          percentage: percentage,
-          color: color,
-        ));
+        final tag = tagById[tagTurnover.tagId];
+        final color = tag != null ? _parseColor(tag.color) : Colors.grey;
+        segments.add(_BarSegment(percentage: percentage, color: color));
         allocatedAmount += amount;
       }
     }
@@ -92,10 +91,12 @@ class TagAmountBar extends StatelessWidget {
     final remainder = absoluteTotal - allocatedAmount;
     if (remainder > Decimal.zero) {
       final remainderPercentage = (remainder / absoluteTotal).toDouble();
-      segments.add(_BarSegment(
-        percentage: remainderPercentage,
-        color: Colors.grey.shade300,
-      ));
+      segments.add(
+        _BarSegment(
+          percentage: remainderPercentage,
+          color: Colors.grey.shade300,
+        ),
+      );
     }
 
     return segments;
@@ -120,8 +121,5 @@ class _BarSegment {
   final double percentage;
   final Color color;
 
-  _BarSegment({
-    required this.percentage,
-    required this.color,
-  });
+  _BarSegment({required this.percentage, required this.color});
 }

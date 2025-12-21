@@ -5,11 +5,10 @@ import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/theme.dart';
-import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
+import 'package:finanalyzer/turnover/services/turnover_service.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_card.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +42,7 @@ class AccountAllTurnoversPage extends StatefulWidget {
 class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
   final _log = Logger();
   final _scrollController = ScrollController();
-  final List<TurnoverWithTags> _items = [];
+  final List<TurnoverWithTagTurnovers> _items = [];
 
   static const _pageSize = 20;
   int _currentOffset = 0;
@@ -54,18 +53,15 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
   DateTime? _openingBalanceDate;
 
   late final TurnoverRepository _turnoverRepository;
-  late final TagTurnoverRepository _tagTurnoverRepository;
-  late final TagCubit _tagCubit;
+  late final TurnoverService _turnoverService;
 
   @override
   void initState() {
     super.initState();
     _turnoverRepository = context.read<TurnoverRepository>();
-    _tagTurnoverRepository = context.read<TagTurnoverRepository>();
-    _tagCubit = context.read<TagCubit>();
+    _turnoverService = context.read<TurnoverService>();
     _scrollController.addListener(_onScroll);
     _loadAccountInfo();
-    _loadTags();
     _loadMore();
   }
 
@@ -85,10 +81,6 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
         _openingBalanceDate = account.openingBalanceDate;
       });
     }
-  }
-
-  Future<void> _loadTags() async {
-    await _tagCubit.loadTags();
   }
 
   void _onScroll() {
@@ -111,39 +103,15 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
     });
 
     try {
-      final turnovers = await _turnoverRepository.getTurnoversForAccount(
-        accountId: widget.accountId,
+      final turnovers = await _turnoverRepository.getTurnoversPaginated(
+        limit: _pageSize,
+        offset: _currentOffset,
+        filter: TurnoverFilter(accountId: widget.accountId),
       );
 
-      // Paginate in memory
-      final startIndex = _currentOffset;
+      final newItems = await _turnoverService.getTurnoversWithTags(turnovers);
+
       final endIndex = (_currentOffset + _pageSize).clamp(0, turnovers.length);
-      final paginatedTurnovers = turnovers.sublist(startIndex, endIndex);
-
-      // Fetch tags for each turnover
-      final tagById = _tagCubit.state.tagById;
-
-      final newItems = <TurnoverWithTags>[];
-      for (final turnover in paginatedTurnovers.reversed) {
-        final tagTurnovers = await _tagTurnoverRepository.getByTurnover(
-          turnover.id,
-        );
-
-        final tagTurnoversWithTags = tagTurnovers.map((tt) {
-          final tag = tagById[tt.tagId];
-          return TagTurnoverWithTag(
-            tagTurnover: tt,
-            tag: tag ?? Tag(name: 'Unknown', id: tt.tagId, color: null),
-          );
-        }).toList();
-
-        newItems.add(
-          TurnoverWithTags(
-            turnover: turnover,
-            tagTurnovers: tagTurnoversWithTags,
-          ),
-        );
-      }
 
       setState(() {
         _items.addAll(newItems);
@@ -172,7 +140,6 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
       _error = null;
     });
     await _loadAccountInfo();
-    await _loadTags();
     await _loadMore();
   }
 

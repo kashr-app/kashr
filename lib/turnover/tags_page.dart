@@ -35,7 +35,6 @@ class _TagsPageState extends State<TagsPage> {
   @override
   void initState() {
     super.initState();
-    context.read<TagCubit>().loadTags();
   }
 
   @override
@@ -62,7 +61,9 @@ class _TagsPageState extends State<TagsPage> {
                     ),
                     const SizedBox(height: 16),
                     FilledButton(
-                      onPressed: () => context.read<TagCubit>().loadTags(),
+                      onPressed: () => context.read<TagCubit>().loadTags(
+                        invalidateCache: true,
+                      ),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -114,10 +115,7 @@ class _TagsPageState extends State<TagsPage> {
   }
 
   Future<void> _confirmDelete(BuildContext context, Tag tag) async {
-    final deleted = await TagDeletionDialog.show(context, tag: tag);
-    if (deleted == true && context.mounted) {
-      context.read<TagCubit>().loadTags();
-    }
+    await TagDeletionDialog.show(context, tag: tag);
   }
 
   Future<void> _showMergeDialog(BuildContext context, Tag sourceTag) async {

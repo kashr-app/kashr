@@ -27,7 +27,19 @@ import 'package:uuid/uuid.dart';
 class QuickTurnoverEntrySheet extends StatefulWidget {
   final Account account;
 
-  const QuickTurnoverEntrySheet({required this.account, super.key});
+  /// Optional tag turnover to pre-fill form values (e.g., when creating a
+  /// matching transfer side).
+  final TagTurnover? prefillFromTagTurnover;
+
+  /// Optional tag to pre-select (overrides tag from prefillFromTagTurnover).
+  final Tag? prefillTag;
+
+  const QuickTurnoverEntrySheet({
+    required this.account,
+    this.prefillFromTagTurnover,
+    this.prefillTag,
+    super.key,
+  });
 
   @override
   State<QuickTurnoverEntrySheet> createState() =>
@@ -52,6 +64,19 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
   @override
   void initState() {
     super.initState();
+
+    // Pre-fill if provided
+    if (widget.prefillFromTagTurnover != null) {
+      final prefill = widget.prefillFromTagTurnover!;
+      _amountScaled = decimalScale(prefill.amountValue);
+      _selectedDate = prefill.bookingDate;
+      _noteController.text = prefill.note ?? '';
+      _counterpartController.text = prefill.counterPart ?? '';
+    }
+    if (widget.prefillTag != null) {
+      _selectedTag = widget.prefillTag;
+    }
+
     // Trigger auto-flow after first frame if setting is enabled
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -79,7 +104,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
       currencyUnit: widget.account.currency,
       initialAmountScaled: _amountScaled?.abs() ?? 0,
       showSignSwitch: true,
-      initialIsNegative: true,
+      initialIsNegative: _amountScaled?.isNegative ?? true,
     );
 
     if (result != null && mounted) {
@@ -94,10 +119,17 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
 
   /// Returns if udpated (true) or canceled (false)
   Future<bool> _selectTag() async {
-    final selectedTag = await AddTagDialog.show(
-      context,
-      filter: (tag) => tag.isNormal,
-    );
+    // Determine tag filter based on prefill context
+    final bool Function(Tag) tagFilter;
+    if (widget.prefillFromTagTurnover != null || widget.prefillTag != null) {
+      // Allow transfer tags if we're prefilling from a transfer
+      tagFilter = (tag) => tag.isTransfer;
+    } else {
+      // Normal tags only for regular entry
+      tagFilter = (tag) => tag.isNormal;
+    }
+
+    final selectedTag = await AddTagDialog.show(context, filter: tagFilter);
     if (selectedTag != null && mounted) {
       setState(() {
         _selectedTag = selectedTag;
@@ -156,7 +188,10 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
       final matchingService = context.read<TurnoverMatchingService>();
       final theme = Theme.of(context);
 
-      createTurnoverAndTagTurnoverOnAccount(
+      final (
+        turnover,
+        tagTurnover,
+      ) = await createTurnoverAndTagTurnoverOnAccount(
         GoRouter.of(context),
         widget.account,
         amount,
@@ -172,7 +207,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
       );
 
       if (mounted) {
-        Navigator.of(context).pop(true);
+        Navigator.of(context).pop(tagTurnover);
       }
     } catch (e) {
       scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -194,8 +229,8 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
   Future<void> _runAutoFlow() async {
     final steps = [
       //
-      _selectAmount,
-      _selectTag,
+      if (widget.prefillFromTagTurnover == null) _selectAmount,
+      if (widget.prefillTag == null) _selectTag,
       _focusFirstTextField,
     ];
     for (final step in steps) {
@@ -213,12 +248,9 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      final isManual = widget.account.syncSource == SyncSource.manual;
-      if (isManual) {
-        // Focus counterpart field for manual accounts
+      if (_counterpartController.text.isEmpty) {
         FocusScope.of(context).requestFocus(_counterpartFocusNode);
       } else {
-        // Focus note field for linked accounts
         FocusScope.of(context).requestFocus(_noteFocusNode);
       }
       c.complete(true);
@@ -229,7 +261,6 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isManual = widget.account.syncSource == SyncSource.manual;
 
     return SafeArea(
       child: Padding(
@@ -356,18 +387,16 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
                 ],
               ),
               const SizedBox(height: 16),
-              if (isManual) ...[
-                TextFormField(
-                  controller: _counterpartController,
-                  focusNode: _counterpartFocusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Counterpart (optional)',
-                    border: OutlineInputBorder(),
-                    hintText: 'e.g., Store name, Person',
-                  ),
+              TextFormField(
+                controller: _counterpartController,
+                focusNode: _counterpartFocusNode,
+                decoration: const InputDecoration(
+                  labelText: 'Counterpart (optional)',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., Store name, Person',
                 ),
-                const SizedBox(height: 16),
-              ],
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _noteController,
                 focusNode: _noteFocusNode,
@@ -457,6 +486,7 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
     amountUnit: account.currency,
     bookingDate: bookingDate,
     accountId: account.id,
+    counterPart: counterpart.isEmpty ? null : counterpart,
     note: note.isEmpty ? null : note,
     createdAt: DateTime.now(),
   );

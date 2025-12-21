@@ -6,19 +6,30 @@ import 'package:uuid/uuid.dart';
 
 class AccountSelectorDialog extends StatelessWidget {
   final UuidValue? selectedId;
-  const AccountSelectorDialog({super.key, this.selectedId});
+  final String? title;
+  final UuidValue? excludeId;
+  const AccountSelectorDialog({
+    super.key,
+    this.selectedId,
+    this.title,
+    this.excludeId,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AccountCubit, AccountState>(
       builder: (context, state) {
+        final items = excludeId != null
+            ? state.visibleAccounts.where((it) => it.id != excludeId).toList()
+            : state.visibleAccounts;
+
         return AlertDialog(
-          title: const Text('Select Account'),
+          title: Text(title ?? 'Select Account'),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: state.visibleAccounts.length + 1,
+              itemCount: items.length + 1,
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return SwitchListTile(
@@ -28,7 +39,7 @@ class AccountSelectorDialog extends StatelessWidget {
                         context.read<AccountCubit>().toggleHiddenAccounts(),
                   );
                 }
-                final account = state.visibleAccounts[index - 1];
+                final account = items[index - 1];
                 final isSelected = account.id == selectedId;
                 return ListTile(
                   selected: isSelected,

@@ -13,11 +13,10 @@ import 'package:finanalyzer/savings/savings_detail_page.dart';
 import 'package:finanalyzer/savings/services/savings_balance_service.dart';
 import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover_sort.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tags.dart';
+import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
+import 'package:finanalyzer/turnover/services/turnover_service.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/widgets/turnover_card.dart';
 import 'package:flutter/material.dart';
@@ -47,7 +46,7 @@ class AccountDetailsPage extends StatefulWidget {
 
 class _AccountDetailsPageState extends State<AccountDetailsPage> {
   Map<Savings, SavingsAccountInfo>? _savingsBreakdown;
-  List<TurnoverWithTags>? _recentTurnovers;
+  List<TurnoverWithTagTurnovers>? _recentTurnovers;
   bool _isLoadingSavings = false;
   bool _isLoadingTurnovers = false;
 
@@ -86,39 +85,17 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     setState(() => _isLoadingTurnovers = true);
     try {
       final turnoverRepository = context.read<TurnoverRepository>();
-      final tagTurnoverRepository = context.read<TagTurnoverRepository>();
-      final tagCubit = context.read<TagCubit>();
+      final turnoverService = context.read<TurnoverService>();
 
-      final recentTurnovers = (await turnoverRepository.getTurnoversForAccount(
-        accountId: widget.accountId,
+      final recentTurnovers = (await turnoverRepository.getTurnoversPaginated(
+        filter: TurnoverFilter(accountId: widget.accountId),
+        offset: 0,
         limit: 5,
-        direction: SortDirection.desc,
       )).toList();
 
-      final tagById = tagCubit.state.tagById;
-
-      final turnoversWithTags = <TurnoverWithTags>[];
-      for (final turnover in recentTurnovers) {
-        final tagTurnovers = await tagTurnoverRepository.getByTurnover(
-          turnover.id,
-        );
-
-        final tagTurnoversWithTags = tagTurnovers.map((tt) {
-          final tag = tagById[tt.tagId];
-          return TagTurnoverWithTag(
-            tagTurnover: tt,
-            tag: tag ?? Tag(name: 'Unknown', id: tt.tagId),
-          );
-        }).toList();
-
-        turnoversWithTags.add(
-          TurnoverWithTags(
-            turnover: turnover,
-            tagTurnovers: tagTurnoversWithTags,
-          ),
-        );
-      }
-
+      final turnoversWithTags = await turnoverService.getTurnoversWithTags(
+        recentTurnovers,
+      );
       if (mounted) {
         setState(() {
           _recentTurnovers = turnoversWithTags;

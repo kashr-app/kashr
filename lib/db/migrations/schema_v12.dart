@@ -152,31 +152,37 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
     'CREATE INDEX idx_savings_virtual_booking_savings_id ON savings_virtual_booking(savings_id)',
   );
 
-  // Create FTS triggers to keep turnover_fts in sync
+  await _createTurnoverFTSTriggers(db);
+}
 
-  // Trigger: When a new turnover is inserted
-  await db.execute('''
-    CREATE TRIGGER turnover_fts_insert AFTER INSERT ON turnover
-    BEGIN
+/// Create FTS triggers to keep turnover_fts in sync
+Future<void> _createTurnoverFTSTriggers(SqliteDatabase db) async {
+  String insert(String tableName) => '''
       INSERT INTO turnover_fts(turnover_id, content)
       SELECT
-        NEW.id,
-        NEW.purpose || ' ' ||
-        COALESCE(NEW.counter_part, '') || ' ' ||
-        COALESCE(NEW.counter_iban, '') || ' ' ||
+        $tableName.id,
+        $tableName.purpose || ' ' ||
+        COALESCE($tableName.counter_part, '') || ' ' ||
+        COALESCE($tableName.counter_iban, '') || ' ' ||
         COALESCE(
           (SELECT GROUP_CONCAT(tag.name, ' ')
            FROM tag_turnover tt
            LEFT JOIN tag ON tt.tag_id = tag.id
-           WHERE tt.turnover_id = NEW.id),
+           WHERE tt.turnover_id = $tableName.id),
           ''
         ) || ' ' ||
         COALESCE(
           (SELECT GROUP_CONCAT(COALESCE(tt.note, ''), ' ')
            FROM tag_turnover tt
-           WHERE tt.turnover_id = NEW.id),
+           WHERE tt.turnover_id = $tableName.id),
           ''
-        );
+        )
+  ''';
+  // Trigger: When a new turnover is inserted
+  await db.execute('''
+    CREATE TRIGGER turnover_fts_insert AFTER INSERT ON turnover
+    BEGIN
+      ${insert('NEW')};
     END
   ''');
 
@@ -185,25 +191,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
     CREATE TRIGGER turnover_fts_update AFTER UPDATE ON turnover
     BEGIN
       DELETE FROM turnover_fts WHERE turnover_id = OLD.id;
-      INSERT INTO turnover_fts(turnover_id, content)
-      SELECT
-        NEW.id,
-        NEW.purpose || ' ' ||
-        COALESCE(NEW.counter_part, '') || ' ' ||
-        COALESCE(NEW.counter_iban, '') || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(tag.name, ' ')
-           FROM tag_turnover tt
-           LEFT JOIN tag ON tt.tag_id = tag.id
-           WHERE tt.turnover_id = NEW.id),
-          ''
-        ) || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(COALESCE(tt.note, ''), ' ')
-           FROM tag_turnover tt
-           WHERE tt.turnover_id = NEW.id),
-          ''
-        );
+      ${insert('NEW')};
     END
   ''');
 
@@ -220,25 +208,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
     CREATE TRIGGER tag_turnover_fts_insert AFTER INSERT ON tag_turnover
     BEGIN
       DELETE FROM turnover_fts WHERE turnover_id = NEW.turnover_id;
-      INSERT INTO turnover_fts(turnover_id, content)
-      SELECT
-        t.id,
-        t.purpose || ' ' ||
-        COALESCE(t.counter_part, '') || ' ' ||
-        COALESCE(t.counter_iban, '') || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(tag.name, ' ')
-           FROM tag_turnover tt
-           LEFT JOIN tag ON tt.tag_id = tag.id
-           WHERE tt.turnover_id = t.id),
-          ''
-        ) || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(COALESCE(tt.note, ''), ' ')
-           FROM tag_turnover tt
-           WHERE tt.turnover_id = t.id),
-          ''
-        )
+      ${insert('t')}
       FROM turnover t
       WHERE t.id = NEW.turnover_id;
     END
@@ -248,25 +218,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
     CREATE TRIGGER tag_turnover_fts_update AFTER UPDATE ON tag_turnover
     BEGIN
       DELETE FROM turnover_fts WHERE turnover_id = NEW.turnover_id;
-      INSERT INTO turnover_fts(turnover_id, content)
-      SELECT
-        t.id,
-        t.purpose || ' ' ||
-        COALESCE(t.counter_part, '') || ' ' ||
-        COALESCE(t.counter_iban, '') || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(tag.name, ' ')
-           FROM tag_turnover tt
-           LEFT JOIN tag ON tt.tag_id = tag.id
-           WHERE tt.turnover_id = t.id),
-          ''
-        ) || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(COALESCE(tt.note, ''), ' ')
-           FROM tag_turnover tt
-           WHERE tt.turnover_id = t.id),
-          ''
-        )
+      ${insert('t')}
       FROM turnover t
       WHERE t.id = NEW.turnover_id;
     END
@@ -276,25 +228,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
     CREATE TRIGGER tag_turnover_fts_delete AFTER DELETE ON tag_turnover
     BEGIN
       DELETE FROM turnover_fts WHERE turnover_id = OLD.turnover_id;
-      INSERT INTO turnover_fts(turnover_id, content)
-      SELECT
-        t.id,
-        t.purpose || ' ' ||
-        COALESCE(t.counter_part, '') || ' ' ||
-        COALESCE(t.counter_iban, '') || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(tag.name, ' ')
-           FROM tag_turnover tt
-           LEFT JOIN tag ON tt.tag_id = tag.id
-           WHERE tt.turnover_id = t.id),
-          ''
-        ) || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(COALESCE(tt.note, ''), ' ')
-           FROM tag_turnover tt
-           WHERE tt.turnover_id = t.id),
-          ''
-        )
+      ${insert('t')}
       FROM turnover t
       WHERE t.id = OLD.turnover_id;
     END
@@ -311,25 +245,7 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
         WHERE tag_id = NEW.id
       );
 
-      INSERT INTO turnover_fts(turnover_id, content)
-      SELECT
-        t.id,
-        t.purpose || ' ' ||
-        COALESCE(t.counter_part, '') || ' ' ||
-        COALESCE(t.counter_iban, '') || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(tag.name, ' ')
-           FROM tag_turnover tt
-           LEFT JOIN tag ON tt.tag_id = tag.id
-           WHERE tt.turnover_id = t.id),
-          ''
-        ) || ' ' ||
-        COALESCE(
-          (SELECT GROUP_CONCAT(COALESCE(tt.note, ''), ' ')
-           FROM tag_turnover tt
-           WHERE tt.turnover_id = t.id),
-          ''
-        )
+      ${insert('t')}
       FROM turnover t
       WHERE t.id IN (
         SELECT DISTINCT turnover_id

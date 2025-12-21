@@ -1,11 +1,13 @@
-import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
+import 'package:finanalyzer/turnover/dialogs/tag_turnover_editor_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/widgets/note_field.dart';
 import 'package:finanalyzer/turnover/widgets/tag_amount_controls.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
+import 'package:finanalyzer/turnover/widgets/transfer_issue_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -17,42 +19,30 @@ class TagTurnoverItem extends StatelessWidget {
   final Tag tag;
   final int maxAmountScaled;
   final String currencyUnit;
+  final TransferWithDetails? transferWithDetails;
+  final VoidCallback? onTransferAction;
 
   const TagTurnoverItem({
     required this.tagTurnover,
     required this.tag,
     required this.maxAmountScaled,
     required this.currencyUnit,
+    this.transferWithDetails,
+    this.onTransferAction,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final amountScaled = decimalScale(tagTurnover.amountValue) ?? 0;
-
-    // Configure slider to work with absolute values for better UX
-    // Left (0) = no allocation, Right (max) = full turnover allocation
-    final bool isNegative = maxAmountScaled < 0;
-    final int maxAbsolute = maxAmountScaled.abs();
-    final int currentAbsolute = amountScaled.abs();
-
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context, theme, tag, tagTurnover),
+            _buildHeader(context, tagTurnover),
             const SizedBox(height: 8),
-            _buildSlider(
-              context,
-              tagTurnover,
-              currentAbsolute,
-              maxAbsolute,
-              isNegative,
-            ),
             TagAmountControls(
               tagTurnover: tagTurnover,
               maxAmountScaled: maxAmountScaled,
@@ -74,66 +64,88 @@ class TagTurnoverItem extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, ThemeData theme, tag, tagTurnover) {
-    return Row(
+  Widget _buildHeader(BuildContext context, TagTurnover tagTurnover) {
+    final theme = Theme.of(context);
+
+    final isTransferTag = tag.isTransfer;
+    final hasTransfer = transferWithDetails != null;
+    final isUnlinkedTransfer = isTransferTag && !hasTransfer;
+    final transferNeedsReview = transferWithDetails?.needsReview;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TagAvatar(tag: tag),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(tag.name, style: theme.textTheme.titleMedium),
-              Text(
-                dateFormat.format(tagTurnover.bookingDate),
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          onTap: () => _onTap(context),
+          leading: TagAvatar(tag: tag),
+          title: Text(tag.name, style: theme.textTheme.titleMedium),
+          subtitle: Text(
+            dateFormat.format(tagTurnover.bookingDate),
+            style: theme.textTheme.bodySmall,
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.link_off),
+            tooltip: 'Unlink from turnover',
+            onPressed: () {
+              context.read<TurnoverTagsCubit>().unlinkTagTurnover(tagTurnover);
+            },
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.link_off),
-          tooltip: 'Unlink from turnover',
-          onPressed: () {
-            context.read<TurnoverTagsCubit>().unlinkTagTurnover(
-              tagTurnover.id!,
-            );
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.delete_outline),
-          tooltip: 'Delete',
-          onPressed: () {
-            context.read<TurnoverTagsCubit>().removeTagTurnover(
-              tagTurnover.id!,
-            );
-          },
-        ),
+        // Transfer badges
+        if (isTransferTag || hasTransfer) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            runSpacing: 8,
+            children: [
+              TransferBadge.badge(),
+              if (isUnlinkedTransfer) ...[
+                const SizedBox(width: 8),
+                TransferBadge.unlinked(),
+              ] else if (transferNeedsReview != null) ...[
+                const SizedBox(width: 8),
+                TransferBadge.needsReviewDetailed(transferNeedsReview),
+              ],
+              if (onTransferAction != null)
+                TextButton.icon(
+                  onPressed: onTransferAction,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  icon: Icon(
+                    isUnlinkedTransfer ? Icons.link : Icons.open_in_new,
+                    size: 16,
+                  ),
+                  label: Text(
+                    isUnlinkedTransfer ? 'Link Transfer' : 'View Transfer',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildSlider(
-    BuildContext context,
-    tagTurnover,
-    int currentAbsolute,
-    int maxAbsolute,
-    bool isNegative,
-  ) {
-    return Slider(
-      value: currentAbsolute.toDouble(),
-      min: 0,
-      max: maxAbsolute.toDouble(),
-      divisions: maxAbsolute > 0 ? maxAbsolute : 1,
-      label: tagTurnover.format(),
-      onChanged: (value) {
-        // Apply the sign back when updating
-        final signedValue = isNegative ? -value.toInt() : value.toInt();
-        context.read<TurnoverTagsCubit>().updateTagTurnoverAmount(
-          tagTurnover.id!,
-          signedValue,
-        );
-      },
+  Future<void> _onTap(BuildContext context) async {
+    final result = await TagTurnoverEditorDialog.show(
+      context,
+      tagTurnover: tagTurnover,
     );
+
+    if (result == null || !context.mounted) return;
+    final cubit = context.read<TurnoverTagsCubit>();
+    switch (result) {
+      case EditTagTurnoverUpdated():
+        cubit.updateTagTurnover(tagTurnover);
+      case EditTagTurnoverDeleted():
+        cubit.removeTagTurnover(tagTurnover.id);
+    }
   }
 }

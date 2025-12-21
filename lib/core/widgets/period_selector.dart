@@ -22,6 +22,7 @@ class PeriodSelector extends StatelessWidget {
   /// [onNextMonth] is called when the user taps the next month button.
   /// [onMonthSelected] is called when the user selects a month from the picker.
   /// [onAction] is optionally called when the user taps the delete button.
+  /// [locked] if set true, the user cannot change nor remove the period.
   /// If [onAction] is null, the delete button will not be shown.
   const PeriodSelector({
     required this.selectedPeriod,
@@ -29,6 +30,7 @@ class PeriodSelector extends StatelessWidget {
     required this.onNextMonth,
     required this.onMonthSelected,
     this.onAction,
+    this.locked = false,
     super.key,
   });
 
@@ -37,6 +39,7 @@ class PeriodSelector extends StatelessWidget {
   final VoidCallback onNextMonth;
   final void Function(YearMonth) onMonthSelected;
   final OnAction? onAction;
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -48,14 +51,25 @@ class PeriodSelector extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: onPreviousMonth,
-              tooltip: 'Previous month',
-            ),
+            if (!locked)
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: onPreviousMonth,
+                tooltip: 'Previous month',
+              ),
             Expanded(
               child: InkWell(
-                onTap: () => _showMonthPicker(context),
+                onTap: locked
+                    ? null
+                    : () async {
+                        final newSelected = await MonthPickerDialog.show(
+                          context,
+                          selectedPeriod,
+                        );
+                        if (newSelected != null) {
+                          onMonthSelected(newSelected);
+                        }
+                      },
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -70,12 +84,13 @@ class PeriodSelector extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              onPressed: onNextMonth,
-              tooltip: 'Next month',
-            ),
-            if (onAction != null)
+            if (!locked)
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: onNextMonth,
+                tooltip: 'Next month',
+              ),
+            if (onAction != null && !locked)
               IconButton(
                 icon: onAction!.icon,
                 onPressed: onAction!.onAction,
@@ -86,30 +101,29 @@ class PeriodSelector extends StatelessWidget {
       ),
     );
   }
-
-  void _showMonthPicker(BuildContext context) {
-    showDialog<YearMonth>(
-      context: context,
-      builder: (context) => _MonthPickerDialog(selectedPeriod: selectedPeriod),
-    ).then((selected) {
-      if (selected != null) {
-        onMonthSelected(selected);
-      }
-    });
-  }
 }
 
 /// A dialog for selecting a year and month.
-class _MonthPickerDialog extends StatefulWidget {
-  const _MonthPickerDialog({required this.selectedPeriod});
+class MonthPickerDialog extends StatefulWidget {
+  const MonthPickerDialog({super.key, required this.selectedPeriod});
 
   final YearMonth selectedPeriod;
 
+  static Future<YearMonth?> show(
+    BuildContext context,
+    YearMonth selectedPeriod,
+  ) {
+    return showDialog<YearMonth>(
+      context: context,
+      builder: (context) => MonthPickerDialog(selectedPeriod: selectedPeriod),
+    );
+  }
+
   @override
-  State<_MonthPickerDialog> createState() => _MonthPickerDialogState();
+  State<MonthPickerDialog> createState() => _MonthPickerDialogState();
 }
 
-class _MonthPickerDialogState extends State<_MonthPickerDialog> {
+class _MonthPickerDialogState extends State<MonthPickerDialog> {
   late int _selectedYear;
   late int _selectedMonth;
 
