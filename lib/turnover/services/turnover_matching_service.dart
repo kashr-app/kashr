@@ -78,6 +78,8 @@ class TurnoverMatchingService {
     return _calcMatches(candidates, [tagTurnover]);
   }
 
+  static final minConfidence = 0.6;
+
   List<TagTurnoverMatch> _calcMatches(
     List<Turnover> turnovers,
     List<TagTurnover> tts,
@@ -88,7 +90,7 @@ class TurnoverMatchingService {
       for (final tagTurnover in tts) {
         final confidence = _calculateConfidence(tagTurnover, turnover);
 
-        if (confidence >= 0.6) {
+        if (confidence >= minConfidence) {
           matches.add(
             TagTurnoverMatch(
               tagTurnover: tagTurnover,

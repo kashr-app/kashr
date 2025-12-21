@@ -12,6 +12,7 @@ import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
+import 'package:finanalyzer/turnover/widgets/source_card.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -258,78 +259,24 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
         _isLoading = false;
       });
 
-      final bestMatch = matches.firstOrNull;
-      if (bestMatch != null) {
-        // Show match found dialog with option to confirm or open
-        final action = await showDialog<String>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Match Found'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Found a match with ${(bestMatch.confidence * 100).toStringAsFixed(0)}% confidence:',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 16),
-                _TurnoverMatchDetails(turnover: bestMatch.turnover),
-                const SizedBox(height: 16),
-                const Text(
-                  'Would you like to confirm this match?',
-                  style: TextStyle(fontSize: 14),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop('cancel'),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop('open'),
-                child: const Text('Open Turnover'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop('confirm'),
-                child: const Text('Confirm Match'),
-              ),
-            ],
-          ),
-        );
+      // Show match dialog with all matches
+      final selectedMatch = await showDialog<TagTurnoverMatch>(
+        context: context,
+        useSafeArea: false,
+        builder: (context) =>
+            _MatchSelectionDialog(matches: matches, tagTurnover: tagTurnover),
+      );
 
-        if (!mounted) return;
+      if (!mounted || selectedMatch == null) return;
 
-        if (action == 'confirm') {
-          // Confirm the match
-          await matchingService.confirmMatch(bestMatch);
+      // Confirm the selected match
+      await matchingService.confirmMatch(selectedMatch);
 
-          if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Match confirmed')));
-            _loadPendingTurnovers();
-          }
-        } else if (action == 'open') {
-          // Navigate to the turnover tags page
-          if (mounted) {
-            context.push(
-              TurnoverTagsRoute(
-                turnoverId: bestMatch.turnover.id.uuid,
-              ).location,
-            );
-            _loadPendingTurnovers();
-          }
-        }
-      } else {
-        // No match found
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No match found'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Match confirmed')));
+        _loadPendingTurnovers();
       }
     } catch (e) {
       setState(() {
@@ -606,6 +553,180 @@ class _PendingTurnoverItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MatchSelectionDialog extends StatefulWidget {
+  final List<TagTurnoverMatch> matches;
+  final TagTurnover tagTurnover;
+
+  const _MatchSelectionDialog({
+    required this.matches,
+    required this.tagTurnover,
+  });
+
+  @override
+  State<_MatchSelectionDialog> createState() => _MatchSelectionDialogState();
+}
+
+class _MatchSelectionDialogState extends State<_MatchSelectionDialog> {
+  late TagTurnoverMatch? _selectedMatch;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-select the best match (first one)
+    _selectedMatch = widget.matches.firstOrNull;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return BlocBuilder<TagCubit, TagState>(
+      builder: (context, tagState) {
+        final tag = tagState.tagById[widget.tagTurnover.tagId];
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              '${widget.matches.length} Match${widget.matches.length > 1 ? 'es' : ''} Found',
+            ),
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            actions: [
+              FilledButton(
+                onPressed: _selectedMatch != null
+                    ? () => Navigator.of(context).pop(_selectedMatch)
+                    : null,
+                child: const Text('Confirm Match'),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                if (tag != null)
+                  SourceCard(tagTurnover: widget.tagTurnover, tag: tag),
+                Expanded(
+                  child: RadioGroup<TagTurnoverMatch>(
+                    groupValue: _selectedMatch,
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _selectedMatch = value;
+                        });
+                      }
+                    },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: widget.matches.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index >= widget.matches.length) {
+                          final minConf =
+                              (TurnoverMatchingService.minConfidence * 100)
+                                  .round();
+                          return Column(
+                            children: [
+                              if (widget.matches.isEmpty) ...[
+                                SizedBox(height: 32),
+                                Icon(Icons.search_off, size: 48),
+                                SizedBox(height: 16),
+                                Text('No Matches Found'),
+                                SizedBox(height: 32),
+                              ],
+                              Text(
+                                '${widget.matches.isEmpty ? '' : 'Match not found? '}'
+                                'This list only shows '
+                                'transactions with a confidence of at least'
+                                ' $minConf%. You can always navigate to a '
+                                'transaction and there select from the pending '
+                                'entries, no matter the matching score.',
+                              ),
+                            ],
+                          );
+                        }
+                        final match = widget.matches[index];
+                        final isSelected = match == _selectedMatch;
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          color: isSelected
+                              ? theme.colorScheme.primaryContainer
+                              : theme.colorScheme.surfaceContainerHighest,
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _selectedMatch = match;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Radio<TagTurnoverMatch>(value: match),
+                                          Text(
+                                            '${(match.confidence * 100).toStringAsFixed(0)}% confidence',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: isSelected
+                                                  ? theme
+                                                        .colorScheme
+                                                        .onPrimaryContainer
+                                                  : theme.colorScheme.onSurface,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.open_in_new,
+                                          size: 20,
+                                        ),
+                                        tooltip: 'Open Turnover',
+                                        onPressed: () {
+                                          // Navigate to the turnover tags page
+                                          context.push(
+                                            TurnoverTagsRoute(
+                                              turnoverId:
+                                                  match.turnover.id.uuid,
+                                            ).location,
+                                          );
+                                          Navigator.of(context).pop();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _TurnoverMatchDetails(
+                                    turnover: match.turnover,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
