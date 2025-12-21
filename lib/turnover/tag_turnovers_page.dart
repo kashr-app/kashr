@@ -10,6 +10,8 @@ import 'package:finanalyzer/turnover/model/transfer_repository.dart';
 import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
 import 'package:finanalyzer/turnover/model/turnover.dart';
 import 'package:finanalyzer/turnover/services/transfer_service.dart';
+import 'package:finanalyzer/turnover/tag_turnovers_cubit.dart';
+import 'package:finanalyzer/turnover/tag_turnovers_state.dart';
 import 'package:finanalyzer/turnover/transfer_editor_page.dart';
 import 'package:finanalyzer/turnover/turnover_tags_page.dart';
 import 'package:finanalyzer/turnover/widgets/source_card.dart';
@@ -39,7 +41,7 @@ class TagTurnoversRoute extends GoRouteData with $TagTurnoversRoute {
   }
 }
 
-class TagTurnoversPage extends StatefulWidget {
+class TagTurnoversPage extends StatelessWidget {
   const TagTurnoversPage({
     this.initialFilter = TagTurnoversFilter.empty,
     this.initialSort = TagTurnoverSort.defaultSort,
@@ -89,45 +91,52 @@ class TagTurnoversPage extends StatefulWidget {
   }
 
   @override
-  State<TagTurnoversPage> createState() => _TagTurnoversPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => TagTurnoversCubit(
+        context.read<TagTurnoverRepository>(),
+        context.read<TransferRepository>(),
+        context.read<TransferService>(),
+        initialFilter: initialFilter,
+        initialSort: initialSort,
+        lockedFilters: lockedFilters,
+      ),
+      child: _TagTurnoversPageContent(
+        forSelection: forSelection,
+        allowMultipleSelection: allowMultipleSelection,
+        lockedFilters: lockedFilters,
+        header: header,
+      ),
+    );
+  }
 }
 
-class _TagTurnoversPageState extends State<TagTurnoversPage> {
+class _TagTurnoversPageContent extends StatefulWidget {
+  const _TagTurnoversPageContent({
+    required this.forSelection,
+    required this.allowMultipleSelection,
+    required this.lockedFilters,
+    this.header,
+  });
+
+  final bool forSelection;
+  final bool allowMultipleSelection;
+  final TagTurnoversFilter lockedFilters;
+  final Widget? header;
+
+  @override
+  State<_TagTurnoversPageContent> createState() =>
+      _TagTurnoversPageContentState();
+}
+
+class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
   final _log = Logger();
   final _scrollController = ScrollController();
-  final List<TagTurnover> _items = [];
-  final Map<UuidValue, TransferWithDetails> _transferByTagTurnoverId = {};
-
-  static const _pageSize = 10;
-  int _currentOffset = 0;
-  bool _isLoading = false;
-  bool _hasMore = true;
-  String? _error;
-
-  late TagTurnoversFilter _filter;
-  late TagTurnoverSort _sort;
-
-  final Set<UuidValue> _selectedIds = {};
-
-  /// Batch mode is active when:
-  /// - Items are selected AND we're not in selection mode, OR
-  /// - We're in multi-selection mode (regardless of whether items are selected)
-  bool get _isBatchMode =>
-      (_selectedIds.isNotEmpty && !widget.forSelection) ||
-      (widget.forSelection && widget.allowMultipleSelection);
-
-  late final TagTurnoverRepository _repository;
-  late final TransferService _transferService;
 
   @override
   void initState() {
     super.initState();
-    _repository = context.read<TagTurnoverRepository>();
-    _transferService = context.read<TransferService>();
-    _filter = widget.initialFilter.lockWith(widget.lockedFilters);
-    _sort = widget.initialSort;
     _scrollController.addListener(_onScroll);
-    _loadMore();
   }
 
   @override
@@ -137,136 +146,50 @@ class _TagTurnoversPageState extends State<TagTurnoversPage> {
   }
 
   void _onScroll() {
-    if (_isLoading || !_hasMore) return;
+    final cubit = context.read<TagTurnoversCubit>();
+    if (cubit.state.isLoading || !cubit.state.hasMore) return;
 
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
 
     if (maxScroll - currentScroll <= 200) {
-      _loadMore();
+      cubit.loadMore();
     }
   }
 
-  Future<void> _loadMore() async {
-    if (_isLoading || !_hasMore) return;
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final newItems = await _repository.getTagTurnoversPaginated(
-        limit: _pageSize,
-        offset: _currentOffset,
-        filter: _filter,
-        sort: _sort,
-      );
-
-      // Fetch transfer information for new items
-      await _loadTransfersForItems(newItems);
-
-      setState(() {
-        _items.addAll(newItems);
-        _currentOffset += newItems.length;
-        _hasMore = newItems.length >= _pageSize;
-        _isLoading = false;
-      });
-    } catch (error, stackTrace) {
-      _log.e(
-        'Error fetching tag turnovers page',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      setState(() {
-        _error = error.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  /// Loads transfer information for the given tag turnovers.
-  Future<void> _loadTransfersForItems(List<TagTurnover> items) async {
-    try {
-      final tagTurnoverIds = items.map((item) => item.id).toList();
-
-      // Get transfer IDs for these tag turnovers
-      final transferRepository = context.read<TransferRepository>();
-      final transferIdByTagTurnoverId = await transferRepository
-          .getTransferIdsForTagTurnovers(tagTurnoverIds);
-
-      if (transferIdByTagTurnoverId.isEmpty) return;
-
-      // Fetch transfer details
-      final transferIds = transferIdByTagTurnoverId.values.toSet().toList();
-      final transfersWithDetails = await _transferService
-          .getTransfersWithDetails(transferIds);
-
-      // Map transfers back to tag turnover IDs
-      for (final entry in transferIdByTagTurnoverId.entries) {
-        final tagTurnoverId = entry.key;
-        final transferId = entry.value;
-        final transferDetails = transfersWithDetails[transferId];
-        if (transferDetails != null) {
-          _transferByTagTurnoverId[tagTurnoverId] = transferDetails;
-        }
-      }
-    } catch (error, stackTrace) {
-      _log.e(
-        'Error loading transfers for tag turnovers',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      // Don't fail the whole operation if transfer loading fails
-    }
-  }
-
-  Future<void> _refresh() async {
-    setState(() {
-      _items.clear();
-      _transferByTagTurnoverId.clear();
-      _currentOffset = 0;
-      _hasMore = true;
-      _error = null;
-    });
-    await _loadMore();
-  }
-
-  void _updateFilter(TagTurnoversFilter newFilter) {
-    setState(() => _filter = newFilter.lockWith(widget.lockedFilters));
-    _refresh();
-  }
-
-  void _updateSort(TagTurnoverSort sort) {
-    setState(() {
-      _sort = sort;
-    });
-    _refresh();
-  }
-
-  Future<void> _openFilterDialog() async {
+  Future<void> _openFilterDialog(
+    BuildContext context,
+    TagTurnoversFilter currentFilter,
+  ) async {
     final result = await showDialog<TagTurnoversFilter>(
       context: context,
       builder: (context) => TagTurnoversFilterDialog(
-        initialFilter: _filter,
+        initialFilter: currentFilter,
         lockedFilters: widget.lockedFilters,
       ),
     );
-    if (result != null) _updateFilter(result);
-  }
-
-  Future<void> _openSortDialog() async {
-    final result = await showDialog<TagTurnoverSort>(
-      context: context,
-      builder: (context) => TagTurnoversSortDialog(initialSort: _sort),
-    );
-    if (result != null) {
-      setState(() => _sort = result);
-      _refresh();
+    if (result != null && context.mounted) {
+      context.read<TagTurnoversCubit>().updateFilter(result);
     }
   }
 
-  Future<void> _openSearchDialog() async {
+  Future<void> _openSortDialog(
+    BuildContext context,
+    TagTurnoverSort currentSort,
+  ) async {
+    final result = await showDialog<TagTurnoverSort>(
+      context: context,
+      builder: (context) => TagTurnoversSortDialog(initialSort: currentSort),
+    );
+    if (result != null && context.mounted) {
+      context.read<TagTurnoversCubit>().updateSort(result);
+    }
+  }
+
+  Future<void> _openSearchDialog(
+    BuildContext context,
+    TagTurnoversFilter currentFilter,
+  ) async {
     final searchQuery = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (context) => const SearchDialog(),
@@ -274,34 +197,20 @@ class _TagTurnoversPageState extends State<TagTurnoversPage> {
       ),
     );
 
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      _updateFilter(_filter.copyWith(searchQuery: searchQuery));
+    if (searchQuery != null && searchQuery.isNotEmpty && context.mounted) {
+      context.read<TagTurnoversCubit>().updateFilter(
+        currentFilter.copyWith(searchQuery: searchQuery),
+      );
     }
   }
 
-  void _toggleSelection(UuidValue id) {
-    setState(() {
-      if (_selectedIds.contains(id)) {
-        _selectedIds.remove(id);
-      } else {
-        _selectedIds.add(id);
-      }
-    });
-  }
-
-  void _clearSelection() {
-    setState(() => _selectedIds.clear());
-  }
-
-  Future<void> _batchDelete() async {
-    if (_selectedIds.isEmpty) return;
-
+  Future<void> _batchDelete(BuildContext context, int selectedCount) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Tag Turnovers'),
         content: Text(
-          'Are you sure you want to delete ${_selectedIds.length} tag turnovers?',
+          'Are you sure you want to delete $selectedCount tag turnovers?',
         ),
         actions: [
           TextButton(
@@ -319,56 +228,48 @@ class _TagTurnoversPageState extends State<TagTurnoversPage> {
       ),
     );
 
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !context.mounted) return;
 
-    try {
-      final idsToDelete = _selectedIds.toList();
-      await _repository.deleteTagTurnoversBatch(idsToDelete);
+    final cubit = context.read<TagTurnoversCubit>();
+    final success = await cubit.batchDelete();
 
-      _clearSelection();
-      await _refresh();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Deleted ${idsToDelete.length} tag turnovers'),
-          ),
-        );
-      }
-    } catch (error, stackTrace) {
-      _log.e(
-        'Error batch deleting tag turnovers',
-        error: error,
-        stackTrace: stackTrace,
+    if (context.mounted && success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Deleted $selectedCount tag turnovers')),
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting tag turnovers: $error'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Error deleting tag turnovers'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
-  Future<void> _handleItemSelect(TagTurnover item) async {
+  Future<void> _handleItemSelect(
+    BuildContext context,
+    TagTurnover item,
+    List<TagTurnover> items,
+  ) async {
     final id = item.id;
 
     if (widget.forSelection) {
-      // In single selection mode, immediately return the selected item
       if (!widget.allowMultipleSelection) {
         Navigator.of(context).pop(item);
         return;
       }
-
-      // In multi-selection mode, toggle selection
-      _toggleSelection(id);
+      context.read<TagTurnoversCubit>().toggleSelection(id);
       return;
     }
 
-    if (_isBatchMode) {
-      _toggleSelection(id);
+    final cubit = context.read<TagTurnoversCubit>();
+    final isBatchMode =
+        cubit.state.selectedIds.isNotEmpty ||
+        (widget.forSelection && widget.allowMultipleSelection);
+
+    if (isBatchMode) {
+      cubit.toggleSelection(id);
     } else {
       _log.e(
         'Should not be able to select an item if neither in forSelection mode nor in batch mode',
@@ -376,68 +277,62 @@ class _TagTurnoversPageState extends State<TagTurnoversPage> {
     }
   }
 
-  Future<void> _handleItemTap(TagTurnover item) async {
+  Future<void> _handleItemTap(BuildContext context, TagTurnover item) async {
     if (widget.forSelection) {
       await TagTurnoverInfoDialog.show(context, item);
       return;
     }
-    // Open appropriate editor based on status
+
     if (item.isMatched) {
-      // Navigate to TurnoverTagsPage for "done" items
       await TurnoverTagsRoute(turnoverId: item.turnoverId!.uuid).push(context);
-      _refresh();
+      if (context.mounted) context.read<TagTurnoversCubit>().refresh();
     } else {
-      // Open EditPendingTagTurnoverDialog for "pending" items
       final result = await TagTurnoverEditorDialog.show(
         context,
         tagTurnover: item,
       );
 
-      if (result == null || !mounted) return;
+      if (result == null || !context.mounted) return;
 
+      final cubit = context.read<TagTurnoversCubit>();
       if (result is EditTagTurnoverUpdated) {
-        await _repository.updateTagTurnover(result.tagTurnover);
-        _refresh();
+        await cubit.updateTagTurnover(result.tagTurnover);
       } else if (result is EditTagTurnoverDeleted) {
-        await _repository.deleteTagTurnover(item.id);
-        _refresh();
+        await cubit.deleteTagTurnover(item.id);
       }
     }
   }
 
-  void _handleItemLongPress(TagTurnover item) {
-    // Don't allow batch mode when opened for selection
+  void _handleItemLongPress(BuildContext context, TagTurnover item) {
     if (widget.forSelection) return;
-
-    _toggleSelection(item.id);
+    context.read<TagTurnoversCubit>().toggleSelection(item.id);
   }
 
   Future<void> _handleTransferAction(
+    BuildContext context,
     TagTurnover item,
     TransferWithDetails? sourceTransfer,
+    Map<UuidValue, TransferWithDetails> transferByTagTurnoverId,
   ) async {
-    final transferDetails = _transferByTagTurnoverId[item.id];
+    final transferDetails = transferByTagTurnoverId[item.id];
     final tagRepository = context.read<TagRepository>();
     final tagById = await tagRepository.getByIdsCached();
     final tag = tagById[item.tagId];
     final isTransferTag = tag?.isTransfer ?? false;
     final isUnlinkedTransfer = isTransferTag && transferDetails == null;
 
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     if (transferDetails != null) {
-      // Navigate to TransferEditorPage if transfer exists
       await TransferEditorRoute(
         transferId: transferDetails.transfer.id.uuid,
       ).push(context);
-      if (mounted) _refresh();
+      if (context.mounted) context.read<TagTurnoversCubit>().refresh();
     } else if (isUnlinkedTransfer) {
-      // Determine the required sign for the counterpart
       final requiredSign = item.sign == TurnoverSign.expense
           ? TurnoverSign.income
           : TurnoverSign.expense;
 
-      // Open TagTurnoversPage for selection with appropriate filters
       final selectedTagTurnover = await TagTurnoversPage.openForSelection(
         context: context,
         header: SourceCard(tagTurnover: item, tag: tag!),
@@ -449,10 +344,9 @@ class _TagTurnoversPageState extends State<TagTurnoversPage> {
         ),
       );
 
-      if (mounted && selectedTagTurnover != null) {
+      if (context.mounted && selectedTagTurnover != null) {
         final transferService = context.read<TransferService>();
 
-        // Create the transfer using the service
         final (transferId, conflict) = await transferService
             .linkTransferTagTurnovers(
               sourceTagTurnover: item,
@@ -460,67 +354,90 @@ class _TagTurnoversPageState extends State<TagTurnoversPage> {
               transfer: sourceTransfer?.transfer,
             );
 
-        if (!mounted) return;
+        if (!context.mounted) return;
         await conflict?.showAsDialog(context);
-        if (!mounted) return;
+        if (!context.mounted) return;
 
         if (transferId != null) {
-          // Navigate to transfer editor page for review
           await TransferEditorRoute(transferId: transferId.uuid).push(context);
         }
-        if (mounted) _refresh();
+        if (context.mounted) context.read<TagTurnoversCubit>().refresh();
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final showFilterChips =
-        _filter.hasFilters || _sort != TagTurnoverSort.defaultSort;
+    return BlocBuilder<TagTurnoversCubit, TagTurnoversState>(
+      builder: (context, state) {
+        final isBatchMode =
+            (state.selectedIds.isNotEmpty && !widget.forSelection) ||
+            (widget.forSelection && widget.allowMultipleSelection);
 
-    return Scaffold(
-      appBar: _isBatchMode ? _buildBatchAppBar() : _buildNormalAppBar(),
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (widget.header != null) widget.header!,
-            if (showFilterChips)
-              TagTurnoversFilterChips(
-                filter: _filter,
-                lockedFilters: widget.lockedFilters,
-                sort: _sort,
-                onFilterChanged: _updateFilter,
-                onSortChanged: _updateSort,
-              ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refresh,
-                child: TagTurnoversListContent(
-                  items: _items,
-                  isLoading: _isLoading,
-                  hasMore: _hasMore,
-                  error: _error,
-                  scrollController: _scrollController,
-                  selectedIds: _selectedIds,
-                  isBatchMode: _isBatchMode,
-                  forSelection: widget.forSelection,
-                  transferByTagTurnoverId: _transferByTagTurnoverId,
-                  onItemTap: _handleItemTap,
-                  onItemSelect: _handleItemSelect,
-                  onItemLongPress: _handleItemLongPress,
-                  onTransferAction: _handleTransferAction,
-                  onRetry: _refresh,
-                  onLoadMore: _loadMore,
+        final showFilterChips =
+            state.filter.hasFilters ||
+            state.sort != TagTurnoverSort.defaultSort;
+
+        return Scaffold(
+          appBar: isBatchMode
+              ? _buildBatchAppBar(context, state.selectedIds.length)
+              : _buildNormalAppBar(context, state),
+          body: SafeArea(
+            child: Column(
+              children: [
+                if (widget.header != null) widget.header!,
+                if (showFilterChips)
+                  TagTurnoversFilterChips(
+                    filter: state.filter,
+                    lockedFilters: widget.lockedFilters,
+                    sort: state.sort,
+                    onFilterChanged: (filter) =>
+                        context.read<TagTurnoversCubit>().updateFilter(filter),
+                    onSortChanged: (sort) =>
+                        context.read<TagTurnoversCubit>().updateSort(sort),
+                  ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () =>
+                        context.read<TagTurnoversCubit>().refresh(),
+                    child: TagTurnoversListContent(
+                      items: state.items,
+                      isLoading: state.isLoading,
+                      hasMore: state.hasMore,
+                      error: state.error,
+                      scrollController: _scrollController,
+                      selectedIds: state.selectedIds,
+                      isBatchMode: isBatchMode,
+                      forSelection: widget.forSelection,
+                      transferByTagTurnoverId: state.transferByTagTurnoverId,
+                      onItemTap: (item) => _handleItemTap(context, item),
+                      onItemSelect: (item) =>
+                          _handleItemSelect(context, item, state.items),
+                      onItemLongPress: (item) =>
+                          _handleItemLongPress(context, item),
+                      onTransferAction: (item, sourceTransfer) =>
+                          _handleTransferAction(
+                            context,
+                            item,
+                            sourceTransfer,
+                            state.transferByTagTurnoverId,
+                          ),
+                      onRetry: () =>
+                          context.read<TagTurnoversCubit>().refresh(),
+                      onLoadMore: () =>
+                          context.read<TagTurnoversCubit>().loadMore(),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  AppBar _buildNormalAppBar() {
+  AppBar _buildNormalAppBar(BuildContext context, TagTurnoversState state) {
     return AppBar(
       title: Text(
         widget.forSelection
@@ -531,16 +448,14 @@ class _TagTurnoversPageState extends State<TagTurnoversPage> {
       ),
       elevation: 0,
       actions: [
-        // In multi-selection mode, show confirm button when items are selected
         if (widget.forSelection &&
             widget.allowMultipleSelection &&
-            _selectedIds.isNotEmpty)
+            state.selectedIds.isNotEmpty)
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () {
-              // Return the first selected item (for single return type compatibility)
-              final selectedItem = _items.firstWhere(
-                (item) => _selectedIds.contains(item.id),
+              final selectedItem = state.items.firstWhere(
+                (item) => state.selectedIds.contains(item.id),
               );
               Navigator.of(context).pop(selectedItem);
             },
@@ -549,38 +464,40 @@ class _TagTurnoversPageState extends State<TagTurnoversPage> {
         if (widget.lockedFilters.searchQuery == null)
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: _openSearchDialog,
+            onPressed: () => _openSearchDialog(context, state.filter),
             tooltip: 'Search',
           ),
         IconButton(
           icon: const Icon(Icons.sort),
-          onPressed: _openSortDialog,
+          onPressed: () => _openSortDialog(context, state.sort),
           tooltip: 'Sort',
         ),
         IconButton(
           icon: Icon(
-            _filter.hasFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+            state.filter.hasFilters
+                ? Icons.filter_alt
+                : Icons.filter_alt_outlined,
           ),
-          onPressed: _openFilterDialog,
+          onPressed: () => _openFilterDialog(context, state.filter),
           tooltip: 'Filter',
         ),
       ],
     );
   }
 
-  AppBar _buildBatchAppBar() {
+  AppBar _buildBatchAppBar(BuildContext context, int selectedCount) {
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.close),
-        onPressed: _clearSelection,
+        onPressed: () => context.read<TagTurnoversCubit>().clearSelection(),
         tooltip: 'Cancel selection',
       ),
-      title: Text('${_selectedIds.length} selected'),
+      title: Text('$selectedCount selected'),
       elevation: 0,
       actions: [
         IconButton(
           icon: const Icon(Icons.delete),
-          onPressed: _batchDelete,
+          onPressed: () => _batchDelete(context, selectedCount),
           tooltip: 'Delete',
         ),
       ],
