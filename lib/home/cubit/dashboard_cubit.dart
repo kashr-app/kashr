@@ -196,7 +196,7 @@ class DashboardCubit extends Cubit<DashboardState> {
       final firstUnallocatedTurnover =
           (await _turnoverService.getTurnoversWithTags(
             firstUnallocatedTurnovers,
-          )).first;
+          )).firstOrNull;
 
       final unallocatedCount = await _turnoverRepository
           .countUnallocatedTurnoversForMonth(state.selectedPeriod);
