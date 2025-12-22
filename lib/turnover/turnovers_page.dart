@@ -1,4 +1,5 @@
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
@@ -54,7 +55,6 @@ class TurnoversPage extends StatefulWidget {
 }
 
 class _TurnoversPageState extends State<TurnoversPage> {
-  final _log = Logger();
   final _scrollController = ScrollController();
   final List<TurnoverWithTagTurnovers> _items = [];
   final Map<UuidValue, TransferWithDetails> _transferByTagTurnoverId = {};
@@ -76,9 +76,12 @@ class _TurnoversPageState extends State<TurnoversPage> {
   late final TransferService _transferService;
   late final TurnoverService _turnoverService;
 
+  late final Logger _log;
+
   @override
   void initState() {
     super.initState();
+    _log = context.read<LogService>().log;
     _repository = context.read<TurnoverRepository>();
     _tagTurnoverRepository = context.read<TagTurnoverRepository>();
     _transferService = context.read<TransferService>();

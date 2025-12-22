@@ -11,9 +11,9 @@ import 'package:logger/logger.dart';
 /// Repository for managing backup metadata and configuration
 class BackupRepository {
   final LocalStorageService _localStorageService;
-  final log = Logger();
+  final Logger log;
 
-  BackupRepository({required LocalStorageService localStorageService})
+  BackupRepository(this.log, LocalStorageService localStorageService)
     : _localStorageService = localStorageService;
 
   /// Get all backup metadata by reading from archive files

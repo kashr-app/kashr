@@ -27,14 +27,15 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
   final TransferRepository _transferRepository;
   final TagRepository _tagRepository;
   final TagSuggestionService _suggestionService;
-  final _log = Logger();
+  final Logger _log;
 
   TurnoverTagsCubit(
     this._tagTurnoverRepository,
     this._turnoverRepository,
     this._accountRepository,
     this._transferRepository,
-    this._tagRepository, {
+    this._tagRepository,
+    this._log, {
     TagSuggestionService? suggestionService,
   }) : _suggestionService = suggestionService ?? TagSuggestionService(),
        super(const TurnoverTagsState());
@@ -141,6 +142,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
 
       // Fetch transfer details
       final transferService = TransferService(
+        _log,
         transferRepository: _transferRepository,
         tagTurnoverRepository: _tagTurnoverRepository,
         tagRepository: _tagRepository,

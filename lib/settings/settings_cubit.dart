@@ -1,3 +1,5 @@
+import 'package:finanalyzer/logging/model/log_level_setting.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/settings/settings_repository.dart';
 import 'package:finanalyzer/settings/settings_state.dart';
 import 'package:flutter/material.dart';
@@ -5,13 +7,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SettingsCubit extends Cubit<SettingsState> {
   final SettingsRepository _repository;
-  SettingsCubit(this._repository) : super(SettingsState()) {
+  final LogService _logService;
+
+  SettingsCubit(this._repository, this._logService)
+    : super(const SettingsState()) {
     load();
   }
 
   Future<void> load() async {
     final stored = await _repository.loadAll();
     emit(stored);
+
+    _logService.setLogLevel(stored.logLevel);
   }
 
   Future<void> setTheme(ThemeMode value) async {
@@ -22,6 +29,13 @@ class SettingsCubit extends Cubit<SettingsState> {
   Future<void> setFastFormMode(bool value) async {
     final newState = state.copyWith(fastFormMode: value);
     await _upsertAndEmit('fastFormMode', newState);
+  }
+
+  Future<void> setLogLevel(LogLevelSetting value) async {
+    final newState = state.copyWith(logLevel: value);
+    await _upsertAndEmit('logLevel', newState);
+
+    _logService.setLogLevel(value);
   }
 
   Future<void> _upsertAndEmit(String key, SettingsState newState) async {

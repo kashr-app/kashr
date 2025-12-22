@@ -12,6 +12,7 @@ import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/core/widgets/period_selector.dart';
 import 'package:finanalyzer/account/account_selector_dialog.dart';
 import 'package:finanalyzer/account/dual_account_selector.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/savings/savings_detail_page.dart';
 import 'package:finanalyzer/savings/savings_overview_page.dart';
 import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
@@ -26,6 +27,7 @@ import 'package:finanalyzer/home/widgets/transfers_need_review_hint.dart';
 import 'package:finanalyzer/home/widgets/spending_summary_card.dart';
 import 'package:finanalyzer/home/widgets/transfer_summary_card.dart';
 import 'package:finanalyzer/home/widgets/unallocated_turnovers_section.dart';
+import 'package:finanalyzer/logging/log_viewer_page.dart';
 import 'package:finanalyzer/settings/banks_page.dart';
 import 'package:finanalyzer/settings/settings_page.dart';
 import 'package:finanalyzer/turnover/model/tag_repository.dart';
@@ -72,6 +74,7 @@ part '../_gen/home/home_page.g.dart';
         ),
         TypedGoRoute<TagsRoute>(path: 'tags'),
         TypedGoRoute<TagTurnoversRoute>(path: 'tagturnovers'),
+        TypedGoRoute<LogViewerRoute>(path: 'logs'),
       ],
     ),
     TypedGoRoute<TurnoversRoute>(
@@ -115,6 +118,7 @@ class HomeRoute extends GoRouteData with $HomeRoute {
         context.read<TagTurnoverRepository>(),
         context.read<TagRepository>(),
         context.read<TransferRepository>(),
+        context.read<LogService>().log,
       )..loadMonthData(),
       child: const HomePage(),
     );

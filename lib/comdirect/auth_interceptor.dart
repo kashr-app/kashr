@@ -9,10 +9,10 @@ import 'package:logger/logger.dart';
 /// - Logs out the user on 401 errors
 class AuthInterceptor extends Interceptor {
   final ComdirectAuthCubit authCubit;
-  final log = Logger();
+  final Logger log;
   bool _isRefreshing = false;
 
-  AuthInterceptor(this.authCubit);
+  AuthInterceptor(this.authCubit, this.log);
 
   @override
   Future<void> onRequest(

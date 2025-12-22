@@ -15,10 +15,10 @@ import 'package:uuid/uuid.dart';
 /// when tags change in the repository.
 class TagCubit extends Cubit<TagState> {
   final TagRepository _repository;
-  final _log = Logger();
+  final Logger _log;
   StreamSubscription<List<Tag>?>? _subscription;
 
-  TagCubit(this._repository) : super(const TagState()) {
+  TagCubit(this._repository, this._log) : super(const TagState()) {
     // Subscribe to tag changes from the repository
     _subscription = _repository.watchTags().listen(_onTagsChanged);
   }

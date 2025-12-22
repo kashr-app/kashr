@@ -7,6 +7,7 @@ import 'package:finanalyzer/core/constants.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/status.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
@@ -20,6 +21,7 @@ import 'package:finanalyzer/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -53,9 +55,13 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
 
+  late final Logger log;
+
   @override
   void initState() {
     super.initState();
+    log = context.read<LogService>().log;
+
     // Trigger auto-flow after first frame if setting is enabled
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -169,6 +175,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
         fromTurnover,
         fromTagTurnover,
       ) = await createTurnoverAndTagTurnoverOnAccount(
+        log,
         router,
         widget.fromAccount,
         -amount,
@@ -187,6 +194,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
         toTurnover,
         toTagTurnover,
       ) = await createTurnoverAndTagTurnoverOnAccount(
+        log,
         router,
         widget.toAccount,
         amount,

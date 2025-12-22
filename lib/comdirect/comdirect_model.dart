@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:finanalyzer/core/secure_storage.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:decimal/decimal.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:logger/logger.dart';
 
 part '../_gen/comdirect/comdirect_model.g.dart';
 part '../_gen/comdirect/comdirect_model.freezed.dart';
@@ -29,9 +29,9 @@ class Credentials {
         localizedReason: 'Access credentials',
         persistAcrossBackgrounding: true,
       );
-    } catch (e) {
-      final log = Logger();
-      log.i("Authentication failed: $e");
+    } catch (e, s) {
+      final log = LogService.instance?.log;
+      log?.i('Authentication failed', error: e, stackTrace: s);
       return false;
     }
   }
@@ -178,12 +178,8 @@ class TokenDTO {
         Map<String, dynamic>.from(jsonDecode(tokenJson) as Map),
       );
     } catch (e, s) {
-      final log = Logger();
-      log.e(
-        'Bad comdirect token format. Deleting the token.',
-        error: e,
-        stackTrace: s,
-      );
+      final log = LogService.instance?.log;
+      log?.e('Bad comdirect token format. Deleting the token.', stackTrace: s);
       await delete();
       return null;
     }

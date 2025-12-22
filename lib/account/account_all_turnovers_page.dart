@@ -4,6 +4,7 @@ import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/model/turnover_filter.dart';
 import 'package:finanalyzer/turnover/model/turnover_repository.dart';
@@ -40,7 +41,6 @@ class AccountAllTurnoversPage extends StatefulWidget {
 }
 
 class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
-  final _log = Logger();
   final _scrollController = ScrollController();
   final List<TurnoverWithTagTurnovers> _items = [];
 
@@ -54,10 +54,12 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
 
   late final TurnoverRepository _turnoverRepository;
   late final TurnoverService _turnoverService;
+  late final Logger _log;
 
   @override
   void initState() {
     super.initState();
+    _log = context.read<LogService>().log;
     _turnoverRepository = context.read<TurnoverRepository>();
     _turnoverService = context.read<TurnoverService>();
     _scrollController.addListener(_onScroll);

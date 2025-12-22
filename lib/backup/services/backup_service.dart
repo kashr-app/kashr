@@ -24,10 +24,12 @@ class BackupService {
   final LocalStorageService _localStorageService;
   final EncryptionService _encryptionService;
 
-  final log = Logger();
+  final Logger log;
+
   final _uuid = const Uuid();
 
-  BackupService({
+  BackupService(
+    this.log, {
     required DatabaseHelper dbHelper,
     required BackupRepository backupRepository,
     required ArchiveService archiveService,

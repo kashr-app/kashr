@@ -27,10 +27,15 @@ class CustomColors extends ThemeExtension<CustomColors> {
   final Color amountPositive;
   final Color amountNeutral;
 
+  final Color warning;
+  final Color info;
+
   const CustomColors({
     required this.amountNegative,
     required this.amountPositive,
     required this.amountNeutral,
+    required this.warning,
+    required this.info,
   });
 
   // Create CustomColors from the current ColorScheme
@@ -42,12 +47,16 @@ class CustomColors extends ThemeExtension<CustomColors> {
           amountNegative: colorScheme.error,
           amountPositive: colorScheme.primary,
           amountNeutral: colorScheme.onSurface,
+          warning: Colors.orange[200]!,
+          info: Colors.blue[300]!,
         );
       case Brightness.light:
         return CustomColors(
           amountNegative: colorScheme.error,
           amountPositive: colorScheme.primary,
           amountNeutral: colorScheme.onSurface,
+          warning: Colors.orange,
+          info: Colors.blue[500]!,
         );
     }
   }
@@ -57,11 +66,15 @@ class CustomColors extends ThemeExtension<CustomColors> {
     Color? amountNegative,
     Color? amountPositive,
     Color? amountNeutral,
+    Color? warning,
+    Color? info,
   }) {
     return CustomColors(
       amountNegative: amountNegative ?? this.amountNegative,
       amountPositive: amountPositive ?? this.amountPositive,
       amountNeutral: amountNeutral ?? this.amountNeutral,
+      warning: warning ?? this.warning,
+      info: info ?? this.info,
     );
   }
 
@@ -74,6 +87,8 @@ class CustomColors extends ThemeExtension<CustomColors> {
       amountNegative: Color.lerp(amountNegative, other.amountNegative, t)!,
       amountPositive: Color.lerp(amountPositive, other.amountPositive, t)!,
       amountNeutral: Color.lerp(amountNeutral, other.amountNeutral, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      info: Color.lerp(info, other.info, t)!,
     );
   }
 }

@@ -12,12 +12,12 @@ import 'package:finanalyzer/turnover/model/turnover_repository.dart';
 import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
 class TurnoverModule implements Module {
   final turnoverRepository = TurnoverRepository();
-  final tagRepository = TagRepository();
   final tagTurnoverRepository = TagTurnoverRepository();
   final transferRepository = TransferRepository();
   final recentSearchRepository = RecentSearchRepository();
@@ -25,18 +25,22 @@ class TurnoverModule implements Module {
   late final TurnoverService turnoverService;
   late final TransferService transferService;
   late final TurnoverMatchingService turnoverMatchingService;
+  late TagRepository tagRepository;
 
   @override
   late final List<SingleChildWidget> providers;
 
   late final List<TagListener> tagListeners = [];
 
-  TurnoverModule() {
+  TurnoverModule(Logger log) {
+    tagRepository = TagRepository(log);
     turnoverService = TurnoverService(
       turnoverRepository,
       tagTurnoverRepository,
+      log,
     );
     transferService = TransferService(
+      log,
       transferRepository: transferRepository,
       tagTurnoverRepository: tagTurnoverRepository,
       tagRepository: tagRepository,
@@ -44,9 +48,10 @@ class TurnoverModule implements Module {
     turnoverMatchingService = TurnoverMatchingService(
       tagTurnoverRepository,
       turnoverRepository,
+      log,
     );
 
-    final tagCubit = TagCubit(tagRepository);
+    final tagCubit = TagCubit(tagRepository, log);
     // Starts loading tags asynchronously (no await)
     // Note that we use the tagCubit instead of the repository in order to set the cubits loading state
     tagCubit.loadTags();

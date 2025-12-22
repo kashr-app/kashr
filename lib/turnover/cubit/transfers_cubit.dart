@@ -10,17 +10,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
-final _log = Logger();
-
 /// Cubit for managing the transfers page state.
 class TransfersCubit extends Cubit<TransfersState> {
   final TransferRepository _transferRepository;
   final TransferService _transferService;
   StreamSubscription<TransferChange>? _transferChangeSubscription;
 
+  final Logger _log;
+
   TransfersCubit(
     this._transferRepository,
-    this._transferService, {
+    this._transferService,
+    this._log, {
     TransfersFilter initialFilter = TransfersFilter.empty,
     TransfersFilter lockedFilters = TransfersFilter.empty,
   }) : super(
@@ -56,11 +57,7 @@ class TransfersCubit extends Cubit<TransfersState> {
 
   /// Updates the filter and reloads data.
   void updateFilter(TransfersFilter newFilter) {
-    emit(
-      state.copyWith(
-        filter: newFilter.lockWith(state.lockedFilters),
-      ),
-    );
+    emit(state.copyWith(filter: newFilter.lockWith(state.lockedFilters)));
     loadTransfers();
   }
 
@@ -100,7 +97,9 @@ class TransfersCubit extends Cubit<TransfersState> {
   /// Loads the next page of transfer items.
   Future<void> loadMoreTransfers() async {
     // Don't load if already loading, no more items, or not in success state
-    if (state.isLoadingMore || !state.hasMore || state.status != Status.success) {
+    if (state.isLoadingMore ||
+        !state.hasMore ||
+        state.status != Status.success) {
       return;
     }
 
@@ -128,7 +127,11 @@ class TransfersCubit extends Cubit<TransfersState> {
         ),
       );
     } catch (e, stackTrace) {
-      _log.e('Failed to load more transfer items', error: e, stackTrace: stackTrace);
+      _log.e(
+        'Failed to load more transfer items',
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(state.copyWith(isLoadingMore: false));
     }
   }

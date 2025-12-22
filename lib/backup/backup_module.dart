@@ -9,6 +9,7 @@ import 'package:finanalyzer/core/module.dart';
 import 'package:finanalyzer/core/secure_storage.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -22,16 +23,14 @@ class BackupModule implements Module {
   @override
   late final List<SingleChildWidget> providers;
 
-  BackupModule() {
-
-        // Backup services
-    archiveService = ArchiveService();
-    localStorageService = LocalStorageService();
-    encryptionService = EncryptionService();
-    backupRepository = BackupRepository(
-      localStorageService: localStorageService,
-    );
+  BackupModule(Logger log) {
+    // Backup services
+    archiveService = ArchiveService(log);
+    localStorageService = LocalStorageService(log);
+    encryptionService = EncryptionService(log);
+    backupRepository = BackupRepository(log, localStorageService);
     backupService = BackupService(
+      log,
       dbHelper: DatabaseHelper(),
       backupRepository: backupRepository,
       archiveService: archiveService,
@@ -41,15 +40,13 @@ class BackupModule implements Module {
 
     providers = [
       Provider.value(value: backupService),
-        BlocProvider(create: (_) => BackupCubit(backupService)),
-        BlocProvider(
-          create: (_) => CloudBackupCubit(backupService, secureStorage()),
-        ),
+      BlocProvider(create: (_) => BackupCubit(backupService, log)),
+      BlocProvider(
+        create: (_) => CloudBackupCubit(backupService, secureStorage(), log),
+      ),
     ];
   }
 
   @override
-  void dispose() {
-  }
+  void dispose() {}
 }
-

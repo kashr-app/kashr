@@ -3,6 +3,7 @@ import 'package:finanalyzer/account/cubit/account_cubit.dart';
 import 'package:finanalyzer/account/cubit/account_state.dart';
 import 'package:finanalyzer/account/model/account.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/cubit/transfer_editor_cubit.dart';
@@ -47,6 +48,7 @@ class TransferEditorPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => TransferEditorCubit(
+        context.read<LogService>().log,
         transferService: context.read<TransferService>(),
         transferRepository: context.read<TransferRepository>(),
         tagTurnoverRepository: context.read<TagTurnoverRepository>(),

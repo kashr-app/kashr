@@ -6,8 +6,8 @@ import 'package:meta/meta.dart';
 part 'local_auth_state.dart';
 
 class LocalAuthCubit extends Cubit<LocalAuthState> {
-  final log = Logger();
-  LocalAuthCubit() : super(LocalAuthInitial());
+  final Logger log;
+  LocalAuthCubit(this.log) : super(LocalAuthInitial());
 
   final LocalAuthentication auth = LocalAuthentication();
 

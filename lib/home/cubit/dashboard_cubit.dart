@@ -31,7 +31,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   final TagTurnoverRepository _tagTurnoverRepository;
   final TagRepository _tagRepository;
   final TransferRepository _transferRepository;
-  final _log = Logger();
+  final Logger log;
 
   StreamSubscription<dynamic>? _changeSubscription;
   StreamSubscription<TurnoverChange>? _turnoverSubscription;
@@ -44,6 +44,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     this._tagTurnoverRepository,
     this._tagRepository,
     this._transferRepository,
+    this.log,
   ) : super(
         DashboardState(
           selectedPeriod: YearMonth.now(),
@@ -292,7 +293,7 @@ class DashboardCubit extends Cubit<DashboardState> {
         ),
       );
     } catch (e, s) {
-      _log.e('Failed to load month data', error: e, stackTrace: s);
+      log.e('Failed to load month data', error: e, stackTrace: s);
       emit(
         state.copyWith(
           status: Status.error,

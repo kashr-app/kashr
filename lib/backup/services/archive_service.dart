@@ -15,7 +15,9 @@ class BackupContents {
 
 /// Service for creating and extracting backup ZIP archives
 class ArchiveService {
-  final log = Logger();
+  final Logger log;
+
+  ArchiveService(this.log);
 
   /// Create a ZIP archive
   /// Returns the output file

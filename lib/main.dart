@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finanalyzer/account/account_module.dart';
 import 'package:finanalyzer/backup/backup_module.dart';
 import 'package:finanalyzer/comdirect/comdirect_module.dart';
@@ -6,26 +8,83 @@ import 'package:finanalyzer/core/module.dart';
 import 'package:finanalyzer/core/restart_widget.dart';
 import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
 import 'package:finanalyzer/local_auth/local_auth_module.dart';
+import 'package:finanalyzer/logging/logging_module.dart';
+import 'package:finanalyzer/logging/model/log_level_setting.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/savings/savings_module.dart';
-import 'package:finanalyzer/router.dart';
+import 'package:finanalyzer/app_router.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/settings/settings_module.dart';
 import 'package:finanalyzer/settings/settings_state.dart';
 import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/turnover_module.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 
 const bool isDevelopment = bool.fromEnvironment('dart.vm.product') == false;
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(RestartWidget(child: const MyApp()));
+LogService? _logService;
+
+void main() async {
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      final loggingModule = LoggingModule();
+      await loggingModule.logService.initialize();
+      _logService = loggingModule.logService;
+
+      _setupErrorHandlers(loggingModule.logService);
+      runApp(
+        RestartWidget(
+          child: MyApp(loggingModule, AppRouter(loggingModule.logService.log)),
+        ),
+      );
+    },
+    (error, stack) {
+      _logService?.logToFile(
+        level: LogLevelSetting.error,
+        message: 'Uncaught zone error',
+        loggerName: 'ZoneError',
+        error: error.toString(),
+        stackTrace: stack.toString(),
+      );
+    },
+  );
+}
+
+void _setupErrorHandlers(LogService logService) {
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+
+    logService.logToFile(
+      level: LogLevelSetting.fatal,
+      message: 'Flutter Error: ${details.exceptionAsString()}',
+      loggerName: 'FlutterError',
+      error: details.exception.toString(),
+      stackTrace: details.stack?.toString(),
+    );
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    logService.logToFile(
+      level: LogLevelSetting.error,
+      message: 'Uncaught async error',
+      loggerName: 'AsyncError',
+      error: error.toString(),
+      stackTrace: stack.toString(),
+    );
+    return true;
+  };
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final LoggingModule loggingModule;
+  final AppRouter router;
+
+  const MyApp(this.loggingModule, this.router, {super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -40,15 +99,17 @@ class _MyAppState extends State<MyApp> {
     super.initState();
 
     // Initialize dependency tree
-    final turnoverModule = TurnoverModule();
+    final log = widget.loggingModule.logService.log;
+    final turnoverModule = TurnoverModule(log);
     _modules = [
-      LocalAuthModule(_appLifeCycleListeners),
-      SettingsModule(),
-      BackupModule(),
+      widget.loggingModule,
+      LocalAuthModule(_appLifeCycleListeners, log),
+      SettingsModule(widget.loggingModule.logService),
+      BackupModule(log),
       turnoverModule,
-      SavingsModule(turnoverModule),
-      AccountModule(turnoverModule),
-      ComdirectModule(),
+      SavingsModule(turnoverModule, log),
+      AccountModule(turnoverModule, log),
+      ComdirectModule(log),
     ];
   }
 
@@ -72,7 +133,7 @@ class _MyAppState extends State<MyApp> {
       ],
       child: BlocListener<LocalAuthCubit, LocalAuthState>(
         // ensure to re-evaluate router redirects when auth state changes.
-        listener: (context, state) => router.refresh(),
+        listener: (context, state) => widget.router.router.refresh(),
         child: BlocBuilder<SettingsCubit, SettingsState>(
           builder: (context, state) {
             return MaterialApp.router(
@@ -81,7 +142,7 @@ class _MyAppState extends State<MyApp> {
               darkTheme: darkMode,
               themeMode: state.themeMode,
               debugShowCheckedModeBanner: false,
-              routerConfig: router,
+              routerConfig: widget.router.router,
             );
           },
         ),

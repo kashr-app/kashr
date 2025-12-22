@@ -19,12 +19,13 @@ final _apiDateFormat = DateFormat("yyyy-MM-dd");
 
 class ComdirectService implements DataIngestor {
   final ComdirectAPI comdirectAPI;
-  final log = Logger();
+  final Logger log;
   final AccountCubit accountCubit;
   final TurnoverService turnoverService;
   final TurnoverMatchingService matchingService;
 
-  ComdirectService({
+  ComdirectService(
+    this.log, {
     required this.comdirectAPI,
     required this.accountCubit,
     required this.turnoverService,

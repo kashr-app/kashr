@@ -7,6 +7,7 @@ import 'package:finanalyzer/core/constants.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/status.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/turnover/dialogs/add_tag_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag.dart';
@@ -61,9 +62,12 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
 
+  late final Logger log;
+
   @override
   void initState() {
     super.initState();
+    log = context.read<LogService>().log;
 
     // Pre-fill if provided
     if (widget.prefillFromTagTurnover != null) {
@@ -192,6 +196,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
         turnover,
         tagTurnover,
       ) = await createTurnoverAndTagTurnoverOnAccount(
+        log,
         GoRouter.of(context),
         widget.account,
         amount,
@@ -440,6 +445,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
 }
 
 Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
+  Logger log,
   GoRouter router,
   Account account,
   Decimal amount,
@@ -453,8 +459,6 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
   ThemeData theme,
   TurnoverMatchingService matchingService,
 ) async {
-  final log = Logger();
-
   final isManual = account.syncSource == SyncSource.manual;
   final turnoverId = isManual
       ? Uuid().v4obj()

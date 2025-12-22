@@ -16,9 +16,9 @@ part 'comdirect_auth_state.dart';
 final requestIdFormat = DateFormat("HHmmssSSS");
 
 class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
-  final log = Logger();
+  final Logger log;
 
-  ComdirectAuthCubit() : super(AuthInitial());
+  ComdirectAuthCubit(this.log) : super(AuthInitial());
 
   Future<void> login(Credentials credentials) async {
     try {
@@ -131,7 +131,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
           "Bearer ${apiToken.accessToken}";
       dioApi.options.headers["x-http-request-info"] = clientRequestInfoHeader;
 
-      dioApi.interceptors.add(AuthInterceptor(this));
+      dioApi.interceptors.add(AuthInterceptor(this, log));
 
       final api = ComdirectAPI(dioApi);
 

@@ -10,7 +10,7 @@ class WebDavClient {
   final String baseUrl;
   final String username;
   final String password;
-  final log = Logger();
+  final  Logger log;
 
   late final String _authHeader;
 
@@ -18,6 +18,7 @@ class WebDavClient {
     required this.baseUrl,
     required this.username,
     required this.password,
+    required this.log,
   }) {
     final credentials = base64Encode(utf8.encode('$username:$password'));
     _authHeader = 'Basic $credentials';

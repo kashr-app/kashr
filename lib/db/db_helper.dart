@@ -5,7 +5,7 @@ import 'package:finanalyzer/db/migrations/schema_v12.dart';
 import 'package:finanalyzer/db/migrations/v13.dart';
 import 'package:finanalyzer/db/migrations/v14.dart';
 import 'package:finanalyzer/db/sqlite_compat.dart';
-import 'package:logger/logger.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -15,8 +15,6 @@ class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static SqliteDatabase? _database;
   static Completer<SqliteDatabase>? _initCompleter;
-
-  final log = Logger();
 
   factory DatabaseHelper() => _instance;
 
@@ -98,6 +96,8 @@ class DatabaseHelper {
 
     final targetVersion = _migrations.keys.last;
 
+    final log = LogService.instance!.log;
+
     if (oldVersion == 0) {
       log.i('New database installation, creating schema at v$newVersion');
       await createSchemaV12(db);
@@ -130,14 +130,16 @@ class DatabaseHelper {
       final result = await db.rawQuery('PRAGMA user_version');
       if (result.isEmpty) return 0;
       return result.first['user_version'] as int;
-    } catch (e) {
-      log.e('Failed to get database version', error: e);
+    } catch (e, s) {
+      final log = LogService.instance!.log;
+      log.e('Failed to get database version', error: e, stackTrace: s);
       return 0;
     }
   }
 
   Future<void> _setVersion(SqliteDatabase db, int version) async {
     await db.execute('PRAGMA user_version = $version');
+    final log = LogService.instance!.log;
     log.i('Database version set to $version');
   }
 

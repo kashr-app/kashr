@@ -10,20 +10,20 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
-final _log = Logger();
-
 /// Cubit for managing the tag turnovers page state.
 class TagTurnoversCubit extends Cubit<TagTurnoversState> {
   final TagTurnoverRepository _tagTurnoverRepository;
   final TransferRepository _transferRepository;
   final TransferService _transferService;
+  final Logger _log;
 
   static const _pageSize = 10;
 
   TagTurnoversCubit(
     this._tagTurnoverRepository,
     this._transferRepository,
-    this._transferService, {
+    this._transferService,
+    this._log, {
     required TagTurnoversFilter initialFilter,
     required TagTurnoverSort initialSort,
     TagTurnoversFilter lockedFilters = TagTurnoversFilter.empty,
@@ -98,12 +98,7 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
         error: error,
         stackTrace: stackTrace,
       );
-      emit(
-        state.copyWith(
-          error: error.toString(),
-          isLoading: false,
-        ),
-      );
+      emit(state.copyWith(error: error.toString(), isLoading: false));
     }
   }
 
@@ -115,17 +110,15 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
       final tagTurnoverIds = items.map((item) => item.id).toList();
 
       // Get transfer IDs for these tag turnovers
-      final transferIdByTagTurnoverId =
-          await _transferRepository.getTransferIdsForTagTurnovers(
-        tagTurnoverIds,
-      );
+      final transferIdByTagTurnoverId = await _transferRepository
+          .getTransferIdsForTagTurnovers(tagTurnoverIds);
 
       if (transferIdByTagTurnoverId.isEmpty) return {};
 
       // Fetch transfer details
       final transferIds = transferIdByTagTurnoverId.values.toSet().toList();
-      final transfersWithDetails =
-          await _transferService.getTransfersWithDetails(transferIds);
+      final transfersWithDetails = await _transferService
+          .getTransfersWithDetails(transferIds);
 
       // Map transfers back to tag turnover IDs
       final result = <UuidValue, TransferWithDetails>{};

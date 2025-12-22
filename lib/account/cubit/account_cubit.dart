@@ -14,9 +14,9 @@ import '../model/account.dart';
 class AccountCubit extends Cubit<AccountState> {
   final AccountRepository _accountRepository;
   final BalanceCalculationService _balanceService;
-  final log = Logger();
+  final Logger log;
 
-  AccountCubit(this._accountRepository, this._balanceService)
+  AccountCubit(this._accountRepository, this._balanceService, this.log)
     : super(
         AccountState(
           projectionDate: Jiffy.parseFromDateTime(

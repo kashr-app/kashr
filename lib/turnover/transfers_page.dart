@@ -1,5 +1,6 @@
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/cubit/transfers_cubit.dart';
@@ -35,6 +36,7 @@ class TransfersRoute extends GoRouteData with $TransfersRoute {
       create: (context) => TransfersCubit(
         context.read<TransferRepository>(),
         context.read<TransferService>(),
+        context.read<LogService>().log,
         initialFilter: filters ?? TransfersFilter.empty,
         lockedFilters: lockedFilters ?? TransfersFilter.empty,
       ),

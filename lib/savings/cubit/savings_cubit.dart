@@ -14,9 +14,9 @@ import 'package:uuid/uuid.dart';
 class SavingsCubit extends Cubit<SavingsState> {
   final SavingsRepository _savingsRepository;
   final SavingsBalanceService _savingsBalanceService;
-  final log = Logger();
+  final Logger log;
 
-  SavingsCubit(this._savingsRepository, this._savingsBalanceService)
+  SavingsCubit(this._savingsRepository, this._savingsBalanceService, this.log)
     : super(const SavingsState());
 
   /// Load all savings and their related data.

@@ -4,6 +4,7 @@ import 'package:finanalyzer/account/services/balance_calculation_service.dart';
 import 'package:finanalyzer/core/module.dart';
 import 'package:finanalyzer/turnover/turnover_module.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -14,7 +15,7 @@ class AccountModule implements Module {
   @override
   late final List<SingleChildWidget> providers;
 
-  AccountModule(TurnoverModule turnoverModule) {
+  AccountModule(TurnoverModule turnoverModule, Logger log) {
     accountRepository = AccountRepository();
     balanceCalculationService = BalanceCalculationService(
       turnoverModule.turnoverRepository,
@@ -23,13 +24,11 @@ class AccountModule implements Module {
 
     providers = [
       Provider.value(value: accountRepository),
-      Provider.value(
-        value: balanceCalculationService,
-      ),
+      Provider.value(value: balanceCalculationService),
       BlocProvider(
         lazy: false,
         create: (_) =>
-            AccountCubit(accountRepository, balanceCalculationService)
+            AccountCubit(accountRepository, balanceCalculationService, log)
               ..loadAccounts(),
       ),
     ];

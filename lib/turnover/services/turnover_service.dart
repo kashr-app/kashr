@@ -9,9 +9,13 @@ class TurnoverService {
   final TurnoverRepository turnoverRepository;
   final TagTurnoverRepository tagTurnoverRepository;
 
-  final log = Logger();
+  final Logger log;
 
-  TurnoverService(this.turnoverRepository, this.tagTurnoverRepository);
+  TurnoverService(
+    this.turnoverRepository,
+    this.tagTurnoverRepository,
+    this.log,
+  );
 
   Future<List<TurnoverWithTagTurnovers>> getTurnoversWithTags(
     Iterable<Turnover> turnovers,
@@ -26,7 +30,10 @@ class TurnoverService {
       final tagTurnovers =
           tagTurnoversByTurnoverId[turnover.id]?.values.toList() ?? [];
       turnoversWithTT.add(
-        TurnoverWithTagTurnovers(turnover: turnover, tagTurnovers: tagTurnovers),
+        TurnoverWithTagTurnovers(
+          turnover: turnover,
+          tagTurnovers: tagTurnovers,
+        ),
       );
     }
 

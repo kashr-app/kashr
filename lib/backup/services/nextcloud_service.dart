@@ -10,9 +10,9 @@ import 'package:logger/logger.dart';
 /// Service for managing Nextcloud backup operations
 class NextcloudService {
   final FlutterSecureStorage _secureStorage;
-  final log = Logger();
+  final Logger log;
 
-  NextcloudService(this._secureStorage);
+  NextcloudService(this._secureStorage, this.log);
 
   /// Create WebDAV client from config
   Future<WebDavClient> _createClient(NextcloudConfig config) async {
@@ -26,6 +26,7 @@ class NextcloudService {
         baseUrl: config.url,
         username: config.username,
         password: password,
+        log: log,
       );
     } catch (e, stack) {
       log.e('Failed to create WebDAV client', error: e, stackTrace: stack);

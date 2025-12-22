@@ -6,6 +6,7 @@ import 'package:finanalyzer/savings/model/savings_virtual_booking_repository.dar
 import 'package:finanalyzer/savings/services/savings_balance_service.dart';
 import 'package:finanalyzer/turnover/turnover_module.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -17,7 +18,7 @@ class SavingsModule implements Module {
   @override
   late final List<SingleChildWidget> providers;
 
-  SavingsModule(TurnoverModule turnoverModule) {
+  SavingsModule(TurnoverModule turnoverModule, Logger log) {
     final savingsRepository = SavingsRepository();
     final savingsVirtualBookingRepository = SavingsVirtualBookingRepository();
     final savingsBalanceService = SavingsBalanceService(
@@ -25,8 +26,11 @@ class SavingsModule implements Module {
       savingsVirtualBookingRepository,
       savingsRepository,
     );
-    final savingsCubit = SavingsCubit(savingsRepository, savingsBalanceService)
-      ..loadAllSavings();
+    final savingsCubit = SavingsCubit(
+      savingsRepository,
+      savingsBalanceService,
+      log,
+    )..loadAllSavings();
 
     providers = [
       Provider<SavingsRepository>.value(value: savingsRepository),
@@ -39,8 +43,7 @@ class SavingsModule implements Module {
 
     turnoverModule.registerTagListener(SavingsTagListener(savingsCubit));
   }
-  
+
   @override
-  void dispose() {
-  }
+  void dispose() {}
 }

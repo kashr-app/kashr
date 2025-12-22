@@ -7,7 +7,9 @@ import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
 class TagRepository {
-  final _log = Logger();
+  final Logger _log;
+
+  TagRepository(this._log);
 
   final _tagsController = StreamController<List<Tag>>.broadcast();
   List<Tag>? _cachedTags;

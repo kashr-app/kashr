@@ -7,7 +7,9 @@ import 'package:path_provider/path_provider.dart';
 
 /// Service for managing local backup files
 class LocalStorageService {
-  final log = Logger();
+  final Logger log;
+
+  LocalStorageService(this.log);
 
   /// Get the app's backup directory
   Future<Directory> getBackupsDirectory() async {

@@ -1,4 +1,5 @@
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/turnover/dialogs/tag_turnover_editor_dialog.dart';
 import 'package:finanalyzer/turnover/dialogs/tag_turnover_info_dialog.dart';
 import 'package:finanalyzer/turnover/model/tag_turnover.dart';
@@ -97,6 +98,7 @@ class TagTurnoversPage extends StatelessWidget {
         context.read<TagTurnoverRepository>(),
         context.read<TransferRepository>(),
         context.read<TransferService>(),
+        context.read<LogService>().log,
         initialFilter: initialFilter,
         initialSort: initialSort,
         lockedFilters: lockedFilters,
@@ -130,12 +132,13 @@ class _TagTurnoversPageContent extends StatefulWidget {
 }
 
 class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
-  final _log = Logger();
+  late final Logger _log;
   final _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _log = context.read<LogService>().log;
     _scrollController.addListener(_onScroll);
   }
 

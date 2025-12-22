@@ -1,15 +1,35 @@
 import 'package:finanalyzer/core/bool_json_converter.dart';
+import 'package:finanalyzer/logging/model/log_level_setting.dart';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../_gen/settings/settings_state.freezed.dart';
 part '../_gen/settings/settings_state.g.dart';
 
+class LogLevelSettingConverter
+    implements JsonConverter<LogLevelSetting, String> {
+  const LogLevelSettingConverter();
+
+  @override
+  LogLevelSetting fromJson(String json) {
+    return LogLevelSetting.values.firstWhere(
+      (e) => e.name == json,
+      orElse: () => LogLevelSetting.error,
+    );
+  }
+
+  @override
+  String toJson(LogLevelSetting object) => object.name;
+}
+
 @freezed
 abstract class SettingsState with _$SettingsState {
   const factory SettingsState({
     @Default(ThemeMode.system) ThemeMode themeMode,
     @BoolJsonConverter() @Default(false) bool fastFormMode,
+    @LogLevelSettingConverter()
+    @Default(LogLevelSetting.error)
+    LogLevelSetting logLevel,
   }) = _SettingsState;
 
   factory SettingsState.fromJson(Map<String, Object?> json) =>

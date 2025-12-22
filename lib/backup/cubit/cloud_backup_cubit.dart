@@ -12,10 +12,10 @@ class CloudBackupCubit extends Cubit<CloudBackupState> {
   final BackupService _backupService;
   final FlutterSecureStorage _secureStorage;
   final NextcloudService _nextcloudService;
-  final log = Logger();
+  final Logger log;
 
-  CloudBackupCubit(this._backupService, this._secureStorage)
-    : _nextcloudService = NextcloudService(_secureStorage),
+  CloudBackupCubit(this._backupService, this._secureStorage, this.log)
+    : _nextcloudService = NextcloudService(_secureStorage, log),
       super(const CloudBackupState());
 
   Future<void> loadBackups() async {
@@ -30,11 +30,7 @@ class CloudBackupCubit extends Cubit<CloudBackupState> {
       final nextcloudConfig = await _getNextcloudConfig();
       final nextcloudConfigured = nextcloudConfig != null;
       // emit that nextcloud is configured so related errors get rendered
-      emit(
-        state.copyWith(
-          nextcloudConfigured: nextcloudConfigured,
-        ),
-      );
+      emit(state.copyWith(nextcloudConfigured: nextcloudConfigured));
 
       final List<String> nextcloud = nextcloudConfigured
           ? (await _nextcloudService.listBackupsOnCloud(nextcloudConfig))

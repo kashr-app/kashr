@@ -8,9 +8,9 @@ import 'package:logger/logger.dart';
 /// Cubit for managing backup operations
 class BackupCubit extends Cubit<BackupState> {
   final BackupService _backupService;
-  final log = Logger();
+  final Logger log;
 
-  BackupCubit(this._backupService) : super(const BackupState.initial());
+  BackupCubit(this._backupService, this.log) : super(const BackupState.initial());
 
   /// Load all backups and configuration
   Future<void> loadBackups() async {

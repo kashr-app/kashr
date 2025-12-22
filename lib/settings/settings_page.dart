@@ -1,6 +1,8 @@
 import 'package:finanalyzer/backup/backup_list_page.dart';
 import 'package:finanalyzer/db/db_helper.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/logging/log_viewer_page.dart';
+import 'package:finanalyzer/logging/model/log_level_setting.dart';
 import 'package:finanalyzer/settings/banks_page.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/settings/settings_state.dart';
@@ -137,6 +139,29 @@ class _SettingsPageState extends State<SettingsPage> {
                   leading: const Icon(Icons.backup),
                   onTap: () => const BackupListRoute().go(context),
                 ),
+                _SettingsHeadline(label: 'Developer'),
+                ListTile(
+                  onTap: () => const LogViewerRoute().go(context),
+                  title: const Text('Logs'),
+                  leading: const Icon(Icons.bug_report),
+                  subtitle: const Text('View application logs'),
+                ),
+                BlocBuilder<SettingsCubit, SettingsState>(
+                  builder: (context, state) => ListTile(
+                    leading: const Icon(Icons.filter_list),
+                    title: const Text("Log Level"),
+                    subtitle: Text(state.logLevel.displayName),
+                    onTap: () async {
+                      final newValue = await _showLogLevelDialog(
+                        context,
+                        state.logLevel,
+                      );
+                      if (newValue != null && context.mounted) {
+                        context.read<SettingsCubit>().setLogLevel(newValue);
+                      }
+                    },
+                  ),
+                ),
                 _SettingsHeadline(label: 'System'),
                 ListTile(
                   title: Text('App Version'),
@@ -195,6 +220,27 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ],
+        );
+      },
+    );
+  }
+
+  Future<LogLevelSetting?> _showLogLevelDialog(
+    BuildContext context,
+    LogLevelSetting current,
+  ) {
+    return showModalBottomSheet<LogLevelSetting>(
+      context: context,
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: LogLevelSetting.values.map((level) {
+            return ListTile(
+              title: Text(level.displayName),
+              trailing: level == current ? const Icon(Icons.check) : null,
+              onTap: () => Navigator.pop(context, level),
+            );
+          }).toList(),
         );
       },
     );

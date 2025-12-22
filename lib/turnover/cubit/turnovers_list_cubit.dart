@@ -8,12 +8,15 @@ import 'package:logger/logger.dart';
 class TurnoversListCubit extends Cubit<TurnoversListState> {
   final TurnoverRepository turnoverRepository;
   final TagTurnoverRepository tagTurnoverRepository;
-  final log = Logger();
+  final Logger log;
 
   static const int pageSize = 10;
 
-  TurnoversListCubit(this.turnoverRepository, this.tagTurnoverRepository)
-    : super(const TurnoversListState.initial());
+  TurnoversListCubit(
+    this.turnoverRepository,
+    this.tagTurnoverRepository,
+    this.log,
+  ) : super(const TurnoversListState.initial());
 
   /// Fetches the next page of turnovers.
   Future<void> fetchPage(int pageKey) async {

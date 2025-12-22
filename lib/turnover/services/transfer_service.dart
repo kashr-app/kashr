@@ -17,9 +17,10 @@ class TransferService {
   final TransferRepository transferRepository;
   final TagTurnoverRepository tagTurnoverRepository;
   final TagRepository tagRepository;
-  final _log = Logger();
+  final Logger _log;
 
-  TransferService({
+  TransferService(
+    this._log, {
     required this.transferRepository,
     required this.tagTurnoverRepository,
     required this.tagRepository,

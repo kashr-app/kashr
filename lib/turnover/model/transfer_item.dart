@@ -32,7 +32,7 @@ abstract class TransferItem with _$TransferItem {
   String get issueDescription => when(
     withTransfer: (details) =>
         details.needsReview?.description ?? 'Unknown issue',
-    unlinkedFromTransfer: (_, __) => 'Not linked to transfer',
+    unlinkedFromTransfer: (_, _) => 'Not linked to transfer',
   );
 
   /// Booking date for sorting

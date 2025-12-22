@@ -2,6 +2,7 @@ import 'package:finanalyzer/account/model/account_repository.dart';
 import 'package:finanalyzer/core/decimal_json_converter.dart';
 import 'package:finanalyzer/core/dialogs/discard_changes_dialog.dart';
 import 'package:finanalyzer/home/home_page.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
@@ -44,6 +45,7 @@ class TurnoverTagsRoute extends GoRouteData with $TurnoverTagsRoute {
         context.read<AccountRepository>(),
         context.read<TransferRepository>(),
         context.read<TagRepository>(),
+        context.read<LogService>().log,
       )..loadTurnover(UuidValue.fromString(turnoverId)),
       child: const TurnoverTagsPage(),
     );

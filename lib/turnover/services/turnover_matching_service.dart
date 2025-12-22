@@ -15,11 +15,12 @@ class TurnoverMatchingService {
   final TagTurnoverRepository _tagTurnoverRepository;
   final TurnoverRepository _turnoverRepository;
 
-  final log = Logger();
+  final Logger log;
 
   TurnoverMatchingService(
     this._tagTurnoverRepository,
     this._turnoverRepository,
+    this.log,
   );
 
   (DateTime startDate, DateTime endDate) _calcMatchingWindow(

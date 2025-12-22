@@ -1,8 +1,10 @@
 import 'package:finanalyzer/backup/model/backup_config.dart';
 import 'package:finanalyzer/backup/services/nextcloud_service.dart';
 import 'package:finanalyzer/core/secure_storage.dart';
+import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 /// Page for configuring Nextcloud WebDAV credentials
 class NextcloudSettingsPage extends StatefulWidget {
@@ -233,6 +235,8 @@ class _NextcloudSettingsPageState extends State<NextcloudSettingsPage> {
       _testResult = null;
     });
 
+    final log = context.read<LogService>().log;
+
     final s = secureStorage();
     var prevPassword = await s.read(key: 'nextcloud_password');
     try {
@@ -245,7 +249,7 @@ class _NextcloudSettingsPageState extends State<NextcloudSettingsPage> {
 
       await s.write(key: 'nextcloud_password', value: _passwordController.text);
 
-      final nextcloudService = NextcloudService(s);
+      final nextcloudService = NextcloudService(s, log);
       final success = await nextcloudService.testConnection(config);
 
       setState(() {

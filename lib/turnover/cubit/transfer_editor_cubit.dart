@@ -15,9 +15,10 @@ class TransferEditorCubit extends Cubit<TransferEditorState> {
   final TagTurnoverRepository _tagTurnoverRepository;
   final UuidValue? transferId;
 
-  final _log = Logger();
+  final Logger _log;
 
-  TransferEditorCubit({
+  TransferEditorCubit(
+    this._log, {
     required TransferService transferService,
     required TransferRepository transferRepository,
     required TagTurnoverRepository tagTurnoverRepository,
