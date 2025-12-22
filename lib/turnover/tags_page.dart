@@ -95,7 +95,7 @@ class _TagsPageState extends State<TagsPage> {
                 return _TagListItem(
                   tag: tag,
                   onTap: () => _showTagDialog(context, tag: tag),
-                  onDelete: () => _confirmDelete(context, tag),
+                  onDelete: () async => await _confirmDelete(context, tag),
                   onMerge: () => _showMergeDialog(context, tag),
                 );
               },

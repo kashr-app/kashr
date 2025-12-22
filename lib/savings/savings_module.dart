@@ -33,11 +33,10 @@ class SavingsModule implements Module {
     )..loadAllSavings();
 
     providers = [
-      Provider<SavingsRepository>.value(value: savingsRepository),
-      Provider<SavingsVirtualBookingRepository>.value(
-        value: savingsVirtualBookingRepository,
-      ),
-      Provider<SavingsBalanceService>.value(value: savingsBalanceService),
+      Provider.value(value: this),
+      Provider.value(value: savingsRepository),
+      Provider.value(value: savingsVirtualBookingRepository),
+      Provider.value(value: savingsBalanceService),
       BlocProvider.value(value: savingsCubit),
     ];
 

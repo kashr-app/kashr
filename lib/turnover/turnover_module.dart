@@ -57,14 +57,15 @@ class TurnoverModule implements Module {
     tagCubit.loadTags();
 
     providers = [
-      Provider<TurnoverRepository>.value(value: turnoverRepository),
-      Provider<TagRepository>.value(value: tagRepository),
-      Provider<TagTurnoverRepository>.value(value: tagTurnoverRepository),
-      Provider<TransferRepository>.value(value: transferRepository),
-      Provider<RecentSearchRepository>.value(value: recentSearchRepository),
-      Provider<TurnoverService>.value(value: turnoverService),
-      Provider<TransferService>.value(value: transferService),
-      Provider<TurnoverMatchingService>.value(value: turnoverMatchingService),
+      Provider.value(value: this),
+      Provider.value(value: turnoverRepository),
+      Provider.value(value: tagRepository),
+      Provider.value(value: tagTurnoverRepository),
+      Provider.value(value: transferRepository),
+      Provider.value(value: recentSearchRepository),
+      Provider.value(value: turnoverService),
+      Provider.value(value: transferService),
+      Provider.value(value: turnoverMatchingService),
       BlocProvider.value(value: tagCubit),
     ];
 

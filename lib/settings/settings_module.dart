@@ -3,6 +3,7 @@ import 'package:finanalyzer/logging/services/log_service.dart';
 import 'package:finanalyzer/settings/settings_cubit.dart';
 import 'package:finanalyzer/settings/settings_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
 class SettingsModule implements Module {
@@ -13,6 +14,7 @@ class SettingsModule implements Module {
 
   SettingsModule(this.logService) {
     providers = [
+      Provider.value(value: this),
       BlocProvider(
         create: (_) => SettingsCubit(SettingsRepository(), logService),
       ),

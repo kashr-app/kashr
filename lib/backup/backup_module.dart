@@ -39,6 +39,7 @@ class BackupModule implements Module {
     );
 
     providers = [
+      Provider.value(value: this),
       Provider.value(value: backupService),
       BlocProvider(create: (_) => BackupCubit(backupService, log)),
       BlocProvider(

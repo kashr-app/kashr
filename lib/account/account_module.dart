@@ -23,6 +23,7 @@ class AccountModule implements Module {
     );
 
     providers = [
+      Provider.value(value: this),
       Provider.value(value: accountRepository),
       Provider.value(value: balanceCalculationService),
       BlocProvider(

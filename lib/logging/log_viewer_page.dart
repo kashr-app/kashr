@@ -118,6 +118,7 @@ class LogViewerPage extends StatelessWidget {
   }
 
   void _confirmClearLogs(BuildContext context) {
+    final cubit = context.read<LogViewerCubit>();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -131,7 +132,7 @@ class LogViewerPage extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.read<LogViewerCubit>().clearLogs();
+              cubit.clearLogs();
             },
             child: Text(
               'Clear',

@@ -127,10 +127,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        for (final m in _modules) Provider.value(value: m),
-        ..._modules.expand((it) => it.providers),
-      ],
+      providers: [..._modules.expand((it) => it.providers)],
       child: BlocListener<LocalAuthCubit, LocalAuthState>(
         // ensure to re-evaluate router redirects when auth state changes.
         listener: (context, state) => widget.router.router.refresh(),

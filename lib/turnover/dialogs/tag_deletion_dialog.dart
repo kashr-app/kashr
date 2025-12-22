@@ -50,6 +50,7 @@ class _TagDeletionDialogState extends State<TagDeletionDialog> {
 
   Future<void> _checkListeners() async {
     final results = <BeforeTagDeleteResult>[];
+
     final tagListeners = context.read<TurnoverModule>().tagListeners;
 
     for (final listener in tagListeners) {

@@ -12,7 +12,10 @@ class LoggingModule implements Module {
   LoggingModule() {
     logService = LogService();
 
-    providers = [Provider.value(value: logService)];
+    providers = [
+      Provider.value(value: this),
+      Provider.value(value: logService),
+    ];
   }
 
   @override
