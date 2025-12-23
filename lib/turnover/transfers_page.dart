@@ -1,6 +1,7 @@
 import 'package:finanalyzer/core/status.dart';
 import 'package:finanalyzer/home/home_page.dart';
 import 'package:finanalyzer/logging/services/log_service.dart';
+import 'package:finanalyzer/theme.dart';
 import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
 import 'package:finanalyzer/turnover/cubit/tag_state.dart';
 import 'package:finanalyzer/turnover/cubit/transfers_cubit.dart';
@@ -23,6 +24,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
+final dateFormat = DateFormat('MMM d, yyyy');
 
 class TransfersRoute extends GoRouteData with $TransfersRoute {
   const TransfersRoute({this.filters, this.lockedFilters});
@@ -322,8 +325,6 @@ class _InvalidTransferCard extends StatelessWidget {
       );
     }
 
-    final dateFormat = DateFormat('MMM d, yyyy');
-
     return Row(
       children: [
         Text(
@@ -348,18 +349,8 @@ class _InvalidTransferCard extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              tagTurnover.format(),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              dateFormat.format(tagTurnover.bookingDate),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
+            _Amount(tagTurnover: tagTurnover),
+            _BookingDate(tagTurnover: tagTurnover),
           ],
         ),
       ],
@@ -380,7 +371,6 @@ class _UnlinkedFromTransferCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dateFormat = DateFormat('MMM d, yyyy');
 
     return Card(
       child: InkWell(
@@ -457,18 +447,8 @@ class _UnlinkedFromTransferCard extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        tagTurnover.format(),
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        dateFormat.format(tagTurnover.bookingDate),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
+                      _Amount(tagTurnover: tagTurnover),
+                      _BookingDate(tagTurnover: tagTurnover),
                     ],
                   ),
                 ],
@@ -476,6 +456,41 @@ class _UnlinkedFromTransferCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BookingDate extends StatelessWidget {
+  const _BookingDate({required this.tagTurnover});
+
+  final TagTurnover tagTurnover;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      dateFormat.format(tagTurnover.bookingDate),
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
+class _Amount extends StatelessWidget {
+  const _Amount({required this.tagTurnover});
+
+  final TagTurnover tagTurnover;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      tagTurnover.format(),
+      style: theme.textTheme.bodyLarge?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: theme.decimalColor(tagTurnover.amountValue),
       ),
     );
   }
