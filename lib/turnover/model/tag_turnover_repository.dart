@@ -620,6 +620,27 @@ class TagTurnoverRepository {
     return summariesByMonth;
   }
 
+  Future<int> count(YearMonth yearMonth) async {
+    final db = await DatabaseHelper().database;
+
+    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
+    final endDate = startDate.add(months: 1);
+
+    final result = await db.rawQuery(
+      '''
+      SELECT COUNT(tt.id) as count
+      FROM tag_turnover tt
+      WHERE tt.booking_date >= ? AND tt.booking_date < ?
+      ''',
+      [
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+      ],
+    );
+
+    return result.first['count'] as int;
+  }
+
   /// Fetches tag turnovers needed for dashboard calculations.
   /// Returns two DISJOINT sets:
   /// - allocatedInMonth: Tag turnovers with tt.booking_date in the month

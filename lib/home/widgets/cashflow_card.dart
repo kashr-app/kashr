@@ -1,17 +1,24 @@
 import 'package:decimal/decimal.dart';
 import 'package:finanalyzer/core/currency.dart';
 import 'package:finanalyzer/theme.dart';
+import 'package:finanalyzer/turnover/model/tag_turnovers_filter.dart';
+import 'package:finanalyzer/turnover/model/year_month.dart';
+import 'package:finanalyzer/turnover/tag_turnovers_page.dart';
 import 'package:flutter/material.dart';
 
 /// A card widget that displays the cashflow (income - expenses) for the month.
 class CashflowCard extends StatelessWidget {
+  final YearMonth period;
   final Decimal totalIncome;
   final Decimal totalExpenses;
+  final int tagTurnoverCount;
   final String currencyCode;
 
   const CashflowCard({
+    required this.period,
     required this.totalIncome,
     required this.totalExpenses,
+    required this.tagTurnoverCount,
     this.currencyCode = 'EUR',
     super.key,
   });
@@ -29,11 +36,36 @@ class CashflowCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Cashflow',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Cashflow',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                TextButton(
+                  child: Row(
+                    children: [
+                      Text(
+                        '$tagTurnoverCount',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                  onPressed: () => TagTurnoversRoute(
+                    filter: TagTurnoversFilter(period: period),
+                  ).push(context),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(

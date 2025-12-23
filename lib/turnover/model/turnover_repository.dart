@@ -172,14 +172,17 @@ class TurnoverRepository {
 
     final result = await db.rawQuery(
       '''
-      SELECT COUNT(DISTINCT t.id) as count
-      FROM turnover t
-      LEFT JOIN tag_turnover tt ON t.id = tt.turnover_id
-      WHERE t.booking_date >= ? AND t.booking_date < ?
-      GROUP BY t.id
-      HAVING
-        COUNT(tt.id) = 0 OR
-        COALESCE(SUM(tt.amount_value), 0) != t.amount_value
+      SELECT COUNT(*) as count
+      FROM (
+        SELECT t.id
+        FROM turnover t
+        LEFT JOIN tag_turnover tt ON t.id = tt.turnover_id
+        WHERE t.booking_date >= ? AND t.booking_date < ?
+        GROUP BY t.id
+        HAVING
+          COUNT(tt.id) = 0 OR
+          COALESCE(SUM(tt.amount_value), 0) != t.amount_value
+      )
       ''',
       [
         startDate.format(pattern: isoDateFormat),
@@ -187,7 +190,7 @@ class TurnoverRepository {
       ],
     );
 
-    return result.length; // Number of rows = number of unallocated turnovers
+    return result.first['count'] as int;
   }
 
   /// Fetches unallocated turnovers for a specific month and year.
@@ -280,7 +283,10 @@ class TurnoverRepository {
     final db = await DatabaseHelper().database;
 
     // Create placeholders: (?, ?, ?, ...)
-    final (placeholders, args) = db.inClause(turnoverIds, toArg: (id) => id.uuid);
+    final (placeholders, args) = db.inClause(
+      turnoverIds,
+      toArg: (id) => id.uuid,
+    );
 
     final maps = await db.rawQuery(
       '''

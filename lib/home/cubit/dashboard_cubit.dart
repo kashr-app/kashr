@@ -59,6 +59,7 @@ class DashboardCubit extends Cubit<DashboardState> {
           pendingCount: 0,
           pendingTotalAmount: Decimal.zero,
           transfersNeedingReviewCount: 0,
+          tagTurnoverCount: 0,
         ),
       ) {
     _setupSubscriptions();
@@ -183,6 +184,10 @@ class DashboardCubit extends Cubit<DashboardState> {
         state.selectedPeriod,
       );
 
+      final tagTurnoverCount = await _tagTurnoverRepository.count(
+        state.selectedPeriod,
+      );
+
       final incomeTagSummaries = await _tagTurnoverRepository
           .getTagSummariesForMonth(
             state.selectedPeriod,
@@ -299,6 +304,7 @@ class DashboardCubit extends Cubit<DashboardState> {
           pendingCount: pendingCount,
           pendingTotalAmount: pendingTotalAmount,
           transfersNeedingReviewCount: transfersNeedingReviewCount,
+          tagTurnoverCount: tagTurnoverCount,
         ),
       );
     } catch (e, s) {

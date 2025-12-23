@@ -21,6 +21,7 @@ abstract class DashboardState with _$DashboardState {
     required Decimal unallocatedExpenses,
     required int pendingCount,
     required Decimal pendingTotalAmount,
+    required int tagTurnoverCount,
 
     // ignore: invalid_annotation_target
     @JsonKey(includeFromJson: false, includeToJson: false)

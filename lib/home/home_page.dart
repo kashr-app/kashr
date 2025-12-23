@@ -235,8 +235,10 @@ class HomePage extends StatelessWidget {
                   const LoadBankDataSection(),
                   const SizedBox(height: 8),
                   CashflowCard(
+                    period: state.selectedPeriod,
                     totalIncome: state.totalIncome,
                     totalExpenses: state.totalExpenses,
+                    tagTurnoverCount: state.tagTurnoverCount,
                   ),
                   const SizedBox(height: 16),
                   UnallocatedTurnoversSection(
