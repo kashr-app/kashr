@@ -35,8 +35,9 @@ class DashboardCubit extends Cubit<DashboardState> {
 
   StreamSubscription<dynamic>? _changeSubscription;
   StreamSubscription<TurnoverChange>? _turnoverSubscription;
-  StreamSubscription<TagTurnoverChange>? _turnoverTagSubscription;
+  StreamSubscription<TagTurnoverChange>? _tagTurnoverSubscription;
   StreamSubscription<List<Tag>?>? _tagsSubscription;
+  StreamSubscription<TransferChange?>? _transferSubscription;
 
   DashboardCubit(
     this._turnoverRepository,
@@ -68,10 +69,13 @@ class DashboardCubit extends Cubit<DashboardState> {
     _turnoverSubscription = _turnoverRepository.watchChanges().listen(
       _onTurnoverChanged,
     );
-    _turnoverTagSubscription = _tagTurnoverRepository.watchChanges().listen(
+    _tagTurnoverSubscription = _tagTurnoverRepository.watchChanges().listen(
       _onTagTurnoverChanged,
     );
     _tagsSubscription = _tagRepository.watchTags().listen(_onTagsChanged);
+    _transferSubscription = _transferRepository.watchChanges().listen(
+      _onTransferChanged,
+    );
   }
 
   void _onTurnoverChanged(TurnoverChange change) {
@@ -113,6 +117,10 @@ class DashboardCubit extends Cubit<DashboardState> {
     }
   }
 
+  void _onTransferChanged(TransferChange change) {
+    loadMonthData();
+  }
+
   /// Checks if a turnover affects the currently selected month.
   bool _affectsSelectedMonth(Turnover turnover) {
     final bookingDate = turnover.bookingDate;
@@ -129,8 +137,9 @@ class DashboardCubit extends Cubit<DashboardState> {
   Future<void> close() {
     _changeSubscription?.cancel();
     _turnoverSubscription?.cancel();
-    _turnoverTagSubscription?.cancel();
+    _tagTurnoverSubscription?.cancel();
     _tagsSubscription?.cancel();
+    _transferSubscription?.cancel();
     return super.close();
   }
 
