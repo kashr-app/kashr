@@ -38,6 +38,7 @@ Kashr, derived from the German word *'Kescher'* (pronounced *Késcher* like cas
 
 ## Limitations of v1
 
+- See [ROADMAP.md](ROADMAP.md)
 - No automatic recurring transactions, yet
 - No debt tracking, yet
 - Multi-currency support is prepared but not implemented and not really planned. Currently, only EUR is supported.
@@ -47,36 +48,6 @@ Kashr, derived from the German word *'Kescher'* (pronounced *Késcher* like cas
 - no automatic tests, yet - Early Stage, use at own risk
 - Cannot execute transactions via the app (not planned, it is a pure analytical app)
 - known bugs: see issue tracker
-
-## Planned for v2
-
-- Recurring transactions
-- Date of balance sync on synced accounts
-- UI Cleanup & Nicer Design
-- 85% Test coverage of repositories and cubits
-
-## Planned for v3
-
-- Budgets
-- Export CSV
-
-## Planned for v4
-
-- Debt tracking
-- i18n + proper, consistent UI wording
-- Release in Play Store, add option (not a paywall) to pay one-time, monthly, or yearly to support the project
-
-## Planned for v5
-
-- Widgets
-
-## Planned for v6
-
-- Notifications
-
-## Planned for v7
-
-- Data ingest: support more banks (and maybe PSD2, but PSD2 is kind of impossible without a paywall).
 
 ## Core Features
 
