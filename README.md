@@ -27,6 +27,7 @@ Kashr, derived from the German word *'Kescher'* (pronounced *Késcher* like cas
 - **No data is sold** (we don't even have or want it!)
 - **All data stays on your device** by default.
 - You can store (optionally encrypted) backups in any of the supported backends (e.g. Nextcloud/WebDAV).
+- We provide a dockerized decryption tool independent of the app, see [ENCRYPTION_README.md](ENCRYPTION_README.md).
 
 ## Trustful Business Model: Good Software, Not Data!
 

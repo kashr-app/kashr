@@ -2,20 +2,20 @@
 """
 Kashr Backup Decryption Tool
 
-This script decrypts encrypted Kashr backup files (.finbak).
+This script decrypts encrypted Kashr backup files (.kasbak).
 The encrypted backups use AES-256-GCM encryption with PBKDF2 key derivation.
 
 Usage:
-    python decrypt_backup.py <backup_file.finbak> [output directory]
+    python decrypt_backup.py <backup_file.kasbak> [output directory]
 
 Example:
-    python decrypt_backup.py backup_2024-12-02_143022.finbak
+    python decrypt_backup.py backup_2024-12-02_143022.kasbak
 
 Requirements:
     pip install cryptography
 
 The script will:
-1. Extract the .finbak ZIP file
+1. Extract the .kasbak ZIP file
 2. Decrypt the database.db file if encrypted
 3. Save the decrypted database as database_decrypted.db
 """
@@ -33,7 +33,7 @@ from cryptography.hazmat.primitives.kdf.argon2 import Argon2id
 
 
 # Constants matching the Dart implementation
-HEADER = b'FINBAK_ENC_V1\x00\x00\x00'
+HEADER = b'KASBAK_ENC_V1\x00\x00\x00'
 SALT_LENGTH = 32
 IV_LENGTH = 12
 ARGON2_ITERATIONS = 3

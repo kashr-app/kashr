@@ -7,7 +7,7 @@ import 'package:crypto/crypto.dart';
 import 'package:logger/logger.dart';
 import 'package:pointycastle/export.dart';
 
-const String _header = 'FINBAK_ENC_V1\x00\x00\x00';
+const String _header = 'KASBAK_ENC_V1\x00\x00\x00';
 const int _saltLength = 32;
 const int _ivLength = 12;
 const int _tagLength = 16;

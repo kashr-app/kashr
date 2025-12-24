@@ -21,7 +21,7 @@ When a database is encrypted, the file structure inside the ZIP archive is:
 
 ```
 database.db (encrypted):
-  [Header: "FINBAK_ENC_V1" + null padding (16 bytes)]
+  [Header: "KASBAK_ENC_V1" + null padding (16 bytes)]
   [Salt (32 bytes)]
   [IV (12 bytes)]
   [Encrypted Data + Authentication Tag (variable + 16 bytes)]

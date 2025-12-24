@@ -13,7 +13,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
-const backupFileExt = 'finbak';
+const backupFileExt = 'kasbak';
 final _fileNameDateFormat = DateFormat('yyyy-MM-dd_HHmmss');
 
 /// Core service for backup and restore operations

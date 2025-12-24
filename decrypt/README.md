@@ -21,32 +21,32 @@ or use the python script directly, which would require:
 ### Usage
 
 ```bash
-docker run --user $(id -u):$(id -g) --rm -it -v $(pwd):/app decrypt-backup <backup_file.finbak> <output-dir>
+docker run --user $(id -u):$(id -g) --rm -it -v $(pwd):/app decrypt-backup <backup_file.kasbak> <output-dir>
 ```
 
 or for the script
 ```bash
-python decrypt_backup.py  <backup_file.finbak> [output-dir]
+python decrypt_backup.py  <backup_file.kasbak> [output-dir]
 ```
 
 ### Example
 ```bash
-docker run --user $(id -u):$(id -g) --rm -it -v $(pwd):/app decrypt-backup backup_2025-12-02_034146.finbak ./output
+docker run --user $(id -u):$(id -g) --rm -it -v $(pwd):/app decrypt-backup backup_2025-12-02_034146.kasbak ./output
 ```
 
 Or using the python script directly:
 
 ```bash
 # Decrypt a backup
-python decrypt_backup.py backup_2024-12-02_143022.finbak
+python decrypt_backup.py backup_2024-12-02_143022.kasbak
 
 # Decrypt to a specific directory
-python decrypt_backup.py backup_2024-12-02_143022.finbak ./my_backups
+python decrypt_backup.py backup_2024-12-02_143022.kasbak ./my_backups
 ```
 
 ### What the Script Does
 
-1. Extracts the .finbak ZIP file
+1. Extracts the .kasbak ZIP file
 2. Reads the metadata.json
 3. Checks if the database is encrypted
 4. Decrypts the database.db file using your password
