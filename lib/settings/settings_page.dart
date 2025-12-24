@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsRoute extends GoRouteData with $SettingsRoute {
   const SettingsRoute();
@@ -166,6 +167,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   onTap: () => showLicensePage(context: context),
                 ),
                 _SettingsHeadline(label: 'Developer'),
+                ListTile(
+                  title: const Text('Source Code'),
+                  leading: Icon(Icons.code),
+                  onTap: () async {
+                    final url = Uri.parse('https://github.com/kashr-app/kashr');
+                    if (!await launchUrl(url,
+                    mode: LaunchMode.externalApplication,
+                    )) {
+                      throw Exception('Could not launch $url');
+                    }
+                  },
+                ),
                 BlocBuilder<SettingsCubit, SettingsState>(
                   builder: (context, state) => ListTile(
                     leading: const Icon(Icons.filter_list),
