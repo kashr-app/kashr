@@ -143,7 +143,7 @@ class TagTurnoverItem extends StatelessWidget {
     final cubit = context.read<TurnoverTagsCubit>();
     switch (result) {
       case EditTagTurnoverUpdated():
-        cubit.updateTagTurnover(tagTurnover);
+        cubit.updateTagTurnover(result.tagTurnover);
       case EditTagTurnoverDeleted():
         cubit.removeTagTurnover(tagTurnover.id);
     }
