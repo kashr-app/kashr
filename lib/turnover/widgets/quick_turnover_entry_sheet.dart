@@ -277,10 +277,11 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
         ),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               Text('Log Turnover', style: theme.textTheme.titleLarge),
               const SizedBox(height: 8),
               Text(
@@ -437,6 +438,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
                     : Text('Save'),
               ),
             ],
+            ),
           ),
         ),
       ),
