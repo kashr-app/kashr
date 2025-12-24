@@ -214,31 +214,33 @@ class _SettingsPageState extends State<SettingsPage> {
     return showModalBottomSheet<ThemeMode>(
       context: context,
       builder: (context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.brightness_6),
-              title: const Text("System"),
-              onTap: () {
-                Navigator.pop(context, ThemeMode.system);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.light_mode),
-              title: const Text("Light"),
-              onTap: () {
-                Navigator.pop(context, ThemeMode.light);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.dark_mode),
-              title: const Text("Dark"),
-              onTap: () {
-                Navigator.pop(context, ThemeMode.dark);
-              },
-            ),
-          ],
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.brightness_6),
+                title: const Text("System"),
+                onTap: () {
+                  Navigator.pop(context, ThemeMode.system);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.light_mode),
+                title: const Text("Light"),
+                onTap: () {
+                  Navigator.pop(context, ThemeMode.light);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.dark_mode),
+                title: const Text("Dark"),
+                onTap: () {
+                  Navigator.pop(context, ThemeMode.dark);
+                },
+              ),
+            ],
+          ),
         );
       },
     );
