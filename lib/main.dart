@@ -126,6 +126,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final themeBuilder = ThemeBuilder();
     return MultiProvider(
       providers: [..._modules.expand((it) => it.providers)],
       child: BlocListener<LocalAuthCubit, LocalAuthState>(
@@ -135,8 +136,8 @@ class _MyAppState extends State<MyApp> {
           builder: (context, state) {
             return MaterialApp.router(
               title: 'Kashr',
-              theme: lightMode,
-              darkTheme: darkMode,
+              theme: themeBuilder.lightMode(),
+              darkTheme: themeBuilder.darkMode(),
               themeMode: state.themeMode,
               debugShowCheckedModeBanner: false,
               routerConfig: widget.router.router,

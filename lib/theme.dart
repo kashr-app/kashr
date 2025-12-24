@@ -1,25 +1,37 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 
-ThemeData lightMode = buildTheme(
-  ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
-    colorSchemeSeed: Colors.green,
-  ),
-);
+class ThemeBuilder {
+  ThemeData lightMode() {
+    return buildTheme(
+      ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
+        colorSchemeSeed: const Color(0xFF28CA97),
+      ),
+    );
+  }
 
-ThemeData darkMode = buildTheme(
-  ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.dark,
-    colorSchemeSeed: Colors.green,
-  ),
-);
+  ThemeData darkMode() {
+    final t = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorSchemeSeed: const Color(0xFF28CA97),
+    );
 
-ThemeData buildTheme(ThemeData themeData) {
-  final customColors = CustomColors.fromTheme(themeData);
-  return themeData.copyWith(extensions: [customColors]);
+    return buildTheme(
+      t.copyWith(
+        colorScheme: t.colorScheme.copyWith(
+          // onSurface: const Color(0xFFFFFFFF),
+        ),
+      ),
+    );
+  }
+
+  ThemeData buildTheme(ThemeData themeData) {
+    final customColors = CustomColors.fromTheme(themeData);
+    return themeData.copyWith(extensions: [customColors]);
+  }
 }
 
 class CustomColors extends ThemeExtension<CustomColors> {
