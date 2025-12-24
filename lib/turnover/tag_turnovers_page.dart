@@ -338,7 +338,15 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
 
       final selectedTagTurnover = await TagTurnoversPage.openForSelection(
         context: context,
-        header: SourceCard(tagTurnover: item, tag: tag!),
+        header: SourceCard(
+          tagTurnover: item,
+          tag: tag!,
+          action: CreateOtherTransferSideButton(
+            tagTurnover: item,
+            tag: tag,
+            onCreated: (context, created) => Navigator.pop(context, created),
+          ),
+        ),
         filter: TagTurnoversFilter(sign: requiredSign),
         lockedFilters: TagTurnoversFilter(
           transferTagOnly: true,

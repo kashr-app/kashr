@@ -449,8 +449,8 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
   GoRouter router,
   Account account,
   Decimal amount,
-  String note,
-  String counterpart,
+  String? note,
+  String? counterpart,
   DateTime bookingDate,
   Tag tag,
   TurnoverRepository turnoverRepository,
@@ -473,8 +473,8 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
       bookingDate: bookingDate,
       amountValue: amount,
       amountUnit: account.currency,
-      purpose: note.isEmpty ? tag.name : note,
-      counterPart: counterpart.isEmpty ? null : counterpart,
+      purpose: (note?.isEmpty ?? true) ? tag.name : note!,
+      counterPart: (counterpart?.isEmpty ?? true) ? null : counterpart,
       createdAt: DateTime.now(),
     );
 
@@ -490,8 +490,8 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
     amountUnit: account.currency,
     bookingDate: bookingDate,
     accountId: account.id,
-    counterPart: counterpart.isEmpty ? null : counterpart,
-    note: note.isEmpty ? null : note,
+    counterPart: (counterpart?.isEmpty ?? true) ? null : counterpart,
+    note: (note?.isEmpty ?? true) ? null : note,
     createdAt: DateTime.now(),
   );
 

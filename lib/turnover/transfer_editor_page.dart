@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:kashr/account/account_selector_dialog.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
@@ -333,7 +334,16 @@ class _TransferEditorContent extends StatelessWidget {
     final selected = await TagTurnoversPage.openForSelection(
       context: context,
       header: otherSide != null && otherSideTag != null
-          ? SourceCard(tagTurnover: otherSide, tag: otherSideTag)
+          ? SourceCard(
+              tagTurnover: otherSide,
+              tag: otherSideTag,
+              action: CreateOtherTransferSideButton(
+                tagTurnover: otherSide,
+                tag: otherSideTag,
+                onCreated: (context, created) =>
+                    Navigator.pop(context, created),
+              ),
+            )
           : null,
       filter: TagTurnoversFilter(sign: requiredSign),
       lockedFilters: TagTurnoversFilter(
@@ -371,27 +381,12 @@ class _TransferEditorContent extends StatelessWidget {
     required Tag? otherSideTag,
     required Account? otherSideAccount,
   }) async {
-    final selectedAccount = await showDialog<Account>(
-      context: context,
-      builder: (context) => AccountSelectorDialog(
-        title: isFromSide ? 'Select FROM Account' : 'Select TO Account',
-        excludeId: otherSideAccount?.id,
-      ),
-    );
-
-    if (selectedAccount == null || !context.mounted) return;
-
-    // Prefill QuickTurnoverEntrySheet
-    final createdTagTurnover = await showModalBottomSheet<TagTurnover>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => QuickTurnoverEntrySheet(
-        account: selectedAccount,
-        prefillFromTagTurnover: otherSide != null
-            ? otherSide.copyWith(amountValue: -otherSide.amountValue)
-            : null,
-        prefillTag: otherSideTag,
-      ),
+    final createdTagTurnover = await _createTransferSide(
+      context,
+      isFromSide: isFromSide,
+      otherSide: otherSide,
+      otherSideTag: otherSideTag,
+      otherSideAccountId: otherSideAccount?.id,
     );
 
     if (createdTagTurnover != null && context.mounted) {
@@ -460,5 +455,71 @@ class _TransferEditorContent extends StatelessWidget {
           }
         }
     }
+  }
+}
+
+Future<TagTurnover?> _createTransferSide(
+  BuildContext context, {
+  required bool isFromSide,
+  required TagTurnover? otherSide,
+  required Tag? otherSideTag,
+  required UuidValue? otherSideAccountId,
+}) async {
+  final selectedAccount = await AccountSelectorDialog.show(
+    context,
+    title: isFromSide ? 'Select FROM Account' : 'Select TO Account',
+    excludeId: otherSideAccountId,
+  );
+
+  if (selectedAccount == null || !context.mounted) return null;
+
+  // Prefill QuickTurnoverEntrySheet
+  return await showModalBottomSheet<TagTurnover>(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => QuickTurnoverEntrySheet(
+      account: selectedAccount,
+      prefillFromTagTurnover: otherSide != null
+          ? otherSide.copyWith(amountValue: -otherSide.amountValue)
+          : null,
+      prefillTag: otherSideTag,
+    ),
+  );
+}
+
+class CreateOtherTransferSideButton extends StatelessWidget {
+  final TagTurnover tagTurnover;
+  final Tag tag;
+  final void Function(BuildContext context, TagTurnover created) onCreated;
+
+  const CreateOtherTransferSideButton({
+    super.key,
+    required this.tagTurnover,
+    required this.tag,
+    required this.onCreated,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      label: Text('Create'),
+      icon: Icon(Icons.add),
+      onPressed: () async {
+        final otherSideTagTurnover = await _createTransferSide(
+          context,
+          isFromSide: tagTurnover.amountValue >= Decimal.zero,
+          otherSide: tagTurnover,
+          otherSideTag: tag,
+          otherSideAccountId: tagTurnover.accountId,
+        );
+        if (!context.mounted || otherSideTagTurnover == null) return;
+        onCreated(context, otherSideTagTurnover);
+      },
+    );
   }
 }

@@ -383,7 +383,16 @@ class _UnlinkedFromTransferCard extends StatelessWidget {
           // Open TagTurnoversPage for selection with appropriate filters
           final selectedTagTurnover = await TagTurnoversPage.openForSelection(
             context: context,
-            header: SourceCard(tagTurnover: tagTurnover, tag: tag),
+            header: SourceCard(
+              tagTurnover: tagTurnover,
+              tag: tag,
+              action: CreateOtherTransferSideButton(
+                tagTurnover: tagTurnover,
+                tag: tag,
+                onCreated: (context, created) =>
+                    Navigator.pop(context, created),
+              ),
+            ),
             filter: TagTurnoversFilter(sign: requiredSign),
             lockedFilters: TagTurnoversFilter(
               transferTagOnly: true,
