@@ -172,8 +172,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   leading: Icon(Icons.code),
                   onTap: () async {
                     final url = Uri.parse('https://github.com/kashr-app/kashr');
-                    if (!await launchUrl(url,
-                    mode: LaunchMode.externalApplication,
+                    if (!await launchUrl(
+                      url,
+                      mode: LaunchMode.externalApplication,
                     )) {
                       throw Exception('Could not launch $url');
                     }
