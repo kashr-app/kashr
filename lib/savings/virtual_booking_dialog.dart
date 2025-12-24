@@ -285,11 +285,9 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                 // Account
                 InkWell(
                   onTap: () async {
-                    final a = await showDialog<Account>(
-                      context: context,
-                      builder: (context) => AccountSelectorDialog(
-                        selectedId: _selectedAccount?.id,
-                      ),
+                    final a = await AccountSelectorDialog.show(
+                      context,
+                      selectedId: _selectedAccount?.id,
                     );
                     if (a != null) {
                       setState(() {

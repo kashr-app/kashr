@@ -135,10 +135,9 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
   }
 
   Future<void> _selectAccount() async {
-    final selectedAccount = await showDialog<Account>(
-      context: context,
-      builder: (context) =>
-          AccountSelectorDialog(selectedId: _selectedAccountId),
+    final selectedAccount = await AccountSelectorDialog.show(
+      context,
+      selectedId: _selectedAccountId,
     );
     if (selectedAccount != null) {
       setState(() {

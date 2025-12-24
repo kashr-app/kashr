@@ -85,10 +85,7 @@ class _TagTurnoversFilterDialogState extends State<TagTurnoversFilterDialog> {
   }
 
   Future<void> _pickAccount() async {
-    final account = await showDialog(
-      context: context,
-      builder: (context) => const AccountSelectorDialog(),
-    );
+    final account = await AccountSelectorDialog.show(context);
 
     if (account != null && !_selectedAccountIds.contains(account.id)) {
       setState(() {

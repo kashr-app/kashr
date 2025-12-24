@@ -319,10 +319,7 @@ class HomePage extends StatelessWidget {
     }
 
     // Show account selector
-    final selectedAccount = await showDialog<Account>(
-      context: context,
-      builder: (context) => AccountSelectorDialog(),
-    );
+    final selectedAccount = await AccountSelectorDialog.show(context);
 
     if (selectedAccount != null && context.mounted) {
       await _showEntrySheetAndRefresh(context, selectedAccount);

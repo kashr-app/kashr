@@ -2,6 +2,7 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kashr/account/model/account.dart';
 import 'package:uuid/uuid.dart';
 
 class AccountSelectorDialog extends StatelessWidget {
@@ -14,6 +15,22 @@ class AccountSelectorDialog extends StatelessWidget {
     this.title,
     this.excludeId,
   });
+
+  static Future<Account?> show(
+    BuildContext context, {
+    final UuidValue? selectedId,
+    final String? title,
+    final UuidValue? excludeId,
+  }) async {
+    return await showDialog<Account>(
+      context: context,
+      builder: (context) => AccountSelectorDialog(
+        selectedId: selectedId,
+        title: title,
+        excludeId: excludeId,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
