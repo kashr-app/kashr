@@ -1,9 +1,9 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/amount_dialog.dart';
-import 'package:finanalyzer/core/constants.dart';
-import 'package:finanalyzer/core/currency.dart';
-import 'package:finanalyzer/core/decimal_json_converter.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:kashr/core/amount_dialog.dart';
+import 'package:kashr/core/constants.dart';
+import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
 
 class EditTurnoverDialog extends StatefulWidget {

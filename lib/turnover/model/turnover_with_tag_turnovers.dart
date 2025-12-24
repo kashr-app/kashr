@@ -1,5 +1,5 @@
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/turnover/model/turnover_with_tag_turnovers.freezed.dart';

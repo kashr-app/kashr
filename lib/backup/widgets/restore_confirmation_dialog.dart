@@ -1,4 +1,4 @@
-import 'package:finanalyzer/backup/model/backup_metadata.dart';
+import 'package:kashr/backup/model/backup_metadata.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

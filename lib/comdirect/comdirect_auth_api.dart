@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:finanalyzer/comdirect/comdirect_model.dart';
+import 'package:kashr/comdirect/comdirect_model.dart';
 import 'package:retrofit/retrofit.dart';
 
 part '../_gen/comdirect/comdirect_auth_api.g.dart';

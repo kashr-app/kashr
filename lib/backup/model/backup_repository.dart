@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
-import 'package:finanalyzer/backup/model/backup_config.dart';
-import 'package:finanalyzer/backup/model/backup_metadata.dart';
-import 'package:finanalyzer/backup/services/local_storage_service.dart';
-import 'package:finanalyzer/db/db_helper.dart';
+import 'package:kashr/backup/model/backup_config.dart';
+import 'package:kashr/backup/model/backup_metadata.dart';
+import 'package:kashr/backup/services/local_storage_service.dart';
+import 'package:kashr/db/db_helper.dart';
 import 'package:logger/logger.dart';
 
 /// Repository for managing backup metadata and configuration

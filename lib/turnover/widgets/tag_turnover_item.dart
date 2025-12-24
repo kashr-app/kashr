@@ -1,13 +1,13 @@
-import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
-import 'package:finanalyzer/turnover/dialogs/tag_turnover_editor_dialog.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
-import 'package:finanalyzer/turnover/widgets/note_field.dart';
-import 'package:finanalyzer/turnover/widgets/tag_amount_controls.dart';
-import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
-import 'package:finanalyzer/turnover/widgets/transfer_issue_badge.dart';
+import 'package:kashr/turnover/cubit/turnover_tags_cubit.dart';
+import 'package:kashr/turnover/dialogs/tag_turnover_editor_dialog.dart';
+import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/transfer_with_details.dart';
+import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/turnover/widgets/note_field.dart';
+import 'package:kashr/turnover/widgets/tag_amount_controls.dart';
+import 'package:kashr/turnover/widgets/tag_avatar.dart';
+import 'package:kashr/turnover/widgets/transfer_issue_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

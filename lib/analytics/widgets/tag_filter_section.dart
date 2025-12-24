@@ -1,6 +1,6 @@
-import 'package:finanalyzer/analytics/cubit/analytics_cubit.dart';
-import 'package:finanalyzer/analytics/cubit/analytics_state.dart';
-import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
+import 'package:kashr/analytics/cubit/analytics_cubit.dart';
+import 'package:kashr/analytics/cubit/analytics_state.dart';
+import 'package:kashr/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

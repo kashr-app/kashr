@@ -1,4 +1,4 @@
-import 'package:finanalyzer/core/bool_json_converter.dart';
+import 'package:kashr/core/bool_json_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/backup/model/backup_config.freezed.dart';
@@ -52,7 +52,7 @@ abstract class CloudProviderConfig with _$CloudProviderConfig {
     required String url,
     required String username,
     required String passwordKey, // Key in secure storage
-    @Default('/Backups/Finanalyzer/') String backupPath,
+    @Default('/Backups/Kashr/') String backupPath,
   }) = NextcloudConfig;
 
   // Future providers can be added here

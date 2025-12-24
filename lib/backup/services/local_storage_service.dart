@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:finanalyzer/backup/services/backup_service.dart';
+import 'package:kashr/backup/services/backup_service.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 

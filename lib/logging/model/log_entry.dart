@@ -1,4 +1,4 @@
-import 'package:finanalyzer/logging/model/log_level_setting.dart';
+import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/logging/model/log_entry.freezed.dart';

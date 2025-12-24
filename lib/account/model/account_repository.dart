@@ -1,4 +1,4 @@
-import 'package:finanalyzer/db/db_helper.dart';
+import 'package:kashr/db/db_helper.dart';
 import 'package:uuid/uuid.dart';
 import 'account.dart';
 

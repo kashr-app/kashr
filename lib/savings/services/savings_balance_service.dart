@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/savings/model/savings.dart';
-import 'package:finanalyzer/savings/model/savings_repository.dart';
-import 'package:finanalyzer/savings/model/savings_virtual_booking_repository.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/savings/model/savings.dart';
+import 'package:kashr/savings/model/savings_repository.dart';
+import 'package:kashr/savings/model/savings_virtual_booking_repository.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:uuid/uuid.dart';
 
 /// Service for calculating savings balances

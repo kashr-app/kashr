@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/decimal_json_converter.dart';
-import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/turnover/model/fts.dart';
-import 'package:finanalyzer/turnover/model/turnover_change.dart';
-import 'package:finanalyzer/turnover/model/turnover_filter.dart';
-import 'package:finanalyzer/turnover/model/turnover_sort.dart';
-import 'package:finanalyzer/turnover/model/year_month.dart';
+import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/db/db_helper.dart';
+import 'package:kashr/turnover/model/fts.dart';
+import 'package:kashr/turnover/model/turnover_change.dart';
+import 'package:kashr/turnover/model/turnover_filter.dart';
+import 'package:kashr/turnover/model/turnover_sort.dart';
+import 'package:kashr/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:uuid/uuid.dart';
 

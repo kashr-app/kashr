@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_suggestion.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:kashr/db/db_helper.dart';
+import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag_suggestion.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:string_similarity/string_similarity.dart';
 import 'package:uuid/uuid.dart';
 

@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/turnover/model/tag_suggestion.freezed.dart';

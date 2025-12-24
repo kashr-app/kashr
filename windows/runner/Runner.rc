@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "finanalyzer" "\0"
+            VALUE "FileDescription", "kashr" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "finanalyzer" "\0"
+            VALUE "InternalName", "kashr" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2024 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "finanalyzer.exe" "\0"
-            VALUE "ProductName", "finanalyzer" "\0"
+            VALUE "OriginalFilename", "kashr.exe" "\0"
+            VALUE "ProductName", "kashr" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

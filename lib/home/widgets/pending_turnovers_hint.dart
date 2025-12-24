@@ -1,6 +1,6 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/currency.dart';
-import 'package:finanalyzer/turnover/pending_turnovers_page.dart';
+import 'package:kashr/core/currency.dart';
+import 'package:kashr/turnover/pending_turnovers_page.dart';
 import 'package:flutter/material.dart';
 
 class PendingTurnoversHint extends StatelessWidget {

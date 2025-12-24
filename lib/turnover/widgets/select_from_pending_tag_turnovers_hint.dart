@@ -1,9 +1,9 @@
-import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
-import 'package:finanalyzer/turnover/select_pending_tag_turnovers_page.dart';
+import 'package:kashr/turnover/cubit/turnover_tags_cubit.dart';
+import 'package:kashr/turnover/cubit/turnover_tags_state.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/turnover/select_pending_tag_turnovers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';

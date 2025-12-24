@@ -1,17 +1,17 @@
 import 'dart:async';
 
-import 'package:finanalyzer/account/cubit/account_cubit.dart';
-import 'package:finanalyzer/comdirect/comdirect_api.dart';
-import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
-import 'package:finanalyzer/comdirect/comdirect_model.dart';
-import 'package:finanalyzer/comdirect/comdirect_service.dart';
-import 'package:finanalyzer/ingest/ingest.dart';
-import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
-import 'package:finanalyzer/home/cubit/dashboard_cubit.dart';
-import 'package:finanalyzer/home/cubit/dashboard_state.dart';
-import 'package:finanalyzer/logging/services/log_service.dart';
-import 'package:finanalyzer/turnover/services/turnover_service.dart';
-import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
+import 'package:kashr/comdirect/comdirect_api.dart';
+import 'package:kashr/comdirect/comdirect_login_page.dart';
+import 'package:kashr/comdirect/comdirect_model.dart';
+import 'package:kashr/comdirect/comdirect_service.dart';
+import 'package:kashr/ingest/ingest.dart';
+import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
+import 'package:kashr/home/cubit/dashboard_cubit.dart';
+import 'package:kashr/home/cubit/dashboard_state.dart';
+import 'package:kashr/logging/services/log_service.dart';
+import 'package:kashr/turnover/services/turnover_service.dart';
+import 'package:kashr/turnover/services/turnover_matching_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

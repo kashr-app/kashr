@@ -1,10 +1,10 @@
-import 'package:finanalyzer/core/module.dart';
-import 'package:finanalyzer/savings/cubit/savings_cubit.dart';
-import 'package:finanalyzer/savings/listeners/savings_tag_listener.dart';
-import 'package:finanalyzer/savings/model/savings_repository.dart';
-import 'package:finanalyzer/savings/model/savings_virtual_booking_repository.dart';
-import 'package:finanalyzer/savings/services/savings_balance_service.dart';
-import 'package:finanalyzer/turnover/turnover_module.dart';
+import 'package:kashr/core/module.dart';
+import 'package:kashr/savings/cubit/savings_cubit.dart';
+import 'package:kashr/savings/listeners/savings_tag_listener.dart';
+import 'package:kashr/savings/model/savings_repository.dart';
+import 'package:kashr/savings/model/savings_virtual_booking_repository.dart';
+import 'package:kashr/savings/services/savings_balance_service.dart';
+import 'package:kashr/turnover/turnover_module.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';

@@ -1,5 +1,5 @@
-import 'package:finanalyzer/account/cubit/account_cubit.dart';
-import 'package:finanalyzer/account/cubit/account_state.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
+import 'package:kashr/account/cubit/account_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';

@@ -1,6 +1,6 @@
-import 'package:finanalyzer/core/currency.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:kashr/core/currency.dart';
+import 'package:kashr/turnover/cubit/turnover_tags_state.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
 
 /// Displays a status message about the tag allocation progress.

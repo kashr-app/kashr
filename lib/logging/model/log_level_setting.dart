@@ -1,4 +1,4 @@
-import 'package:finanalyzer/theme.dart';
+import 'package:kashr/theme.dart';
 import 'package:flutter/material.dart';
 
 enum LogLevelSetting {

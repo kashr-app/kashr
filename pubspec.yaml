@@ -1,5 +1,5 @@
-name: finanalyzer
-description: "A simple finances analyzer and planner."
+name: kashr
+description: "A personal finance app with a focus on privacy and open source."
 publish_to: 'none'
 
 # The following defines the version and build number for your application.

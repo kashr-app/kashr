@@ -1,7 +1,7 @@
-import 'package:finanalyzer/logging/model/log_level_setting.dart';
-import 'package:finanalyzer/logging/services/log_service.dart';
-import 'package:finanalyzer/settings/settings_repository.dart';
-import 'package:finanalyzer/settings/settings_state.dart';
+import 'package:kashr/logging/model/log_level_setting.dart';
+import 'package:kashr/logging/services/log_service.dart';
+import 'package:kashr/settings/settings_repository.dart';
+import 'package:kashr/settings/settings_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

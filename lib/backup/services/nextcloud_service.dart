@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:finanalyzer/backup/model/backup_config.dart';
-import 'package:finanalyzer/backup/model/backup_metadata.dart';
-import 'package:finanalyzer/backup/services/backup_service.dart';
-import 'package:finanalyzer/backup/services/webdav_client.dart';
+import 'package:kashr/backup/model/backup_config.dart';
+import 'package:kashr/backup/model/backup_metadata.dart';
+import 'package:kashr/backup/services/backup_service.dart';
+import 'package:kashr/backup/services/webdav_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 

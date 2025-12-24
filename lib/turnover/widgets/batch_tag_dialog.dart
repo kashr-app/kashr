@@ -1,5 +1,5 @@
-import 'package:finanalyzer/core/color_utils.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:kashr/core/color_utils.dart';
+import 'package:kashr/turnover/model/tag.dart';
 import 'package:flutter/material.dart';
 
 /// Mode for the batch tag dialog.

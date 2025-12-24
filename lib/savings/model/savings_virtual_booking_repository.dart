@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/decimal_json_converter.dart';
-import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/savings/model/savings_virtual_booking.dart';
+import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/db/db_helper.dart';
+import 'package:kashr/savings/model/savings_virtual_booking.dart';
 import 'package:uuid/uuid.dart';
 
 class SavingsVirtualBookingRepository {

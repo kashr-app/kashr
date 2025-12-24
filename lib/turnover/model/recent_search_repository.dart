@@ -1,5 +1,5 @@
-import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/turnover/model/recent_search.dart';
+import 'package:kashr/db/db_helper.dart';
+import 'package:kashr/turnover/model/recent_search.dart';
 import 'package:uuid/uuid.dart';
 
 /// Repository for managing recent search queries

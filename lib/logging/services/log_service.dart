@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:finanalyzer/logging/model/log_entry.dart';
-import 'package:finanalyzer/logging/model/log_level_setting.dart';
+import 'package:kashr/logging/model/log_entry.dart';
+import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart' as path;

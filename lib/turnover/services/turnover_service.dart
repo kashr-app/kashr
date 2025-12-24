@@ -1,7 +1,7 @@
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
-import 'package:finanalyzer/turnover/model/turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/turnover/model/turnover_repository.dart';
+import 'package:kashr/turnover/model/turnover_with_tag_turnovers.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 

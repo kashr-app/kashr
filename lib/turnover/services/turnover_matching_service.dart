@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
-import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/turnover/model/turnover_repository.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 

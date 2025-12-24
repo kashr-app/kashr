@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/cubit/transfers_state.dart';
-import 'package:finanalyzer/turnover/model/transfer_repository.dart';
-import 'package:finanalyzer/turnover/model/transfer_item.dart';
-import 'package:finanalyzer/turnover/model/transfers_filter.dart';
-import 'package:finanalyzer/turnover/services/transfer_service.dart';
+import 'package:kashr/core/status.dart';
+import 'package:kashr/turnover/cubit/transfers_state.dart';
+import 'package:kashr/turnover/model/transfer_repository.dart';
+import 'package:kashr/turnover/model/transfer_item.dart';
+import 'package:kashr/turnover/model/transfers_filter.dart';
+import 'package:kashr/turnover/services/transfer_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';

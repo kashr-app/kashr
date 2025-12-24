@@ -1,10 +1,10 @@
-import 'package:finanalyzer/account/cubit/account_cubit.dart';
-import 'package:finanalyzer/account/cubit/account_state.dart';
-import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
-import 'package:finanalyzer/turnover/cubit/tag_state.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
-import 'package:finanalyzer/turnover/widgets/tag_turnover_card.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
+import 'package:kashr/account/cubit/account_state.dart';
+import 'package:kashr/turnover/cubit/tag_cubit.dart';
+import 'package:kashr/turnover/cubit/tag_state.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/transfer_with_details.dart';
+import 'package:kashr/turnover/widgets/tag_turnover_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';

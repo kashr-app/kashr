@@ -1,23 +1,23 @@
 import 'dart:async';
 
-import 'package:finanalyzer/account/account_module.dart';
-import 'package:finanalyzer/backup/backup_module.dart';
-import 'package:finanalyzer/comdirect/comdirect_module.dart';
-import 'package:finanalyzer/core/app_lifecycle_listeners.dart';
-import 'package:finanalyzer/core/module.dart';
-import 'package:finanalyzer/core/restart_widget.dart';
-import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
-import 'package:finanalyzer/local_auth/local_auth_module.dart';
-import 'package:finanalyzer/logging/logging_module.dart';
-import 'package:finanalyzer/logging/model/log_level_setting.dart';
-import 'package:finanalyzer/logging/services/log_service.dart';
-import 'package:finanalyzer/savings/savings_module.dart';
-import 'package:finanalyzer/app_router.dart';
-import 'package:finanalyzer/settings/settings_cubit.dart';
-import 'package:finanalyzer/settings/settings_module.dart';
-import 'package:finanalyzer/settings/settings_state.dart';
-import 'package:finanalyzer/theme.dart';
-import 'package:finanalyzer/turnover/turnover_module.dart';
+import 'package:kashr/account/account_module.dart';
+import 'package:kashr/backup/backup_module.dart';
+import 'package:kashr/comdirect/comdirect_module.dart';
+import 'package:kashr/core/app_lifecycle_listeners.dart';
+import 'package:kashr/core/module.dart';
+import 'package:kashr/core/restart_widget.dart';
+import 'package:kashr/local_auth/cubit/local_auth_cubit.dart';
+import 'package:kashr/local_auth/local_auth_module.dart';
+import 'package:kashr/logging/logging_module.dart';
+import 'package:kashr/logging/model/log_level_setting.dart';
+import 'package:kashr/logging/services/log_service.dart';
+import 'package:kashr/savings/savings_module.dart';
+import 'package:kashr/app_router.dart';
+import 'package:kashr/settings/settings_cubit.dart';
+import 'package:kashr/settings/settings_module.dart';
+import 'package:kashr/settings/settings_state.dart';
+import 'package:kashr/theme.dart';
+import 'package:kashr/turnover/turnover_module.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -134,7 +134,7 @@ class _MyAppState extends State<MyApp> {
         child: BlocBuilder<SettingsCubit, SettingsState>(
           builder: (context, state) {
             return MaterialApp.router(
-              title: 'Finanalyzer',
+              title: 'Kashr',
               theme: lightMode,
               darkTheme: darkMode,
               themeMode: state.themeMode,

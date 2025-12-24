@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:finanalyzer/backup/model/backup_config.dart';
-import 'package:finanalyzer/backup/model/backup_metadata.dart';
-import 'package:finanalyzer/backup/model/backup_repository.dart';
-import 'package:finanalyzer/backup/services/archive_service.dart';
-import 'package:finanalyzer/backup/services/encryption_service.dart';
-import 'package:finanalyzer/backup/services/local_storage_service.dart';
-import 'package:finanalyzer/db/db_helper.dart';
+import 'package:kashr/backup/model/backup_config.dart';
+import 'package:kashr/backup/model/backup_metadata.dart';
+import 'package:kashr/backup/model/backup_repository.dart';
+import 'package:kashr/backup/services/archive_service.dart';
+import 'package:kashr/backup/services/encryption_service.dart';
+import 'package:kashr/backup/services/local_storage_service.dart';
+import 'package:kashr/db/db_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';

@@ -1,2 +1,2 @@
 #!/bin/bash
-adb exec-out run-as com.example.finanalyzer cat /data/data/com.example.finanalyzer/databases/app_database.db > app_database.db
+adb exec-out run-as app.kashr.kashr cat /data/data/app.kashr.kashr/databases/app_database.db > app_database.db

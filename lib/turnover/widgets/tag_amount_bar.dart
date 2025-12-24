@@ -1,6 +1,6 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 

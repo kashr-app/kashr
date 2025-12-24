@@ -1,7 +1,7 @@
-import 'package:finanalyzer/backup/cubit/backup_state.dart';
-import 'package:finanalyzer/backup/model/backup_config.dart';
-import 'package:finanalyzer/backup/model/backup_metadata.dart';
-import 'package:finanalyzer/backup/services/backup_service.dart';
+import 'package:kashr/backup/cubit/backup_state.dart';
+import 'package:kashr/backup/model/backup_config.dart';
+import 'package:kashr/backup/model/backup_metadata.dart';
+import 'package:kashr/backup/services/backup_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 

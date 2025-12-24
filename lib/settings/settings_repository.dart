@@ -1,5 +1,5 @@
-import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/settings/settings_state.dart';
+import 'package:kashr/db/db_helper.dart';
+import 'package:kashr/settings/settings_state.dart';
 
 class SettingsRepository {
   Future<SettingsState> loadAll() async {

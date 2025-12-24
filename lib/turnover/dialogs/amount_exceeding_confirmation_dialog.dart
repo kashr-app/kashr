@@ -1,5 +1,5 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/currency.dart';
+import 'package:kashr/core/currency.dart';
 import 'package:flutter/material.dart';
 
 enum AmountExceedingAction {

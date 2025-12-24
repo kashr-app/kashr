@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/decimal_json_converter.dart';
-import 'package:finanalyzer/core/uuid_json_converter.dart';
-import 'package:finanalyzer/core/bool_json_converter.dart';
+import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/uuid_json_converter.dart';
+import 'package:kashr/core/bool_json_converter.dart';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';

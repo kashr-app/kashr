@@ -1,10 +1,10 @@
 import 'dart:math';
 
-import 'package:finanalyzer/core/amount_dialog.dart';
-import 'package:finanalyzer/core/decimal_json_converter.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_tags_cubit.dart';
-import 'package:finanalyzer/turnover/cubit/turnover_tags_state.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:kashr/core/amount_dialog.dart';
+import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/turnover/cubit/turnover_tags_cubit.dart';
+import 'package:kashr/turnover/cubit/turnover_tags_state.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

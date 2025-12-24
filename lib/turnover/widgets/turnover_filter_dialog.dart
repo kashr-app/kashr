@@ -1,10 +1,10 @@
-import 'package:finanalyzer/core/widgets/period_selector.dart';
-import 'package:finanalyzer/turnover/cubit/tag_cubit.dart';
-import 'package:finanalyzer/turnover/cubit/tag_state.dart';
-import 'package:finanalyzer/turnover/dialogs/tag_picker_dialog.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
-import 'package:finanalyzer/turnover/model/turnover_filter.dart';
-import 'package:finanalyzer/turnover/model/year_month.dart';
+import 'package:kashr/core/widgets/period_selector.dart';
+import 'package:kashr/turnover/cubit/tag_cubit.dart';
+import 'package:kashr/turnover/cubit/tag_state.dart';
+import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
+import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/turnover/model/turnover_filter.dart';
+import 'package:kashr/turnover/model/year_month.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';

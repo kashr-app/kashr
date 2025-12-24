@@ -1,5 +1,5 @@
-import 'package:finanalyzer/backup/model/backup_config.dart';
-import 'package:finanalyzer/db/sqlite_compat.dart';
+import 'package:kashr/backup/model/backup_config.dart';
+import 'package:kashr/db/sqlite_compat.dart';
 
 /// Creates the full database schema at version 12.
 ///

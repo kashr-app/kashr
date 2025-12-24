@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:finanalyzer/db/migrations/schema_v12.dart';
-import 'package:finanalyzer/db/migrations/v13.dart';
-import 'package:finanalyzer/db/migrations/v14.dart';
-import 'package:finanalyzer/db/sqlite_compat.dart';
-import 'package:finanalyzer/logging/services/log_service.dart';
+import 'package:kashr/db/migrations/schema_v12.dart';
+import 'package:kashr/db/migrations/v13.dart';
+import 'package:kashr/db/migrations/v14.dart';
+import 'package:kashr/db/sqlite_compat.dart';
+import 'package:kashr/logging/services/log_service.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -63,7 +63,7 @@ class DatabaseHelper {
     final Directory appDocDir = await getApplicationDocumentsDirectory();
 
     // Construct databases directory path
-    // On Android: /data/data/com.example.finanalyzer/databases/
+    // On Android: /data/data/app.kashr.kashr/databases/
     // On iOS: <app documents parent>/databases/
     final String dbDir = join(appDocDir.parent.path, 'databases');
 

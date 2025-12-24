@@ -1,9 +1,9 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/amount_dialog.dart';
-import 'package:finanalyzer/core/currency.dart';
-import 'package:finanalyzer/core/decimal_json_converter.dart';
-import 'package:finanalyzer/savings/cubit/savings_cubit.dart';
-import 'package:finanalyzer/savings/model/savings.dart';
+import 'package:kashr/core/amount_dialog.dart';
+import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/savings/cubit/savings_cubit.dart';
+import 'package:kashr/savings/model/savings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

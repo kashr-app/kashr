@@ -1,4 +1,4 @@
-import 'package:finanalyzer/backup/services/backup_service.dart';
+import 'package:kashr/backup/services/backup_service.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/backup/model/backup_metadata.freezed.dart';

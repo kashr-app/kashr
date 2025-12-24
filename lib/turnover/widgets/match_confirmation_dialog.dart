@@ -1,6 +1,6 @@
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
-import 'package:finanalyzer/turnover/services/turnover_matching_service.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/turnover/services/turnover_matching_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
-import 'package:finanalyzer/backup/model/backup_metadata.dart';
+import 'package:kashr/backup/model/backup_metadata.dart';
 import 'package:logger/logger.dart';
 
 /// Contents extracted from a backup archive

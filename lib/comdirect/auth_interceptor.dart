@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:finanalyzer/comdirect/comdirect_model.dart';
-import 'package:finanalyzer/comdirect/cubit/comdirect_auth_cubit.dart';
+import 'package:kashr/comdirect/comdirect_model.dart';
+import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:logger/logger.dart';
 
 /// Dio interceptor that handles token refresh and authentication errors.

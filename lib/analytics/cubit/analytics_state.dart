@@ -1,6 +1,6 @@
-import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/core/status.dart';
+import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 

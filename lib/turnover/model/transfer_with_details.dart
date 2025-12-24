@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/transfer.dart';
-import 'package:finanalyzer/turnover/model/transfer_repository.dart';
+import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/transfer.dart';
+import 'package:kashr/turnover/model/transfer_repository.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/turnover/model/transfer_with_details.freezed.dart';

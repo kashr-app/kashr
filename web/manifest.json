@@ -1,6 +1,6 @@
 {
-    "name": "finanalyzer",
-    "short_name": "finanalyzer",
+    "name": "kashr",
+    "short_name": "kashr",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

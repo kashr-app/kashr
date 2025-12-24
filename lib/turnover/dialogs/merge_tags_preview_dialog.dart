@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/currency.dart';
-import 'package:finanalyzer/savings/model/savings.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
+import 'package:kashr/core/currency.dart';
+import 'package:kashr/savings/model/savings.dart';
+import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 
 /// Result of the merge preview dialog.

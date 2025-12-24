@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Finanalyzer Backup Decryption Tool
+Kashr Backup Decryption Tool
 
-This script decrypts encrypted Finanalyzer backup files (.finbak).
+This script decrypts encrypted Kashr backup files (.finbak).
 The encrypted backups use AES-256-GCM encryption with PBKDF2 key derivation.
 
 Usage:
@@ -92,7 +92,7 @@ def calculate_checksum(data: bytes) -> str:
 
 
 def extract_and_decrypt_backup(backup_file: str, password: str, output_dir: str = None):
-    """Extract and decrypt a Finanalyzer backup"""
+    """Extract and decrypt a Kashr backup"""
 
     backup_path = Path(backup_file)
     if not backup_path.exists():

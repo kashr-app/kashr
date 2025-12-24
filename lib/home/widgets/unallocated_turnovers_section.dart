@@ -1,10 +1,10 @@
-import 'package:finanalyzer/turnover/model/turnover_filter.dart';
-import 'package:finanalyzer/turnover/model/turnover_sort.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
-import 'package:finanalyzer/turnover/model/year_month.dart';
-import 'package:finanalyzer/turnover/turnover_tags_page.dart';
-import 'package:finanalyzer/turnover/turnovers_page.dart';
-import 'package:finanalyzer/turnover/widgets/turnover_card.dart';
+import 'package:kashr/turnover/model/turnover_filter.dart';
+import 'package:kashr/turnover/model/turnover_sort.dart';
+import 'package:kashr/turnover/model/turnover_with_tag_turnovers.dart';
+import 'package:kashr/turnover/model/year_month.dart';
+import 'package:kashr/turnover/turnover_tags_page.dart';
+import 'package:kashr/turnover/turnovers_page.dart';
+import 'package:kashr/turnover/widgets/turnover_card.dart';
 import 'package:flutter/material.dart';
 
 /// A section widget that displays unallocated turnovers requiring user attention.

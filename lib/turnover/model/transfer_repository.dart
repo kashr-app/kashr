@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/transfer.dart';
-import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
-import 'package:finanalyzer/turnover/model/transfers_filter.dart';
+import 'package:kashr/db/db_helper.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/transfer.dart';
+import 'package:kashr/turnover/model/transfer_with_details.dart';
+import 'package:kashr/turnover/model/transfers_filter.dart';
 import 'package:uuid/uuid.dart';
 
 /// Type of transfer item for pagination.

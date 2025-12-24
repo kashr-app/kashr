@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:finanalyzer/core/associate_by.dart';
-import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/cubit/tag_state.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
+import 'package:kashr/core/associate_by.dart';
+import 'package:kashr/core/status.dart';
+import 'package:kashr/turnover/cubit/tag_state.dart';
+import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';

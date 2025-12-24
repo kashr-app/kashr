@@ -1,7 +1,7 @@
-import 'package:finanalyzer/backup/model/backup_config.dart';
-import 'package:finanalyzer/backup/services/nextcloud_service.dart';
-import 'package:finanalyzer/core/secure_storage.dart';
-import 'package:finanalyzer/logging/services/log_service.dart';
+import 'package:kashr/backup/model/backup_config.dart';
+import 'package:kashr/backup/services/nextcloud_service.dart';
+import 'package:kashr/core/secure_storage.dart';
+import 'package:kashr/logging/services/log_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -20,7 +20,7 @@ class _NextcloudSettingsPageState extends State<NextcloudSettingsPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _backupPathController = TextEditingController(
-    text: '/Backups/Finanalyzer/',
+    text: '/Backups/Kashr/',
   );
 
   bool _isLoading = false;

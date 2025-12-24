@@ -2,7 +2,7 @@
 
 ## What this is
 
-This tool allows to decypt backup files of the Finanalyzer app.
+This tool allows to decypt backup files of the Kashr app.
 
 ## Instructions
 
@@ -63,4 +63,4 @@ Once decrypted, you can open the SQLite database with any SQLite viewer:
 
 ## License
 
-This encryption implementation is part of Finanalyzer and follows the same license.
+This encryption implementation is part of Kashr and follows the same license.

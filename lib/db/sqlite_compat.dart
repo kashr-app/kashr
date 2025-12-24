@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:isolate';
-import 'package:finanalyzer/db/database_isolate.dart';
+import 'package:kashr/db/database_isolate.dart';
 
 /// Async wrapper for sqlite3.Database that runs operations in background isolate.
 ///

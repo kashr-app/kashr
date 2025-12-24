@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/widgets/note_display.dart';
+import 'package:kashr/turnover/widgets/note_display.dart';
 import 'package:flutter/material.dart';
 
 /// A widget for displaying and editing a note.

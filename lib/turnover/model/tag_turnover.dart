@@ -1,7 +1,7 @@
-import 'package:finanalyzer/core/currency.dart';
-import 'package:finanalyzer/core/decimal_json_converter.dart';
-import 'package:finanalyzer/core/uuid_json_converter.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/uuid_json_converter.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:decimal/decimal.dart';

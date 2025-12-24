@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:finanalyzer/logging/log_viewer_state.dart';
-import 'package:finanalyzer/logging/model/log_level_setting.dart';
-import 'package:finanalyzer/logging/services/log_service.dart';
+import 'package:kashr/logging/log_viewer_state.dart';
+import 'package:kashr/logging/model/log_level_setting.dart';
+import 'package:kashr/logging/services/log_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 

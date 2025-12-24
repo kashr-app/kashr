@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/currency.dart';
-import 'package:finanalyzer/savings/model/savings.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:kashr/core/currency.dart';
+import 'package:kashr/savings/model/savings.dart';
+import 'package:kashr/turnover/model/tag.dart';
 import 'package:flutter/material.dart';
 
 /// A dialog for confirming savings deletion with clear implications.

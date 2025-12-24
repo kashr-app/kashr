@@ -1,10 +1,10 @@
-import 'package:finanalyzer/analytics/cubit/analytics_cubit.dart';
-import 'package:finanalyzer/analytics/cubit/analytics_state.dart';
-import 'package:finanalyzer/analytics/widgets/analytics_chart.dart';
-import 'package:finanalyzer/analytics/widgets/tag_filter_section.dart';
-import 'package:finanalyzer/home/home_page.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/analytics/cubit/analytics_cubit.dart';
+import 'package:kashr/analytics/cubit/analytics_state.dart';
+import 'package:kashr/analytics/widgets/analytics_chart.dart';
+import 'package:kashr/analytics/widgets/tag_filter_section.dart';
+import 'package:kashr/home/home_page.dart';
+import 'package:kashr/turnover/model/tag_repository.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';

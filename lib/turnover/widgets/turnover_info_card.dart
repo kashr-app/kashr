@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:finanalyzer/account/cubit/account_cubit.dart';
-import 'package:finanalyzer/account/cubit/account_state.dart';
-import 'package:finanalyzer/theme.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
+import 'package:kashr/account/cubit/account_state.dart';
+import 'package:kashr/theme.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

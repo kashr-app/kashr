@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:uuid/uuid.dart';
 
 /// Represents a change to turnovers in the repository.

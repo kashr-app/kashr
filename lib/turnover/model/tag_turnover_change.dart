@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:uuid/uuid.dart';
 
 /// Represents a change to tag turnovers in the repository.

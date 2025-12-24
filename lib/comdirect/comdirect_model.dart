@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:finanalyzer/core/secure_storage.dart';
-import 'package:finanalyzer/logging/services/log_service.dart';
+import 'package:kashr/core/secure_storage.dart';
+import 'package:kashr/logging/services/log_service.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:decimal/decimal.dart';
 import 'package:local_auth/local_auth.dart';

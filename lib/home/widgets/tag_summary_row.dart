@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/color_utils.dart';
-import 'package:finanalyzer/core/currency.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:kashr/core/color_utils.dart';
+import 'package:kashr/core/currency.dart';
+import 'package:kashr/turnover/model/tag.dart';
 import 'package:flutter/material.dart';
 
 /// A reusable row widget that displays a summary item (tag or unallocated)

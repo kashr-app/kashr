@@ -1,9 +1,9 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/model/tag_suggestion.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
+import 'package:kashr/core/status.dart';
+import 'package:kashr/turnover/model/tag_suggestion.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/transfer_with_details.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 

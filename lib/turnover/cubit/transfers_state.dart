@@ -1,6 +1,6 @@
-import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/model/transfer_item.dart';
-import 'package:finanalyzer/turnover/model/transfers_filter.dart';
+import 'package:kashr/core/status.dart';
+import 'package:kashr/turnover/model/transfer_item.dart';
+import 'package:kashr/turnover/model/transfers_filter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 

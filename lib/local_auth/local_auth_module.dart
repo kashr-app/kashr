@@ -1,6 +1,6 @@
-import 'package:finanalyzer/core/app_lifecycle_listeners.dart';
-import 'package:finanalyzer/core/module.dart';
-import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
+import 'package:kashr/core/app_lifecycle_listeners.dart';
+import 'package:kashr/core/module.dart';
+import 'package:kashr/local_auth/cubit/local_auth_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/single_child_widget.dart';

@@ -1,5 +1,5 @@
-import 'package:finanalyzer/turnover/model/tag_semantic_converter.dart';
-import 'package:finanalyzer/core/uuid_json_converter.dart';
+import 'package:kashr/turnover/model/tag_semantic_converter.dart';
+import 'package:kashr/core/uuid_json_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 

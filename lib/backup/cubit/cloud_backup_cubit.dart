@@ -1,9 +1,9 @@
-import 'package:finanalyzer/backup/cubit/cloud_backup_state.dart';
-import 'package:finanalyzer/backup/model/backup_config.dart';
-import 'package:finanalyzer/backup/model/backup_metadata.dart';
-import 'package:finanalyzer/backup/services/backup_service.dart';
-import 'package:finanalyzer/backup/services/nextcloud_service.dart';
-import 'package:finanalyzer/core/status.dart';
+import 'package:kashr/backup/cubit/cloud_backup_state.dart';
+import 'package:kashr/backup/model/backup_config.dart';
+import 'package:kashr/backup/model/backup_metadata.dart';
+import 'package:kashr/backup/services/backup_service.dart';
+import 'package:kashr/backup/services/nextcloud_service.dart';
+import 'package:kashr/core/status.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
@@ -76,7 +76,7 @@ class CloudBackupCubit extends Cubit<CloudBackupState> {
         url: url,
         username: username,
         passwordKey: 'nextcloud_password',
-        backupPath: path ?? '/Backups/Finanalyzer/',
+        backupPath: path ?? '/Backups/Kashr/',
       );
     } catch (e) {
       log.w('Failed to load Nextcloud config', error: e);

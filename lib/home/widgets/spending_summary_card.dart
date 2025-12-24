@@ -1,10 +1,10 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/home/widgets/turnover_summary_card.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
-import 'package:finanalyzer/turnover/model/turnover_filter.dart';
-import 'package:finanalyzer/turnover/model/year_month.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/turnovers_page.dart';
+import 'package:kashr/home/widgets/turnover_summary_card.dart';
+import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/turnover/model/turnover_filter.dart';
+import 'package:kashr/turnover/model/year_month.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
 
 /// A card widget that displays expenses summary with total and per-tag breakdown.

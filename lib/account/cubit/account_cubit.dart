@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/account/cubit/account_state.dart';
-import 'package:finanalyzer/account/services/balance_calculation_service.dart';
-import 'package:finanalyzer/core/associate_by.dart';
-import 'package:finanalyzer/core/status.dart';
+import 'package:kashr/account/cubit/account_state.dart';
+import 'package:kashr/account/services/balance_calculation_service.dart';
+import 'package:kashr/core/associate_by.dart';
+import 'package:kashr/core/status.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:collection/collection.dart';

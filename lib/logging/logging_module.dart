@@ -1,5 +1,5 @@
-import 'package:finanalyzer/core/module.dart';
-import 'package:finanalyzer/logging/services/log_service.dart';
+import 'package:kashr/core/module.dart';
+import 'package:kashr/logging/services/log_service.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 

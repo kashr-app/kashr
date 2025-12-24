@@ -1,5 +1,5 @@
-import 'package:finanalyzer/comdirect/comdirect_login_page.dart';
-import 'package:finanalyzer/home/home_page.dart';
+import 'package:kashr/comdirect/comdirect_login_page.dart';
+import 'package:kashr/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

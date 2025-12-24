@@ -1,10 +1,10 @@
-import 'package:finanalyzer/account/model/account.dart';
-import 'package:finanalyzer/theme.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
-import 'package:finanalyzer/turnover/widgets/tag_avatar.dart';
-import 'package:finanalyzer/turnover/widgets/transfer_issue_badge.dart';
+import 'package:kashr/account/model/account.dart';
+import 'package:kashr/theme.dart';
+import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/transfer_with_details.dart';
+import 'package:kashr/turnover/widgets/tag_avatar.dart';
+import 'package:kashr/turnover/widgets/transfer_issue_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid_value.dart';

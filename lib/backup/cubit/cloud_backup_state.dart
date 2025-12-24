@@ -1,5 +1,5 @@
-import 'package:finanalyzer/backup/model/backup_config.dart';
-import 'package:finanalyzer/core/status.dart';
+import 'package:kashr/backup/model/backup_config.dart';
+import 'package:kashr/core/status.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/backup/cubit/cloud_backup_state.freezed.dart';

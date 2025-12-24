@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
+import 'package:kashr/turnover/model/transfer_with_details.dart';
 import 'package:flutter/material.dart';
 
 /// Displays the status banner for a transfer (review warning or confirmed).

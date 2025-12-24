@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover_with_tag_turnovers.dart';
-import 'package:finanalyzer/turnover/model/year_month.dart';
+import 'package:kashr/core/status.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/turnover/model/turnover_with_tag_turnovers.dart';
+import 'package:kashr/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/home/cubit/dashboard_state.freezed.dart';

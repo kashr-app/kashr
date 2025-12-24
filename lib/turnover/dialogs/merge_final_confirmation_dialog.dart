@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag.dart';
 import 'package:flutter/material.dart';
 
 /// Final confirmation dialog before executing a tag merge.

@@ -1,14 +1,14 @@
 import 'dart:convert';
 
-import 'package:finanalyzer/comdirect/auth_interceptor.dart';
-import 'package:finanalyzer/comdirect/comdirect_api.dart';
+import 'package:kashr/comdirect/auth_interceptor.dart';
+import 'package:kashr/comdirect/comdirect_api.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:meta/meta.dart';
-import 'package:finanalyzer/comdirect/comdirect_auth_api.dart';
-import 'package:finanalyzer/comdirect/comdirect_model.dart';
+import 'package:kashr/comdirect/comdirect_auth_api.dart';
+import 'package:kashr/comdirect/comdirect_model.dart';
 import 'package:uuid/v4.dart';
 
 part 'comdirect_auth_state.dart';

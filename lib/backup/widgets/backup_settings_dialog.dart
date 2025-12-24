@@ -1,5 +1,5 @@
-import 'package:finanalyzer/backup/cubit/backup_cubit.dart';
-import 'package:finanalyzer/backup/model/backup_config.dart';
+import 'package:kashr/backup/cubit/backup_cubit.dart';
+import 'package:kashr/backup/model/backup_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

@@ -1,5 +1,5 @@
-import 'package:finanalyzer/turnover/model/recent_search.dart';
-import 'package:finanalyzer/turnover/model/recent_search_repository.dart';
+import 'package:kashr/turnover/model/recent_search.dart';
+import 'package:kashr/turnover/model/recent_search_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

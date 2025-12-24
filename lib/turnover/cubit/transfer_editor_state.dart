@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/model/transfer_with_details.dart';
+import 'package:kashr/turnover/model/transfer_with_details.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/turnover/cubit/transfer_editor_state.freezed.dart';

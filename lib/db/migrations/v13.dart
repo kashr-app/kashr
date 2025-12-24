@@ -1,4 +1,4 @@
-import 'package:finanalyzer/db/sqlite_compat.dart';
+import 'package:kashr/db/sqlite_compat.dart';
 
 Future<void> v13(SqliteDatabase db) async {
   await db.execute('''

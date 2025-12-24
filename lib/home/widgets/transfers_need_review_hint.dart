@@ -1,5 +1,5 @@
-import 'package:finanalyzer/turnover/model/transfers_filter.dart';
-import 'package:finanalyzer/turnover/transfers_page.dart';
+import 'package:kashr/turnover/model/transfers_filter.dart';
+import 'package:kashr/turnover/transfers_page.dart';
 import 'package:flutter/material.dart';
 
 /// Hint shown on dashboard when transfers need user review.

@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/model/year_month.dart';
+import 'package:kashr/turnover/model/year_month.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

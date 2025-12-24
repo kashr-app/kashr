@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/model/tag_turnover_sort.dart';
+import 'package:kashr/turnover/model/tag_turnover_sort.dart';
 import 'package:flutter/material.dart';
 
 /// Dialog for editing tag turnover sort options.

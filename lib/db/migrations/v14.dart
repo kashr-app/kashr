@@ -1,4 +1,4 @@
-import 'package:finanalyzer/db/sqlite_compat.dart';
+import 'package:kashr/db/sqlite_compat.dart';
 
 /// Migration v14: Add transfer tracking and TagTurnover full text search
 ///

@@ -1,7 +1,7 @@
-import 'package:finanalyzer/local_auth/cubit/local_auth_cubit.dart';
-import 'package:finanalyzer/home/home_page.dart' as home;
-import 'package:finanalyzer/main.dart';
-import 'package:finanalyzer/local_auth/local_auth_login_page.dart'
+import 'package:kashr/local_auth/cubit/local_auth_cubit.dart';
+import 'package:kashr/home/home_page.dart' as home;
+import 'package:kashr/main.dart';
+import 'package:kashr/local_auth/local_auth_login_page.dart'
     as local_auth;
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';

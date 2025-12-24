@@ -1,4 +1,4 @@
-import 'package:finanalyzer/turnover/model/tag_suggestion.dart';
+import 'package:kashr/turnover/model/tag_suggestion.dart';
 import 'package:flutter/material.dart';
 
 /// Widget displaying a horizontal scrollable row of tag suggestions.

@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:finanalyzer/core/associate_by.dart';
-import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:kashr/core/associate_by.dart';
+import 'package:kashr/db/db_helper.dart';
+import 'package:kashr/turnover/model/tag.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 

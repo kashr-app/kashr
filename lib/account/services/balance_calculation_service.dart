@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/account/model/account.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/turnover_repository.dart';
+import 'package:kashr/account/model/account.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/turnover/model/turnover_repository.dart';
 
 class BalanceCalculationService {
   final TurnoverRepository _turnoverRepository;

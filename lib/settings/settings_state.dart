@@ -1,5 +1,5 @@
-import 'package:finanalyzer/core/bool_json_converter.dart';
-import 'package:finanalyzer/logging/model/log_level_setting.dart';
+import 'package:kashr/core/bool_json_converter.dart';
+import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 

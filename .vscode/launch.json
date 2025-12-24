@@ -5,18 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "finanalyzer",
+            "name": "kashr",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "finanalyzer (profile mode)",
+            "name": "kashr (profile mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "finanalyzer (release mode)",
+            "name": "kashr (release mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

@@ -1,5 +1,5 @@
-import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
+import 'package:kashr/core/status.dart';
+import 'package:kashr/turnover/model/tag.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 

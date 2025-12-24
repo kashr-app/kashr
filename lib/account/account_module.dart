@@ -1,8 +1,8 @@
-import 'package:finanalyzer/account/cubit/account_cubit.dart';
-import 'package:finanalyzer/account/model/account_repository.dart';
-import 'package:finanalyzer/account/services/balance_calculation_service.dart';
-import 'package:finanalyzer/core/module.dart';
-import 'package:finanalyzer/turnover/turnover_module.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
+import 'package:kashr/account/model/account_repository.dart';
+import 'package:kashr/account/services/balance_calculation_service.dart';
+import 'package:kashr/core/module.dart';
+import 'package:kashr/turnover/turnover_module.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';

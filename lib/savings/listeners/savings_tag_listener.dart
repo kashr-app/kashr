@@ -1,7 +1,7 @@
-import 'package:finanalyzer/savings/cubit/savings_cubit.dart';
-import 'package:finanalyzer/savings/savings_detail_page.dart';
-import 'package:finanalyzer/turnover/model/tag.dart';
-import 'package:finanalyzer/turnover/turnover_module.dart';
+import 'package:kashr/savings/cubit/savings_cubit.dart';
+import 'package:kashr/savings/savings_detail_page.dart';
+import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/turnover_module.dart';
 import 'package:flutter/material.dart';
 
 /// Listens to tag deletion events and blocks deletion if the tag has

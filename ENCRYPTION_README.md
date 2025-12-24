@@ -1,10 +1,10 @@
-# Finanalyzer Backup Encryption
+# Kashr Backup Encryption
 
 This document explains how the backup encryption feature works and how to decrypt backups outside the app.
 
 ## Overview
 
-Finanalyzer backups can be encrypted using AES-256-GCM encryption with PBKDF2 key derivation. This provides strong protection for your financial data when stored locally or in the cloud.
+Kashr backups can be encrypted using AES-256-GCM encryption with PBKDF2 key derivation. This provides strong protection for your financial data when stored locally or in the cloud.
 
 ## Encryption Details
 
@@ -122,4 +122,4 @@ This means the decryption succeeded but the data doesn't match the expected chec
 
 ## License
 
-This encryption implementation is part of Finanalyzer and follows the same license.
+This encryption implementation is part of Kashr and follows the same license.

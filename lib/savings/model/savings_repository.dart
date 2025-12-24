@@ -1,5 +1,5 @@
-import 'package:finanalyzer/db/db_helper.dart';
-import 'package:finanalyzer/savings/model/savings.dart';
+import 'package:kashr/db/db_helper.dart';
+import 'package:kashr/savings/model/savings.dart';
 import 'package:uuid/uuid.dart';
 
 class SavingsRepository {

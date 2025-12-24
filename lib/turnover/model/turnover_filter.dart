@@ -1,6 +1,6 @@
-import 'package:finanalyzer/core/uuid_json_converter.dart';
-import 'package:finanalyzer/turnover/model/turnover.dart';
-import 'package:finanalyzer/turnover/model/year_month.dart';
+import 'package:kashr/core/uuid_json_converter.dart';
+import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 

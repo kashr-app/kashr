@@ -1,8 +1,8 @@
-import 'package:finanalyzer/turnover/cubit/transfer_editor_state.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
-import 'package:finanalyzer/turnover/model/transfer_repository.dart';
-import 'package:finanalyzer/turnover/services/transfer_service.dart'
+import 'package:kashr/turnover/cubit/transfer_editor_state.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/turnover/model/transfer_repository.dart';
+import 'package:kashr/turnover/services/transfer_service.dart'
     show TransferService, TransferLinkConflict;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';

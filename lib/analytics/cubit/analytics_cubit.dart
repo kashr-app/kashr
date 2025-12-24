@@ -1,9 +1,9 @@
 import 'dart:developer' as developer;
 
-import 'package:finanalyzer/analytics/cubit/analytics_state.dart';
-import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/turnover/model/tag_repository.dart';
-import 'package:finanalyzer/turnover/model/tag_turnover_repository.dart';
+import 'package:kashr/analytics/cubit/analytics_state.dart';
+import 'package:kashr/core/status.dart';
+import 'package:kashr/turnover/model/tag_repository.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 

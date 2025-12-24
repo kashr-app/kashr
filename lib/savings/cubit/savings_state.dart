@@ -1,6 +1,6 @@
 import 'package:decimal/decimal.dart';
-import 'package:finanalyzer/core/status.dart';
-import 'package:finanalyzer/savings/model/savings.dart';
+import 'package:kashr/core/status.dart';
+import 'package:kashr/savings/model/savings.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 
