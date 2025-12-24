@@ -442,10 +442,10 @@ class TransferRepository {
   /// Includes both:
   /// - Invalid Transfer entities (from [countTransferIds])
   /// - Unlinked tagTurnovers with transfer semantic (from [countUnlinkedTransferTagTurnoverIds])
-  Future<int> countTransfersNeedingReview({
-    TransfersFilter filter = TransfersFilter.empty,
-  }) async {
-    final needReviewCount = await countTransferIds(filter: filter);
+  Future<int> countTransfersNeedingReview() async {
+    final needReviewCount = await countTransferIds(
+      filter: TransfersFilter(needsReviewOnly: true),
+    );
     final unlinkedTTCount = await countUnlinkedTransferTagTurnoverIds();
     return needReviewCount + unlinkedTTCount;
   }
