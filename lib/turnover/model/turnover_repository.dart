@@ -403,6 +403,11 @@ class TurnoverRepository {
       whereArgs.add(sanitizeFts5Query(filter.searchQuery!));
     }
 
+    if (filter.accountId != null) {
+      whereClauses.add('t.account_id = ?');
+      whereArgs.add(filter.accountId!.uuid);
+    }
+
     // Tag filter - turnovers must have ALL specified tags
     if (filter.tagIds != null && filter.tagIds!.isNotEmpty) {
       // For each tag, ensure the turnover has a tag_turnover entry with that tagId
