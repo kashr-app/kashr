@@ -4,7 +4,7 @@ This document explains how the backup encryption feature works and how to decryp
 
 ## Overview
 
-Kashr backups can be encrypted using AES-256-GCM encryption with PBKDF2 key derivation. This provides strong protection for your financial data when stored locally or in the cloud.
+Kashr backups can be encrypted to provide strong protection for your financial data when stored locally or in the cloud.
 
 ## Encryption Details
 

@@ -3,7 +3,7 @@
 Kashr Backup Decryption Tool
 
 This script decrypts encrypted Kashr backup files (.kasbak).
-The encrypted backups use AES-256-GCM encryption with PBKDF2 key derivation.
+The encrypted backups use AES-256-GCM encryption with Argon2id key derivation.
 
 Usage:
     python decrypt_backup.py <backup_file.kasbak> [output directory]

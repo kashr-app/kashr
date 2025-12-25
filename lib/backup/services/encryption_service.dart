@@ -119,7 +119,6 @@ Future<Uint8List> _decrypt(
 }
 
 /// Service for encrypting and decrypting backup files
-/// Uses AES-256-GCM with PBKDF2 key derivation
 class EncryptionService {
   final Logger log;
 
