@@ -81,7 +81,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ListTile(
                         leading: const Icon(Icons.brightness_6),
                         title: const Text("Theme Mode"),
-                        subtitle: Text(state.themeMode.name),
+                        subtitle: Text(state.themeMode.title()),
                         onTap: () async {
                           final newValue = await _showThemeSelectionDialog(
                             context,
@@ -220,21 +220,21 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               ListTile(
                 leading: const Icon(Icons.brightness_6),
-                title: const Text("System"),
+                title: Text(ThemeMode.system.title()),
                 onTap: () {
                   Navigator.pop(context, ThemeMode.system);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.light_mode),
-                title: const Text("Light"),
+                title: Text(ThemeMode.light.title()),
                 onTap: () {
                   Navigator.pop(context, ThemeMode.light);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.dark_mode),
-                title: const Text("Dark"),
+                title: Text(ThemeMode.dark.title()),
                 onTap: () {
                   Navigator.pop(context, ThemeMode.dark);
                 },
@@ -312,4 +312,12 @@ class _SettingsHeadline extends StatelessWidget {
       child: Text(label, style: Theme.of(context).textTheme.labelMedium),
     );
   }
+}
+
+extension ThemeModeTitle on ThemeMode {
+  String title() => switch (this) {
+    ThemeMode.system => 'System',
+    ThemeMode.light => 'Light',
+    ThemeMode.dark => 'Dark',
+  };
 }
