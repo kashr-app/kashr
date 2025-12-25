@@ -267,177 +267,198 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-              Text('Log Turnover', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text(
-                'Account: ${widget.account.name}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  InkWell(
-                    onTap: _selectAmount,
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: 'Amount',
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: _amountError != null
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.outline,
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('Log Transaction', style: theme.textTheme.titleLarge),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Account: ${widget.account.name}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: _amountError != null
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.outline,
-                          ),
-                        ),
-                        suffixIcon: const Icon(Icons.edit),
-                      ),
-                      child: Text(
-                        _amountScaled != null
-                            ? _formatAmount(_amountScaled!)
-                            : 'Tap to enter amount',
-                        style: _amountScaled == null
-                            ? theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                  if (_amountError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 12, top: 4),
-                      child: Text(
-                        _amountError!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.error,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  InkWell(
-                    onTap: _selectTag,
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: 'Tag',
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: _tagError != null
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.outline,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: _tagError != null
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.outline,
-                          ),
-                        ),
-                        suffixIcon: const Icon(Icons.arrow_drop_down),
-                      ),
-                      child: _selectedTag != null
-                          ? Row(
-                              children: [
-                                TagAvatar(tag: _selectedTag!, radius: 12),
-                                const SizedBox(width: 8),
-                                Text(_selectedTag!.name),
-                              ],
-                            )
-                          : Text(
-                              'Tap to select tag',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                        const SizedBox(height: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            InkWell(
+                              onTap: _selectAmount,
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'Amount',
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: _amountError != null
+                                          ? theme.colorScheme.error
+                                          : theme.colorScheme.outline,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: _amountError != null
+                                          ? theme.colorScheme.error
+                                          : theme.colorScheme.outline,
+                                    ),
+                                  ),
+                                  suffixIcon: const Icon(Icons.edit),
+                                ),
+                                child: Text(
+                                  _amountScaled != null
+                                      ? _formatAmount(_amountScaled!)
+                                      : 'Tap to enter amount',
+                                  style: _amountScaled == null
+                                      ? theme.textTheme.bodyMedium?.copyWith(
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        )
+                                      : null,
+                                ),
                               ),
                             ),
-                    ),
-                  ),
-                  if (_tagError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 12, top: 4),
-                      child: Text(
-                        _tagError!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.error,
+                            if (_amountError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 12,
+                                  top: 4,
+                                ),
+                                child: Text(
+                                  _amountError!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            InkWell(
+                              onTap: _selectTag,
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'Tag',
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: _tagError != null
+                                          ? theme.colorScheme.error
+                                          : theme.colorScheme.outline,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: _tagError != null
+                                          ? theme.colorScheme.error
+                                          : theme.colorScheme.outline,
+                                    ),
+                                  ),
+                                  suffixIcon: const Icon(Icons.arrow_drop_down),
+                                ),
+                                child: _selectedTag != null
+                                    ? Row(
+                                        children: [
+                                          TagAvatar(
+                                            tag: _selectedTag!,
+                                            radius: 12,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(_selectedTag!.name),
+                                        ],
+                                      )
+                                    : Text(
+                                        'Tap to select tag',
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                              ),
+                            ),
+                            if (_tagError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 12,
+                                  top: 4,
+                                ),
+                                child: Text(
+                                  _tagError!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _counterpartController,
+                          focusNode: _counterpartFocusNode,
+                          decoration: const InputDecoration(
+                            labelText: 'Counterpart (optional)',
+                            border: OutlineInputBorder(),
+                            hintText: 'e.g., Store name, Person',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _noteController,
+                          focusNode: _noteFocusNode,
+                          decoration: const InputDecoration(
+                            labelText: 'Note (optional)',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 16),
+                        InkWell(
+                          onTap: _selectDate,
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Date',
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.calendar_today),
+                            ),
+                            child: Text(
+                              '${_selectedDate.day.toString().padLeft(2, '0')}.${_selectedDate.month.toString().padLeft(2, '0')}.${_selectedDate.year}',
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _counterpartController,
-                focusNode: _counterpartFocusNode,
-                decoration: const InputDecoration(
-                  labelText: 'Counterpart (optional)',
-                  border: OutlineInputBorder(),
-                  hintText: 'e.g., Store name, Person',
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _noteController,
-                focusNode: _noteFocusNode,
-                decoration: const InputDecoration(
-                  labelText: 'Note (optional)',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: _selectDate,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Date',
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(
-                    '${_selectedDate.day.toString().padLeft(2, '0')}.${_selectedDate.month.toString().padLeft(2, '0')}.${_selectedDate.year}',
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text('Save'),
-              ),
-            ],
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save'),
+                ),
+              ],
             ),
           ),
         ),
