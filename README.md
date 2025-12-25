@@ -1,8 +1,12 @@
+<p align="center">
+<img src="assets/logo-transparent.svg" width="300" title="Kashr Logo">
+</p>
+
 # Kashr - Catch Your Cash
 
-A personal finance app with a focus on privacy and open source.
+**Personal finance app with a focus on privacy and open source**
 
-Kashr, derived from the German word *'Kescher'* (pronounced *Késcher* like cash-er), means landing net. It's open like open source software, but your privacy and data? They won't slip through! Plus, it's perfect for catching where your money goes. Oh, and it sounds like "cash" - pure coincidence, of course. :p
+Kashr, derived from the German word *'Kescher'* (pronounced *Késcher* like cash-er), means landing net. It's open like open source software, but your privacy and data? They won't slip through! Plus, it's perfect for catching where your money goes. Oh, and it sounds like "cashier" - pure coincidence, of course. :p
 
 **Status**: EARLY ACCESS
 
