@@ -122,6 +122,7 @@ class AccountCubit extends Cubit<AccountState> {
       // Update the account with new opening balance
       final updatedAccount = account.copyWith(
         openingBalance: newOpeningBalance,
+        openingBalanceDate: DateTime.now(),
       );
 
       await _accountRepository.updateAccount(updatedAccount);

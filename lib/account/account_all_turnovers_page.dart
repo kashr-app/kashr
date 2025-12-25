@@ -113,12 +113,10 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
 
       final newItems = await _turnoverService.getTurnoversWithTags(turnovers);
 
-      final endIndex = (_currentOffset + _pageSize).clamp(0, turnovers.length);
-
       setState(() {
         _items.addAll(newItems);
-        _currentOffset = endIndex;
-        _hasMore = endIndex < turnovers.length;
+        _currentOffset += turnovers.length;
+        _hasMore = turnovers.length >= _pageSize;
         _isLoading = false;
       });
     } catch (error, stackTrace) {
@@ -151,8 +149,8 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
       builder: (context) => AlertDialog(
         title: const Text('Opening Balance'),
         content: const Text(
-          'This is the initial balance of the account when it was created. '
-          'All turnovers are calculated from this starting point.',
+          'The opening balance is calculated as your current account balance minus the sum of all transactions on the account.'
+          ' The date states when it was last re-calculated, typically when the current balance is updated (e.g. during sync).',
         ),
         actions: [
           TextButton(
@@ -276,7 +274,7 @@ class _AccountAllTurnoversPageState extends State<AccountAllTurnoversPage> {
                     ),
                     if (_openingBalanceDate != null)
                       Text(
-                        'As of ${_formatDate(_openingBalanceDate!)}',
+                        'Modified at ${_formatDate(_openingBalanceDate!)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                   ],
