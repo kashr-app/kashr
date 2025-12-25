@@ -1,5 +1,5 @@
 <p align="center">
-<img src="assets/logo-transparent.svg" width="300" title="Kashr Logo">
+<img src="assets/logo-light.png" width="300" title="Kashr Logo">
 </p>
 
 # Kashr - Catch Your Cash
