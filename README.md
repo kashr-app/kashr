@@ -66,6 +66,14 @@ Kashr, derived from the German word *'Kescher'* (pronounced *Késcher* like cas
 | macos       | not planned |
 | windows     | not planned |
 
+
+## Translations
+
+| Language    | Status     |
+| ----------- | ---------- |
+| English     |    ✅      |
+| Other       | planned    |
+
 ## Core Features
 
 ### Account Management
