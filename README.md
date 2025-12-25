@@ -54,6 +54,18 @@ Kashr, derived from the German word *'Kescher'* (pronounced *Késcher* like cas
 - Cannot execute transactions via the app (not planned, it is a pure analytical app)
 - known bugs: see issue tracker
 
+
+## Supported Platforms
+
+| Platform    | Supported   |
+| ----------- | ----------- |
+| Android     |     ✅      |
+| iOS         | planned     |
+| web         | maybe       |
+| linux       | not planned |
+| macos       | not planned |
+| windows     | not planned |
+
 ## Core Features
 
 ### Account Management
