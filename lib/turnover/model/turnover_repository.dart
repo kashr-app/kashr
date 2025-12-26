@@ -235,7 +235,7 @@ class TurnoverRepository {
       )
       ''', whereArgs);
 
-    return decimalUnscale(result.first['total'] as int)!;
+    return decimalUnscale(result.first['total'] as int? ?? 0)!;
   }
 
   /// Fetches unallocated turnovers for a specific month and year.
@@ -312,7 +312,7 @@ class TurnoverRepository {
         $whereClause
       ''', whereArgs);
 
-    return decimalUnscale(maps.first['total'] as int)!;
+    return decimalUnscale(maps.first['total'] as int? ?? 0)!;
   }
 
   /// Returns the ids of turnovers that are unmatched.
