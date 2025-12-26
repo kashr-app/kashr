@@ -115,20 +115,6 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                           items: [
                             DropdownMenuItem(value: null, child: Text("All")),
                             DropdownMenuItem(
-                              value: TurnoverSign.expense,
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.arrow_downward,
-                                    color: Colors.red,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text('Expense'),
-                                ],
-                              ),
-                            ),
-                            DropdownMenuItem(
                               value: TurnoverSign.income,
                               child: Row(
                                 children: [
@@ -139,6 +125,20 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                                   ),
                                   const SizedBox(width: 8),
                                   const Text('Income'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: TurnoverSign.expense,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.arrow_downward,
+                                    color: Colors.red,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Expense'),
                                 ],
                               ),
                             ),
