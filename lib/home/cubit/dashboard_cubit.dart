@@ -335,7 +335,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     final pendingTurnovers = await _tagTurnoverRepository.getUnmatched();
     final count = pendingTurnovers.length;
     final totalAmount = pendingTurnovers
-        .map((tt) => tt.amountValue)
+        .map((tt) => tt.amountValue.abs())
         .fold(Decimal.zero, (sum, amount) => sum + amount);
     return (count, totalAmount);
   }
