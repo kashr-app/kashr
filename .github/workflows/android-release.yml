@@ -119,35 +119,42 @@ jobs:
           name: kashr-${{ needs.build.outputs.release_tag }}-release-apk
           path: release
 
-      - name: Create build information header
-        id: header
+      - name: Generate release notes
+        id: notes
         run: |
-          cat > release_header.md << EOF
-          ### 📦 Build Information
-          - **Version:** ${{ needs.build.outputs.version_name }}
-          - **Build Number:** ${{ needs.build.outputs.version_code }}
-          - **Flutter Version:** ${{ needs.build.outputs.flutter_version }}
-          - **Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          # Generate release notes using GitHub CLI
+          gh api repos/${{ github.repository }}/releases/generate-notes \
+            -f tag_name="${{ needs.build.outputs.release_tag }}" \
+            -q .body > auto_notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          ### 📥 Installation
-          Download the APK file below and install it on your Android device.
-
-          **Note:** You may need to enable "Install from Unknown Sources" in your device settings.
+      - name: Create release notes footer
+        id: footer
+        run: |
+          cat > release_footer.md << EOF
 
           ---
 
+          ## 📥 Installation
+          Download the APK file below and install it on your Android device.
+
+          **Note:** You may need to enable "Install from Unknown Sources" in your device settings.
           EOF
+
+      - name: Combine notes and footer
+        run: |
+          cat auto_notes.md release_footer.md > final_body.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.build.outputs.release_tag }}
           name: Kashr ${{ needs.build.outputs.release_tag }}
-          body_path: release_header.md
+          body_path: final_body.md
           files: |
-            release/kashr-${{ needs.build.outputs.release_tag }}-release.apk
+            release/kashr-${{ needs.build.outputs.release_tag }}-${{ needs.build.outputs.version_code }}-release.apk
           draft: false
           prerelease: false
-          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
