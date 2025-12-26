@@ -1,0 +1,115 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: false
+
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+  build-and-release:
+    name: Build and Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read Flutter version from .fvmrc
+        id: fvm
+        run: |
+          FLUTTER_VERSION=$(cat .fvmrc | grep -o '"flutter"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)".*/\1/')
+          echo "flutter_version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+          echo "Using Flutter version: $FLUTTER_VERSION"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.fvm.outputs.flutter_version }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze code
+        run: flutter analyze
+        continue-on-error: true
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Extract version from pubspec.yaml
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//' | tr -d '\r')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_name=$(echo $VERSION | cut -d'+' -f1)" >> $GITHUB_OUTPUT
+          echo "version_code=$(echo $VERSION | cut -d'+' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=v${{ steps.version.outputs.version_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rename APK
+        run: |
+          mkdir -p release
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             release/kashr-${{ steps.tag.outputs.tag }}-release.apk
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          chmod +x .github/scripts/generate-release-notes.sh
+          .github/scripts/generate-release-notes.sh \
+            "${{ steps.version.outputs.version_name }}" \
+            "${{ steps.version.outputs.version_code }}" \
+            "${{ steps.fvm.outputs.flutter_version }}"
+          echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Kashr ${{ steps.tag.outputs.tag }}
+          body_path: release_notes.md
+          files: |
+            release/kashr-${{ steps.tag.outputs.tag }}-release.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kashr-${{ steps.tag.outputs.tag }}-release-apk
+          path: release/kashr-${{ steps.tag.outputs.tag }}-release.apk
+          retention-days: 30
