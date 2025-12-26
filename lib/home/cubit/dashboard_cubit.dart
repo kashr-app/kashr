@@ -48,6 +48,8 @@ class DashboardCubit extends Cubit<DashboardState> {
     this.log,
   ) : super(
         DashboardState(
+          status: Status.initial,
+          bankDownloadStatus: Status.initial,
           selectedPeriod: YearMonth.now(),
           totalIncome: Decimal.zero,
           totalExpenses: Decimal.zero,
@@ -55,7 +57,12 @@ class DashboardCubit extends Cubit<DashboardState> {
           unallocatedIncome: Decimal.zero,
           unallocatedExpenses: Decimal.zero,
           firstUnallocatedTurnover: null,
-          unallocatedCount: 0,
+          incomeTagSummaries: [],
+          expenseTagSummaries: [],
+          transferTagSummaries: [],
+          unallocatedCountInPeriod: 0,
+          unallocatedCountTotal: 0,
+          unallocatedSumTotal: Decimal.zero,
           pendingCount: 0,
           pendingTotalAmount: Decimal.zero,
           transfersNeedingReviewCount: 0,
@@ -212,8 +219,12 @@ class DashboardCubit extends Cubit<DashboardState> {
             firstUnallocatedTurnovers,
           )).firstOrNull;
 
-      final unallocatedCount = await _turnoverRepository
-          .countUnallocatedTurnoversForMonth(state.selectedPeriod);
+      final unallocatedCountInPeriod = await _turnoverRepository
+          .countUnallocatedTurnovers(yearMonth: state.selectedPeriod);
+      final unallocatedCountTotal = await _turnoverRepository
+          .countUnallocatedTurnovers();
+      final unallocatedSumTotal = await _turnoverRepository
+          .sumUnallocatedTurnovers();
 
       // Fetch tag turnovers for correct total calculation
       final startDate = state.selectedPeriod.toDateTime();
@@ -300,7 +311,9 @@ class DashboardCubit extends Cubit<DashboardState> {
           expenseTagSummaries: expenseTagSummaries,
           transferTagSummaries: transferTagSummaries,
           firstUnallocatedTurnover: firstUnallocatedTurnover,
-          unallocatedCount: unallocatedCount,
+          unallocatedCountInPeriod: unallocatedCountInPeriod,
+          unallocatedCountTotal: unallocatedCountTotal,
+          unallocatedSumTotal: unallocatedSumTotal,
           pendingCount: pendingCount,
           pendingTotalAmount: pendingTotalAmount,
           transfersNeedingReviewCount: transfersNeedingReviewCount,

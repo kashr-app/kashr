@@ -6,13 +6,12 @@ import 'package:kashr/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/home/cubit/dashboard_state.freezed.dart';
-part '../../_gen/home/cubit/dashboard_state.g.dart';
 
 @freezed
 abstract class DashboardState with _$DashboardState {
   const factory DashboardState({
-    @Default(Status.initial) Status status,
-    @Default(Status.initial) Status bankDownloadStatus,
+    required Status status,
+    required Status bankDownloadStatus,
     required YearMonth selectedPeriod,
     required Decimal totalIncome,
     required Decimal totalExpenses,
@@ -23,40 +22,17 @@ abstract class DashboardState with _$DashboardState {
     required Decimal pendingTotalAmount,
     required int tagTurnoverCount,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(includeFromJson: false, includeToJson: false)
-    @Default([])
-    List<TagSummary> incomeTagSummaries,
+    required List<TagSummary> incomeTagSummaries,
+    required List<TagSummary> expenseTagSummaries,
+    required List<TagSummary> transferTagSummaries,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(includeFromJson: false, includeToJson: false)
-    @Default([])
-    List<TagSummary> expenseTagSummaries,
+    required TurnoverWithTagTurnovers? firstUnallocatedTurnover,
+    required int unallocatedCountInPeriod,
+    required int unallocatedCountTotal,
+    required Decimal unallocatedSumTotal,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(includeFromJson: false, includeToJson: false)
-    @Default([])
-    List<TagSummary> transferTagSummaries,
+    required int transfersNeedingReviewCount,
 
-    // ignore: invalid_annotation_target
-    @JsonKey(includeFromJson: false, includeToJson: false)
-    @Default(null)
-    TurnoverWithTagTurnovers? firstUnallocatedTurnover,
-
-    // ignore: invalid_annotation_target
-    @JsonKey(includeFromJson: false, includeToJson: false)
-    @Default(0)
-    int unallocatedCount,
-
-    // ignore: invalid_annotation_target
-    @JsonKey(includeFromJson: false, includeToJson: false)
-    @Default(0)
-    int transfersNeedingReviewCount,
-
-    // ignore: invalid_annotation_target
-    @JsonKey(includeFromJson: false, includeToJson: false) String? errorMessage,
+    String? errorMessage,
   }) = _DashboardState;
-
-  factory DashboardState.fromJson(Map<String, dynamic> json) =>
-      _$DashboardStateFromJson(json);
 }

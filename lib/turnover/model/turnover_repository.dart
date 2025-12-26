@@ -160,37 +160,82 @@ class TurnoverRepository {
     return result.map(Turnover.fromJson).toList();
   }
 
-  /// Counts unallocated turnovers for a specific month and year.
+  /// Counts unallocated turnovers.
   /// A turnover is considered unallocated if:
   /// - It has no tag_turnover entries, OR
   /// - The sum of tag_turnover amounts doesn't equal the turnover amount
-  Future<int> countUnallocatedTurnoversForMonth(YearMonth yearMonth) async {
+  Future<int> countUnallocatedTurnovers({YearMonth? yearMonth}) async {
     final db = await DatabaseHelper().database;
 
-    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
-    final endDate = startDate.add(months: 1);
+    final whereClauses = <String>[];
+    final whereArgs = <String>[];
+    if (yearMonth != null) {
+      final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
+      final endDate = startDate.add(months: 1);
+      whereClauses.add('t.booking_date >= ? AND t.booking_date < ?');
+      whereArgs.addAll([
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+      ]);
+    }
 
-    final result = await db.rawQuery(
-      '''
+    final where = whereClauses.isEmpty
+        ? ''
+        : 'WHERE ${whereClauses.join(' AND ')}';
+    final result = await db.rawQuery('''
       SELECT COUNT(*) as count
       FROM (
         SELECT t.id
         FROM turnover t
         LEFT JOIN tag_turnover tt ON t.id = tt.turnover_id
-        WHERE t.booking_date >= ? AND t.booking_date < ?
+        $where
         GROUP BY t.id
         HAVING
           COUNT(tt.id) = 0 OR
           COALESCE(SUM(tt.amount_value), 0) != t.amount_value
       )
-      ''',
-      [
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
-      ],
-    );
+      ''', whereArgs);
 
     return result.first['count'] as int;
+  }
+
+  /// Sums the unallocated amount of all turnovers.
+  /// A turnover is considered unallocated if:
+  /// - It has no tag_turnover entries, OR
+  /// - The sum of tag_turnover amounts doesn't equal the turnover amount
+  Future<Decimal> sumUnallocatedTurnovers({YearMonth? yearMonth}) async {
+    final db = await DatabaseHelper().database;
+
+    final whereClauses = <String>[];
+    final whereArgs = <String>[];
+    if (yearMonth != null) {
+      final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
+      final endDate = startDate.add(months: 1);
+      whereClauses.add('t.booking_date >= ? AND t.booking_date < ?');
+      whereArgs.addAll([
+        startDate.format(pattern: isoDateFormat),
+        endDate.format(pattern: isoDateFormat),
+      ]);
+    }
+
+    final where = whereClauses.isEmpty
+        ? ''
+        : 'WHERE ${whereClauses.join(' AND ')}';
+    final result = await db.rawQuery('''
+      SELECT SUM(unallocated_amount_abs) as total
+      FROM (
+        SELECT ABS(t.amount_value - COALESCE(SUM(tt.amount_value), 0)) as unallocated_amount_abs
+        FROM turnover t
+        LEFT JOIN tag_turnover tt ON t.id = tt.turnover_id
+        $where
+        GROUP BY t.id, t.amount_value
+        HAVING
+          COUNT(tt.id) = 0 OR
+          COALESCE(SUM(tt.amount_value), 0) != t.amount_value
+      )
+      ''', whereArgs);
+
+    return decimalUnscale(result.first['total'] as int)!;
   }
 
   /// Fetches unallocated turnovers for a specific month and year.

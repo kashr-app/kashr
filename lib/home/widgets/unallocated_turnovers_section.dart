@@ -10,13 +10,13 @@ import 'package:flutter/material.dart';
 /// A section widget that displays unallocated turnovers requiring user attention.
 class UnallocatedTurnoversSection extends StatelessWidget {
   final TurnoverWithTagTurnovers? firstUnallocatedTurnover;
-  final int unallocatedCount;
+  final int unallocatedCountInPeriod;
   final VoidCallback onRefresh;
   final YearMonth selectedPeriod;
 
   const UnallocatedTurnoversSection({
     required this.firstUnallocatedTurnover,
-    required this.unallocatedCount,
+    required this.unallocatedCountInPeriod,
     required this.onRefresh,
     required this.selectedPeriod,
     super.key,
@@ -47,7 +47,7 @@ class UnallocatedTurnoversSection extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Quick Tag ($unallocatedCount)',
+                  'Quick Tag ($unallocatedCountInPeriod)',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onSurface,
                     fontWeight: FontWeight.w600,

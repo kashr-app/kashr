@@ -12,6 +12,7 @@ import 'package:kashr/core/status.dart';
 import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/account/account_selector_dialog.dart';
 import 'package:kashr/account/dual_account_selector.dart';
+import 'package:kashr/home/widgets/unallocated_hint.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/savings/savings_detail_page.dart';
 import 'package:kashr/savings/savings_overview_page.dart';
@@ -225,6 +226,13 @@ class HomePage extends StatelessWidget {
                       totalAmount: state.pendingTotalAmount,
                     ),
                   ],
+                  if (state.unallocatedCountTotal > 0) ...[
+                    const SizedBox(height: 8),
+                    UnallocatedHint(
+                      unallocatedCountTotal: state.unallocatedCountTotal,
+                      unallocatedSumTotal: state.unallocatedSumTotal,
+                    ),
+                  ],
                   if (state.transfersNeedingReviewCount > 0) ...[
                     const SizedBox(height: 8),
                     TransfersNeedReviewHint(
@@ -243,7 +251,7 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   UnallocatedTurnoversSection(
                     firstUnallocatedTurnover: state.firstUnallocatedTurnover,
-                    unallocatedCount: state.unallocatedCount,
+                    unallocatedCountInPeriod: state.unallocatedCountInPeriod,
                     onRefresh: () =>
                         context.read<DashboardCubit>().loadMonthData(),
                     selectedPeriod: state.selectedPeriod,
