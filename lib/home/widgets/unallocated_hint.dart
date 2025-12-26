@@ -22,7 +22,7 @@ class UnallocatedHint extends StatelessWidget {
     return DashboardHint(
       icon: Icon(Icons.label),
       title:
-          '$unallocatedCountTotal Need tagging (${Currency.currencyFrom('EUR').formatCompact(unallocatedSumTotal)})',
+          '$unallocatedCountTotal need tagging (${Currency.currencyFrom('EUR').formatCompact(unallocatedSumTotal)})',
       color: theme.colorScheme.onSecondaryContainer,
       colorBackground: theme.colorScheme.secondaryContainer.withValues(
         alpha: 0.5,
