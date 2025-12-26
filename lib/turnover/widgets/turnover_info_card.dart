@@ -23,14 +23,6 @@ class TurnoverInfoCard extends StatefulWidget {
 }
 
 class _TurnoverInfoCardState extends State<TurnoverInfoCard> {
-  bool _isExpanded = false;
-
-  void _toggleExpanded() {
-    setState(() {
-      _isExpanded = !_isExpanded;
-    });
-  }
-
   void _showRawApiDataDialog(BuildContext context) {
     final apiRaw = widget.turnover.apiRaw;
     String displayContent;
@@ -57,85 +49,107 @@ class _TurnoverInfoCardState extends State<TurnoverInfoCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final iban = widget.turnover.counterIban;
-
     return Card(
       margin: const EdgeInsets.all(16),
       child: InkWell(
-        onTap: _toggleExpanded,
+        onTap: () => showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            actions: [
+              TextButton.icon(
+                icon: const Icon(Icons.code),
+                label: Text('Raw API data'),
+                onPressed: () => _showRawApiDataDialog(context),
+              ),
+              TextButton(
+                child: Text('Close'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+            scrollable: true,
+            content: _TurnoverInfoCardContent(
+              turnover: widget.turnover,
+              showDetails: true,
+            ),
+          ),
+        ),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: _TurnoverInfoCardContent(turnover: widget.turnover),
+        ),
+      ),
+    );
+  }
+}
+
+class _TurnoverInfoCardContent extends StatelessWidget {
+  const _TurnoverInfoCardContent({
+    required this.turnover,
+    this.showDetails = false,
+  });
+
+  final Turnover turnover;
+  final bool showDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final iban = turnover.counterIban;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        BlocBuilder<AccountCubit, AccountState>(
+          builder: (context, state) => Row(
             children: [
-              BlocBuilder<AccountCubit, AccountState>(
-                builder: (context, state) => Row(
-                  children: [
-                    Icon(
-                      state.accountById[widget.turnover.accountId]
-                          ?.accountType.icon,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      state.accountById[widget.turnover.accountId]?.name ?? '',
-                    ),
-                  ],
-                ),
+              Icon(
+                state.accountById[turnover.accountId]?.accountType.icon,
+                size: 16,
               ),
-              const SizedBox(height: 4),
-              Text(
-                widget.turnover.counterPart ?? '(Unknown)',
-                style: theme.textTheme.titleLarge,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.turnover.purpose,
-                style: theme.textTheme.bodyMedium,
-                maxLines: _isExpanded ? null : 3,
-                overflow: _isExpanded ? null : TextOverflow.ellipsis,
-              ),
-              if (_isExpanded && iban != null) ...[
-                const SizedBox(height: 4),
-                Text(iban, style: theme.textTheme.bodySmall),
-              ],
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.turnover.formatDate() ?? '',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  Text(
-                    widget.turnover.formatAmount(),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context)
-                          .decimalColor(widget.turnover.amountValue),
-                    ),
-                  ),
-                ],
-              ),
-              if (_isExpanded) ...[
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.code),
-                      onPressed: () => _showRawApiDataDialog(context),
-                      tooltip: 'View raw API data',
-                    ),
-                  ],
-                ),
-              ],
+              const SizedBox(width: 4),
+              Text(state.accountById[turnover.accountId]?.name ?? ''),
             ],
           ),
         ),
-      ),
+        const SizedBox(height: 4),
+        Text(
+          turnover.counterPart ?? '(Unknown)',
+          style: theme.textTheme.titleLarge,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          turnover.purpose,
+          style: theme.textTheme.bodyMedium,
+          maxLines: showDetails ? null : 3,
+          overflow: showDetails ? null : TextOverflow.ellipsis,
+        ),
+        if (showDetails && iban != null) ...[
+          const SizedBox(height: 16),
+          Text(
+            'IBAN',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          Text(iban, style: theme.textTheme.bodySmall),
+        ],
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(turnover.formatDate() ?? '', style: theme.textTheme.bodySmall),
+            Text(
+              turnover.formatAmount(),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).decimalColor(turnover.amountValue),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -159,14 +173,15 @@ class _RawApiDataDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        TextButton(
+        TextButton.icon(
+          icon: Icon(Icons.copy),
           onPressed: () {
             Clipboard.setData(ClipboardData(text: content));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Copied to clipboard')),
             );
           },
-          child: const Text('Copy All'),
+          label: const Text('Copy'),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
