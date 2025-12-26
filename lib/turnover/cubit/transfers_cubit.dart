@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:kashr/core/status.dart';
 import 'package:kashr/turnover/cubit/transfers_state.dart';
+import 'package:kashr/turnover/model/tag_repository.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
 import 'package:kashr/turnover/model/transfer_item.dart';
 import 'package:kashr/turnover/model/transfers_filter.dart';
@@ -14,6 +17,8 @@ import 'package:uuid/uuid.dart';
 class TransfersCubit extends Cubit<TransfersState> {
   final TransferRepository _transferRepository;
   final TransferService _transferService;
+  final TagTurnoverRepository _tagTurnoverRepository;
+  final TagRepository _tagRepository;
   StreamSubscription<TransferChange>? _transferChangeSubscription;
 
   final Logger _log;
@@ -21,6 +26,8 @@ class TransfersCubit extends Cubit<TransfersState> {
   TransfersCubit(
     this._transferRepository,
     this._transferService,
+    this._tagTurnoverRepository,
+    this._tagRepository,
     this._log, {
     TransfersFilter initialFilter = TransfersFilter.empty,
     TransfersFilter lockedFilters = TransfersFilter.empty,
@@ -170,6 +177,48 @@ class TransfersCubit extends Cubit<TransfersState> {
     } catch (e, stackTrace) {
       _log.e('Failed to delete transfer', error: e, stackTrace: stackTrace);
       emit(state.copyWith(status: Status.error));
+    }
+  }
+
+  Future<bool> updateTagTurnover(TagTurnover tagTurnover) async {
+    try {
+      final copy = {...state.transferItemsById};
+      final toUpdate = copy[tagTurnover.id] as UnlinkedFromTransferItem?;
+      if (toUpdate == null) {
+        return false;
+      }
+
+      await _tagTurnoverRepository.updateTagTurnover(tagTurnover);
+
+      final tagById = await _tagRepository.getByIdsCached();
+      final newTag = tagById[tagTurnover.tagId] ?? toUpdate.tag;
+      copy[tagTurnover.id] = toUpdate.copyWith(
+        tagTurnover: tagTurnover,
+        tag: newTag,
+      );
+
+      emit(state.copyWith(transferItemsById: copy));
+      return true;
+    } catch (e, s) {
+      _log.e('Failed to update TagTurnover', error: e, stackTrace: s);
+      return false;
+    }
+  }
+
+  Future<bool> deleteTagTurnover(TagTurnover tagTurnover) async {
+    try {
+      await _tagTurnoverRepository.deleteTagTurnover(tagTurnover.id);
+
+      emit(
+        state.copyWith(
+          transferItemsById: {...state.transferItemsById}
+            ..remove(tagTurnover.id),
+        ),
+      );
+      return true;
+    } catch (e, s) {
+      _log.e('Failed to delete TagTurnover', error: e, stackTrace: s);
+      return false;
     }
   }
 }

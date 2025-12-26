@@ -6,8 +6,11 @@ import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/cubit/transfers_cubit.dart';
 import 'package:kashr/turnover/cubit/transfers_state.dart';
+import 'package:kashr/turnover/dialogs/tag_turnover_editor_dialog.dart';
 import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag_repository.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
 import 'package:kashr/turnover/model/transfer_item.dart';
@@ -39,6 +42,8 @@ class TransfersRoute extends GoRouteData with $TransfersRoute {
       create: (context) => TransfersCubit(
         context.read<TransferRepository>(),
         context.read<TransferService>(),
+        context.read<TagTurnoverRepository>(),
+        context.read<TagRepository>(),
         context.read<LogService>().log,
         initialFilter: filters ?? TransfersFilter.empty,
         lockedFilters: lockedFilters ?? TransfersFilter.empty,
@@ -447,7 +452,7 @@ class _UnlinkedFromTransferCard extends StatelessWidget {
                         Text(
                           'Tap to link',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                       ],
@@ -459,6 +464,61 @@ class _UnlinkedFromTransferCard extends StatelessWidget {
                       _Amount(tagTurnover: tagTurnover),
                       _BookingDate(tagTurnover: tagTurnover),
                     ],
+                  ),
+                  IconButton(
+                    onPressed: () async {
+                      final cubit = context.read<TransfersCubit>();
+                      final result = await TagTurnoverEditorDialog.show(
+                        context,
+                        tagTurnover: tagTurnover,
+                      );
+
+                      if (result == null || !context.mounted) return;
+
+                      switch (result) {
+                        case EditTagTurnoverUpdated():
+                          final success = await cubit.updateTagTurnover(
+                            result.tagTurnover,
+                          );
+
+                          if (context.mounted) {
+                            if (success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Transaction updated'),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Failed to update transaction'),
+                                ),
+                              );
+                            }
+                          }
+                        case EditTagTurnoverDeleted():
+                          final success = await cubit.deleteTagTurnover(
+                            tagTurnover,
+                          );
+
+                          if (context.mounted) {
+                            if (success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Transaction deleted'),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Failed to delete transaction'),
+                                ),
+                              );
+                            }
+                          }
+                      }
+                    },
+                    icon: Icon(Icons.edit),
                   ),
                 ],
               ),
