@@ -18,10 +18,10 @@ import 'package:provider/single_child_widget.dart';
 
 class TurnoverModule implements Module {
   final turnoverRepository = TurnoverRepository();
-  final tagTurnoverRepository = TagTurnoverRepository();
   final transferRepository = TransferRepository();
   final recentSearchRepository = RecentSearchRepository();
 
+  late final TagTurnoverRepository tagTurnoverRepository;
   late final TurnoverService turnoverService;
   late final TransferService transferService;
   late final TurnoverMatchingService turnoverMatchingService;
@@ -34,6 +34,7 @@ class TurnoverModule implements Module {
 
   TurnoverModule(Logger log) {
     tagRepository = TagRepository(log);
+    tagTurnoverRepository = TagTurnoverRepository(log);
     turnoverService = TurnoverService(
       turnoverRepository,
       tagTurnoverRepository,

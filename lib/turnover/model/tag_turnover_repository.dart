@@ -13,11 +13,15 @@ import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
+import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
 class TagTurnoverRepository {
+  final Logger _log;
   final StreamController<TagTurnoverChange> _changeController =
       StreamController<TagTurnoverChange>.broadcast();
+
+  TagTurnoverRepository(this._log);
 
   /// Stream of tag turnover changes for reactive updates.
   Stream<TagTurnoverChange> watchChanges() => _changeController.stream;
@@ -80,9 +84,9 @@ class TagTurnoverRepository {
     _changeController.add(TagTurnoversDeleted(ids));
   }
 
-  /// Unlinks multiple tag turnovers from their turnovers by setting
+  /// Unallocates multiple tag turnovers from their turnovers by setting
   /// turnover_id to null, effectively making them pending tag turnovers.
-  Future<void> unlinkManyFromTurnover(List<TagTurnover> tts) async {
+  Future<void> unallocateManyFromTurnover(List<TagTurnover> tts) async {
     if (tts.isEmpty) return;
 
     final db = await DatabaseHelper().database;
@@ -175,11 +179,9 @@ class TagTurnoverRepository {
     }
   }
 
-  /// Batch removes a tag from multiple turnovers.
-  /// Deletes all tag_turnover entries for the specified tag across
-  /// the given turnovers. This is done efficiently in a single
-  /// database transaction.
-  Future<void> batchRemoveTagFromTurnovers(
+  /// Batch deletes all tag_turnover entries for the specified [tag] across
+  /// the given [turnovers].
+  Future<void> batchDeleteByTurnoverInAndTag(
     List<Turnover> turnovers,
     Tag tag,
   ) async {
@@ -307,36 +309,31 @@ class TagTurnoverRepository {
     return maps.map((e) => TagTurnover.fromJson(e)).toList();
   }
 
-  /// Link an unmatched TagTurnover to a Turnover (confirm match)
-  Future<int> allocateToTurnover(
+  /// Allocate [tagTurnoverId] to a [turnoverId].
+  Future<void> allocateToTurnover(
     UuidValue tagTurnoverId,
     UuidValue turnoverId,
   ) async {
-    final db = await DatabaseHelper().database;
-
-    return await db.update(
-      'tag_turnover',
-      {'turnover_id': turnoverId.uuid},
-      where: 'id = ?',
-      whereArgs: [tagTurnoverId.uuid],
-    );
+    final tagTurnover = await getById(tagTurnoverId);
+    if (tagTurnover == null) {
+      _log.e('Could not find tagTurnover to allocate');
+    } else {
+      final updated = tagTurnover.copyWith(turnoverId: turnoverId);
+      // will emit changes
+      await updateTagTurnover(updated);
+    }
   }
 
-  /// Unlink a matched TagTurnover from its Turnover
-  Future<int> unallocateFromTurnover(UuidValue tagTurnoverId) async {
-    final db = await DatabaseHelper().database;
-
-    final result = await db.update(
-      'tag_turnover',
-      {'turnover_id': null},
-      where: 'id = ?',
-      whereArgs: [tagTurnoverId.uuid],
-    );
-
-    // Emit as deleted since unlinking removes it from the turnover context
-    _changeController.add(TagTurnoversDeleted([tagTurnoverId]));
-
-    return result;
+  /// Unallocates a matched TagTurnover from its Turnover
+  Future<void> unallocateFromTurnover(UuidValue tagTurnoverId) async {
+    final tagTurnover = await getById(tagTurnoverId);
+    if (tagTurnover == null) {
+      _log.e('Could not find tagTurnover to unallocate');
+    } else {
+      final updated = tagTurnover.copyWith(turnoverId: null);
+      // will emit changes
+      await updateTagTurnover(updated);
+    }
   }
 
   /// Get TagTurnover by ID
@@ -459,26 +456,23 @@ class TagTurnoverRepository {
     return result;
   }
 
-  Future<int> updateAmount(UuidValue id, Decimal amountValue) async {
-    final db = await DatabaseHelper().database;
-
-    return await db.update(
-      'tag_turnover',
-      {'amount_value': amountValue.toString()},
-      where: 'id = ?',
-      whereArgs: [id.uuid],
-    );
-  }
-
   Future<int> updateTagByTagId(UuidValue oldTagId, UuidValue newTagId) async {
     final db = await DatabaseHelper().database;
 
-    return await db.update(
+    final result = await db.query(
       'tag_turnover',
-      {'tag_id': newTagId.uuid},
       where: 'tag_id = ?',
       whereArgs: [oldTagId.uuid],
     );
+
+    final updated = result.map(
+      (map) => TagTurnover.fromJson(map).copyWith(tagId: newTagId),
+    );
+
+    // will emit updates
+    await updateTagTurnoversBatch(updated.toList());
+
+    return updated.length;
   }
 
   Future<Decimal> sumByTag(UuidValue tagId) async {

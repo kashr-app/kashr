@@ -30,7 +30,7 @@ class TurnoversListContent extends StatelessWidget {
   final bool hasMore;
   final String? error;
   final ScrollController scrollController;
-  final Set<String> selectedIds;
+  final Set<UuidValue> selectedIds;
   final bool isBatchMode;
   final void Function(TurnoverWithTagTurnovers) onItemTap;
   final void Function(TurnoverWithTagTurnovers) onItemLongPress;
@@ -75,8 +75,9 @@ class TurnoversListContent extends StatelessWidget {
             }
 
             final turnoverWithTags = items[index];
-            final turnoverId = turnoverWithTags.turnover.id.uuid;
-            final isSelected = selectedIds.contains(turnoverId);
+            final isSelected = selectedIds.contains(
+              turnoverWithTags.turnover.id,
+            );
 
             // Calculate transfer flags for this turnover
             bool hasTransfer = false;
@@ -104,6 +105,7 @@ class TurnoversListContent extends StatelessWidget {
             }
 
             return TurnoverCard(
+              key: Key(turnoverWithTags.turnover.id.uuid),
               turnoverWithTags: turnoverWithTags,
               isSelected: isSelected,
               isBatchMode: isBatchMode,

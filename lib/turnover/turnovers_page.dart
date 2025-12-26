@@ -1,7 +1,13 @@
+import 'dart:async';
+
+import 'package:collection/collection.dart';
+import 'package:kashr/core/associate_by.dart';
+import 'package:kashr/core/map_values.dart';
 import 'package:kashr/home/home_page.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/tag_turnover_change.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
 import 'package:kashr/turnover/model/transfer_with_details.dart';
@@ -56,7 +62,7 @@ class TurnoversPage extends StatefulWidget {
 
 class _TurnoversPageState extends State<TurnoversPage> {
   final _scrollController = ScrollController();
-  final List<TurnoverWithTagTurnovers> _items = [];
+  final Map<UuidValue, TurnoverWithTagTurnovers> _itemsByTurnoverId = {};
   final Map<UuidValue, TransferWithDetails> _transferByTagTurnoverId = {};
 
   static const _pageSize = 10;
@@ -68,7 +74,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
   late TurnoverFilter _filter;
   late TurnoverSort _sort;
 
-  final Set<String> _selectedTurnoverIds = {};
+  final Set<UuidValue> _selectedTurnoverIds = {};
   bool get _isBatchMode => _selectedTurnoverIds.isNotEmpty;
 
   late final TurnoverRepository _repository;
@@ -76,26 +82,109 @@ class _TurnoversPageState extends State<TurnoversPage> {
   late final TransferService _transferService;
   late final TurnoverService _turnoverService;
 
+  StreamSubscription<TagTurnoverChange>? _tagTurnoverSubscription;
+
   late final Logger _log;
 
   @override
   void initState() {
     super.initState();
     _log = context.read<LogService>().log;
+
     _repository = context.read<TurnoverRepository>();
     _tagTurnoverRepository = context.read<TagTurnoverRepository>();
     _transferService = context.read<TransferService>();
     _turnoverService = context.read<TurnoverService>();
+
+    _tagTurnoverSubscription = _tagTurnoverRepository.watchChanges().listen(
+      _onTagTurnoverChanged,
+    );
+
     _filter = widget.initialFilter;
     _sort = widget.initialSort;
     _scrollController.addListener(_onScroll);
+
     _loadMore();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _tagTurnoverSubscription?.cancel();
     super.dispose();
+  }
+
+  void _onTagTurnoverChanged(TagTurnoverChange change) {
+    switch (change) {
+      case TagTurnoversInserted(:final tagTurnovers):
+        final updated = <UuidValue, TurnoverWithTagTurnovers>{};
+        for (final tt in tagTurnovers) {
+          final turnoverId = tt.turnoverId;
+          if (turnoverId == null) continue;
+          final t = _itemsByTurnoverId[turnoverId];
+          if (t != null) {
+            final c = t.copyWith(tagTurnovers: [...t.tagTurnovers, tt]);
+            updated[turnoverId] = c;
+          }
+        }
+        setState(() {
+          _itemsByTurnoverId.addAll(updated);
+        });
+      case TagTurnoversUpdated(:final tagTurnovers):
+        final updated = <UuidValue, TurnoverWithTagTurnovers>{};
+        for (final tt in tagTurnovers) {
+          final turnoverId = tt.turnoverId;
+          if (turnoverId == null) {
+            // the tt was unallocated from its turnover
+            // find the former turnover
+            final toUpdate = _itemsByTurnoverId.values.firstWhereOrNull(
+              (it) => it.tagTurnovers.any((it2) => it2.id == tt.id),
+            );
+            if (toUpdate != null) {
+              // remove the tt
+              updated[toUpdate.turnover.id] = toUpdate.copyWith(
+                tagTurnovers: toUpdate.tagTurnovers
+                    .whereNot((it) => it.id == tt.id)
+                    .toList(),
+              );
+            }
+          } else {
+            final t = _itemsByTurnoverId[turnoverId];
+            if (t != null) {
+              // the tt can be either already in the map or newly allocated
+              var isNew = true;
+              final c = t.copyWith(
+                tagTurnovers:
+                    t.tagTurnovers.map((it) {
+                        if (it.id == tt.id) {
+                          isNew = false;
+                          return tt;
+                        } else {
+                          return it;
+                        }
+                      }).toList()
+                      // if new, append
+                      ..addAll([if (isNew) tt]),
+              );
+              updated[turnoverId] = c;
+            }
+          }
+        }
+        setState(() {
+          _itemsByTurnoverId.addAll(updated);
+        });
+      case TagTurnoversDeleted(:final ids):
+        final updated = _itemsByTurnoverId.mapValues(
+          (turnoverId, it) => it.copyWith(
+            tagTurnovers: it.tagTurnovers
+                .whereNot((tt) => ids.contains(tt.id))
+                .toList(),
+          ),
+        );
+        setState(() {
+          _itemsByTurnoverId.addAll(updated);
+        });
+    }
   }
 
   void _onScroll() {
@@ -133,7 +222,9 @@ class _TurnoversPageState extends State<TurnoversPage> {
       await _loadTransfersForItems(turnoversWithTT);
 
       setState(() {
-        _items.addAll(turnoversWithTT);
+        _itemsByTurnoverId.addAll(
+          turnoversWithTT.associateBy((it) => it.turnover.id),
+        );
         _currentOffset += newItems.length;
         _hasMore = newItems.length >= _pageSize;
         _isLoading = false;
@@ -199,7 +290,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
 
   Future<void> _refresh() async {
     setState(() {
-      _items.clear();
+      _itemsByTurnoverId.clear();
       _transferByTagTurnoverId.clear();
       _currentOffset = 0;
       _hasMore = true;
@@ -252,7 +343,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
     }
   }
 
-  void _toggleTurnoverSelection(String turnoverId) {
+  void _toggleTurnoverSelection(UuidValue turnoverId) {
     setState(() {
       if (_selectedTurnoverIds.contains(turnoverId)) {
         _selectedTurnoverIds.remove(turnoverId);
@@ -266,8 +357,9 @@ class _TurnoversPageState extends State<TurnoversPage> {
     setState(() => _selectedTurnoverIds.clear());
   }
 
-  List<TurnoverWithTagTurnovers> get _selectedTurnovers => _items
-      .where((item) => _selectedTurnoverIds.contains(item.turnover.id.uuid))
+  List<TurnoverWithTagTurnovers> get _selectedTurnovers => _selectedTurnoverIds
+      .map((id) => _itemsByTurnoverId[id])
+      .nonNulls
       .toList();
 
   Future<void> _batchAddTag() async {
@@ -326,7 +418,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
       if (isAdd) {
         await _tagTurnoverRepository.batchAddTagToTurnovers(turnovers, tag);
       } else {
-        await _tagTurnoverRepository.batchRemoveTagFromTurnovers(
+        await _tagTurnoverRepository.batchDeleteByTurnoverInAndTag(
           turnovers,
           tag,
         );
@@ -367,16 +459,15 @@ class _TurnoversPageState extends State<TurnoversPage> {
     final id = item.turnover.id;
 
     if (_isBatchMode) {
-      _toggleTurnoverSelection(id.uuid);
+      _toggleTurnoverSelection(id);
     } else {
       await TurnoverTagsRoute(turnoverId: id.uuid).push(context);
-      _refresh();
     }
   }
 
   void _handleItemLongPress(TurnoverWithTagTurnovers item) {
     final id = item.turnover.id;
-    _toggleTurnoverSelection(id.uuid);
+    _toggleTurnoverSelection(id);
   }
 
   @override
@@ -400,7 +491,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
               child: RefreshIndicator(
                 onRefresh: _refresh,
                 child: TurnoversListContent(
-                  items: _items,
+                  items: _itemsByTurnoverId.values.toList(),
                   isLoading: _isLoading,
                   hasMore: _hasMore,
                   error: _error,

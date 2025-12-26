@@ -292,7 +292,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
 
       // Batch unlink tag turnovers that were marked for unlinking
       if (state.unlinkedTagTurnovers.isNotEmpty) {
-        await _tagTurnoverRepository.unlinkManyFromTurnover(
+        await _tagTurnoverRepository.unallocateManyFromTurnover(
           state.unlinkedTagTurnovers,
         );
       }
