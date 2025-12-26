@@ -210,6 +210,26 @@ class HomePage extends StatelessWidget {
                   16,
                 ).copyWith(bottom: 80), // let fab not hide the bottom
                 children: [
+                  if (state.pendingCount > 0) ...[
+                    PendingTurnoversHint(
+                      count: state.pendingCount,
+                      totalAmount: state.pendingTotalAmount,
+                    ),
+                  ],
+                  if (state.unallocatedCountTotal > 0) ...[
+                    const SizedBox(height: 4),
+                    UnallocatedHint(
+                      unallocatedCountTotal: state.unallocatedCountTotal,
+                      unallocatedSumTotal: state.unallocatedSumTotal,
+                    ),
+                  ],
+                  if (state.transfersNeedingReviewCount > 0) ...[
+                    const SizedBox(height: 4),
+                    TransfersNeedReviewHint(
+                      count: state.transfersNeedingReviewCount,
+                    ),
+                  ],
+                  const SizedBox(height: 8),
                   PeriodSelector(
                     selectedPeriod: state.selectedPeriod,
                     onPreviousMonth: () =>
@@ -219,26 +239,6 @@ class HomePage extends StatelessWidget {
                     onMonthSelected: (yearMonth) =>
                         context.read<DashboardCubit>().selectMonth(yearMonth),
                   ),
-                  if (state.pendingCount > 0) ...[
-                    const SizedBox(height: 8),
-                    PendingTurnoversHint(
-                      count: state.pendingCount,
-                      totalAmount: state.pendingTotalAmount,
-                    ),
-                  ],
-                  if (state.unallocatedCountTotal > 0) ...[
-                    const SizedBox(height: 8),
-                    UnallocatedHint(
-                      unallocatedCountTotal: state.unallocatedCountTotal,
-                      unallocatedSumTotal: state.unallocatedSumTotal,
-                    ),
-                  ],
-                  if (state.transfersNeedingReviewCount > 0) ...[
-                    const SizedBox(height: 8),
-                    TransfersNeedReviewHint(
-                      count: state.transfersNeedingReviewCount,
-                    ),
-                  ],
                   const SizedBox(height: 8),
                   const LoadBankDataSection(),
                   const SizedBox(height: 8),
