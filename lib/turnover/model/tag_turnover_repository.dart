@@ -648,10 +648,10 @@ class TagTurnoverRepository {
       List<TagTurnover> allocatedOutsideMonthButTurnoverInMonth,
     })
   >
-  getTagTurnoversForMonthlyDashboard({
-    required DateTime startDate,
-    required DateTime endDate,
-  }) async {
+  getTagTurnoversForMonthlyDashboard(YearMonth yearMonth) async {
+    final startDate = yearMonth.toDateTime();
+    final endDate = Jiffy.parseFromDateTime(startDate).add(months: 1).dateTime;
+
     final db = await DatabaseHelper().database;
 
     final start = isoDateFormatter.format(startDate);
