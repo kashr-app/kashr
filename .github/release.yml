@@ -1,0 +1,42 @@
+changelog:
+  exclude:
+    labels:
+      - changelog:skip
+    authors:
+      - dependabot
+  categories:
+    - title: 🚨 Breaking Changes
+      labels:
+        - changelog:breaking-change
+
+    - title: 🚀 Features
+      labels:
+        - changelog:feature
+
+    - title: 🌟 Enhancements
+      labels:
+        - changelog:enhancement
+
+    - title: 🐛 Bug Fixes
+      labels:
+        - changelog:bugfix
+
+    - title: 🚀 Performance Improvements
+      labels:
+        - changelog:performance
+
+    - title: 📚 Documentation
+      labels:
+        - changelog:documentation
+
+    - title: 🔧 Maintenance
+      labels:
+        - changelog:maintenance
+
+    - title: ♻️ Code Refactoring
+      labels:
+        - changelog:refactor
+
+    - title: 🌐 Translations
+      labels:
+        - changelog:translation

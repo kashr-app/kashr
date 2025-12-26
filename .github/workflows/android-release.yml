@@ -119,26 +119,35 @@ jobs:
           name: kashr-${{ needs.build.outputs.release_tag }}-release-apk
           path: release
 
-      - name: Generate release notes
-        id: notes
+      - name: Create build information header
+        id: header
         run: |
-          chmod +x .github/scripts/generate-release-notes.sh
-          .github/scripts/generate-release-notes.sh \
-            "${{ needs.build.outputs.version_name }}" \
-            "${{ needs.build.outputs.version_code }}" \
-            "${{ needs.build.outputs.flutter_version }}"
-          echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
+          cat > release_header.md << EOF
+          ### 📦 Build Information
+          - **Version:** ${{ needs.build.outputs.version_name }}
+          - **Build Number:** ${{ needs.build.outputs.version_code }}
+          - **Flutter Version:** ${{ needs.build.outputs.flutter_version }}
+          - **Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+          ### 📥 Installation
+          Download the APK file below and install it on your Android device.
+
+          **Note:** You may need to enable "Install from Unknown Sources" in your device settings.
+
+          ---
+
+          EOF
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.build.outputs.release_tag }}
           name: Kashr ${{ needs.build.outputs.release_tag }}
-          body_path: release_notes.md
+          body_path: release_header.md
           files: |
             release/kashr-${{ needs.build.outputs.release_tag }}-release.apk
           draft: false
           prerelease: false
-          generate_release_notes: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
