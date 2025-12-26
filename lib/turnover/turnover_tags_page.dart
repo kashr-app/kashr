@@ -12,17 +12,10 @@ import 'package:kashr/turnover/dialogs/delete_turnover_dialog.dart';
 import 'package:kashr/turnover/dialogs/edit_turnover_dialog.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
-import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
-import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
-import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
-import 'package:kashr/turnover/services/transfer_service.dart';
-import 'package:kashr/turnover/tag_turnovers_page.dart';
-import 'package:kashr/turnover/transfer_editor_page.dart';
 import 'package:kashr/turnover/widgets/select_from_pending_tag_turnovers_hint.dart';
-import 'package:kashr/turnover/widgets/source_card.dart';
 import 'package:kashr/turnover/widgets/status_message.dart';
 import 'package:kashr/turnover/widgets/tag_suggestions_row.dart';
 import 'package:kashr/turnover/widgets/tag_turnover_item.dart';
@@ -54,75 +47,6 @@ class TurnoverTagsRoute extends GoRouteData with $TurnoverTagsRoute {
 
 class TurnoverTagsPage extends StatelessWidget {
   const TurnoverTagsPage({super.key});
-
-  Future<void> _handleTransferAction(
-    BuildContext context,
-    TagTurnover tagTurnover,
-  ) async {
-    final cubit = context.read<TurnoverTagsCubit>();
-    final transferDetails = cubit.state.transferByTagTurnoverId[tagTurnover.id];
-    final tagRepository = context.read<TagRepository>();
-    final tagById = await tagRepository.getByIdsCached();
-    final tag = tagById[tagTurnover.tagId];
-    final isTransferTag = tag?.isTransfer ?? false;
-    final isUnlinkedTransfer = isTransferTag && transferDetails == null;
-
-    if (!context.mounted) return;
-
-    if (transferDetails != null) {
-      // Navigate to TransferEditorPage if transfer exists
-      await TransferEditorRoute(
-        transferId: transferDetails.transfer.id.uuid,
-      ).push(context);
-      if (context.mounted) cubit.loadTransfers();
-    } else if (isUnlinkedTransfer) {
-      // Determine the required sign for the counterpart
-      final requiredSign = tagTurnover.sign == TurnoverSign.expense
-          ? TurnoverSign.income
-          : TurnoverSign.expense;
-
-      // Open TagTurnoversPage for selection with appropriate filters
-      final selectedTagTurnover = await TagTurnoversPage.openForSelection(
-        context: context,
-        header: SourceCard(
-          tagTurnover: tagTurnover,
-          tag: tag!,
-          action: CreateOtherTransferSideButton(
-            tagTurnover: tagTurnover,
-            tag: tag,
-            onCreated: (context, created) => Navigator.pop(context, created),
-          ),
-        ),
-        filter: TagTurnoversFilter(sign: requiredSign),
-        lockedFilters: TagTurnoversFilter(
-          transferTagOnly: true,
-          unfinishedTransfersOnly: true,
-          excludeTagTurnoverIds: [tagTurnover.id],
-        ),
-      );
-
-      if (context.mounted && selectedTagTurnover != null) {
-        final transferService = context.read<TransferService>();
-
-        // Create the transfer using the service
-        final (transferId, conflict) = await transferService
-            .linkTransferTagTurnovers(
-              sourceTagTurnover: tagTurnover,
-              selectedTagTurnover: selectedTagTurnover,
-            );
-
-        if (!context.mounted) return;
-        await conflict?.showAsDialog(context);
-        if (!context.mounted) return;
-
-        if (transferId != null) {
-          // Navigate to transfer editor page for review
-          await TransferEditorRoute(transferId: transferId.uuid).push(context);
-        }
-        if (context.mounted) cubit.loadTransfers();
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -275,11 +199,6 @@ class TurnoverTagsPage extends StatelessWidget {
                                           0,
                                       currencyUnit: turnover.amountUnit,
                                       transferWithDetails: transferDetails,
-                                      onTransferAction: () =>
-                                          _handleTransferAction(
-                                            context,
-                                            tagTurnover,
-                                          ),
                                     );
                                   },
                                 );

@@ -144,7 +144,7 @@ class _SelectPendingTagTurnoversPageState
     }
 
     // All confirmations passed, associate the tag turnovers
-    widget.cubit.associatePendingTagTurnovers(selectedTagTurnovers);
+    widget.cubit.allocatePendingTagTurnovers(selectedTagTurnovers);
 
     if (mounted) {
       Navigator.of(context).pop(true);

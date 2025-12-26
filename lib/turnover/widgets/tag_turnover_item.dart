@@ -20,7 +20,6 @@ class TagTurnoverItem extends StatelessWidget {
   final int maxAmountScaled;
   final String currencyUnit;
   final TransferWithDetails? transferWithDetails;
-  final VoidCallback? onTransferAction;
 
   const TagTurnoverItem({
     required this.tagTurnover,
@@ -28,7 +27,6 @@ class TagTurnoverItem extends StatelessWidget {
     required this.maxAmountScaled,
     required this.currencyUnit,
     this.transferWithDetails,
-    this.onTransferAction,
     super.key,
   });
 
@@ -69,6 +67,8 @@ class TagTurnoverItem extends StatelessWidget {
 
     final isTransferTag = tag.isTransfer;
     final hasTransfer = transferWithDetails != null;
+    final isTransfer = isTransferTag || hasTransfer;
+
     final isUnlinkedTransfer = isTransferTag && !hasTransfer;
     final transferNeedsReview = transferWithDetails?.needsReview;
 
@@ -84,16 +84,14 @@ class TagTurnoverItem extends StatelessWidget {
             dateFormat.format(tagTurnover.bookingDate),
             style: theme.textTheme.bodySmall,
           ),
-          trailing: IconButton(
-            icon: const Icon(Icons.link_off),
-            tooltip: 'Unlink from turnover',
-            onPressed: () {
-              context.read<TurnoverTagsCubit>().unlinkTagTurnover(tagTurnover);
-            },
+          trailing: _buildTagTurnoverPopUpMenu(
+            context,
+            tagTurnover,
+            isTransfer: isTransfer,
           ),
         ),
         // Transfer badges
-        if (isTransferTag || hasTransfer) ...[
+        if (isTransfer) ...[
           const SizedBox(height: 8),
           Wrap(
             runSpacing: 8,
@@ -106,29 +104,82 @@ class TagTurnoverItem extends StatelessWidget {
                 const SizedBox(width: 8),
                 TransferBadge.needsReviewDetailed(transferNeedsReview),
               ],
-              if (onTransferAction != null)
-                TextButton.icon(
-                  onPressed: onTransferAction,
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  icon: Icon(
-                    isUnlinkedTransfer ? Icons.link : Icons.open_in_new,
-                    size: 16,
-                  ),
-                  label: Text(
-                    isUnlinkedTransfer ? 'Link Transfer' : 'View Transfer',
-                    style: theme.textTheme.labelSmall,
-                  ),
-                ),
             ],
           ),
         ],
+      ],
+    );
+  }
+
+  PopupMenuButton<TagTurnoverPopUpMenu> _buildTagTurnoverPopUpMenu(
+    BuildContext context,
+    TagTurnover tagTurnover, {
+    required bool isTransfer,
+  }) {
+    return PopupMenuButton<TagTurnoverPopUpMenu>(
+      initialValue: null,
+      onSelected: (TagTurnoverPopUpMenu item) {
+        switch (item) {
+          case TagTurnoverPopUpMenu.edit:
+            _onTap(context);
+          case TagTurnoverPopUpMenu.editTransfer:
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                content: Text(
+                  'Transfer links can\'t be edited here, because the edits are temporary until saved.'
+                  ' Please save changes and then review the transfer link from the transfers review page.\n\n'
+                  'If the Transfer has a problem it will be highlighted on the home screen.'
+                  ' You can view all transfers via Settings > Transfers',
+                ),
+                actions: [
+                  TextButton(
+                    child: Text('Close'),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            );
+          case TagTurnoverPopUpMenu.delete:
+            context.read<TurnoverTagsCubit>().deleteTagTurnover(tagTurnover.id);
+          case TagTurnoverPopUpMenu.unallocate:
+            context.read<TurnoverTagsCubit>().unallocateTagTurnover(tagTurnover);
+        }
+      },
+      itemBuilder: (BuildContext context) => [
+        const PopupMenuItem(
+          value: TagTurnoverPopUpMenu.unallocate,
+          child: Row(
+            children: [
+              Icon(Icons.remove),
+              SizedBox(width: 8),
+              Text('Remove from turnover'),
+            ],
+          ),
+        ),
+        if (isTransfer)
+          const PopupMenuItem(
+            value: TagTurnoverPopUpMenu.editTransfer,
+            child: Row(
+              children: [
+                Icon(Icons.link),
+                SizedBox(width: 8),
+                Text('Edit Transfer Link'),
+              ],
+            ),
+          ),
+        const PopupMenuItem(
+          value: TagTurnoverPopUpMenu.edit,
+          child: Row(
+            children: [Icon(Icons.edit), SizedBox(width: 8), Text('Edit')],
+          ),
+        ),
+        const PopupMenuItem(
+          value: TagTurnoverPopUpMenu.delete,
+          child: Row(
+            children: [Icon(Icons.delete), SizedBox(width: 8), Text('Delete')],
+          ),
+        ),
       ],
     );
   }
@@ -145,7 +196,9 @@ class TagTurnoverItem extends StatelessWidget {
       case EditTagTurnoverUpdated():
         cubit.updateTagTurnover(result.tagTurnover);
       case EditTagTurnoverDeleted():
-        cubit.removeTagTurnover(tagTurnover.id);
+        cubit.deleteTagTurnover(tagTurnover.id);
     }
   }
 }
+
+enum TagTurnoverPopUpMenu { unallocate, editTransfer, edit, delete }
