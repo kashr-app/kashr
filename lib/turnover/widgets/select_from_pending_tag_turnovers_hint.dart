@@ -23,7 +23,7 @@ class SelectFromPendingTagTurnoversHint extends StatelessWidget {
           turnover: turnover,
           tagTurnoverRepository: tagTurnoverRepository,
           existingTagTurnoverIds: state.currentTagTurnoversById.keys,
-          unlinkedTagTurnoverIds: state.unlinkedTagTurnovers,
+          unallocatedTagTurnovers: state.unallocatedTagTurnovers,
         );
       },
     );
@@ -34,13 +34,13 @@ class _HintContent extends StatelessWidget {
   final Turnover turnover;
   final TagTurnoverRepository tagTurnoverRepository;
   final Iterable<UuidValue> existingTagTurnoverIds;
-  final List<TagTurnover> unlinkedTagTurnoverIds;
+  final List<TagTurnover> unallocatedTagTurnovers;
 
   const _HintContent({
     required this.turnover,
     required this.tagTurnoverRepository,
     required this.existingTagTurnoverIds,
-    required this.unlinkedTagTurnoverIds,
+    required this.unallocatedTagTurnovers,
   });
 
   @override
@@ -50,7 +50,7 @@ class _HintContent extends StatelessWidget {
     return FutureBuilder<List<TagTurnover>>(
       future: tagTurnoverRepository.getUnmatched(),
       builder: (context, snapshot) {
-        // Calculate total count: unmatched from DB + unlinked in current session
+        // Calculate total count: unmatched from DB + unallocated in current session
         final unmatchedFromDb = snapshot.data ?? [];
 
         // Filter out tag turnovers that are already associated with this turnover
@@ -58,9 +58,9 @@ class _HintContent extends StatelessWidget {
             .where((tt) => !existingTagTurnoverIds.contains(tt.id))
             .toList();
 
-        // Add count of unlinked tag turnovers
+        // Add count of unallocated tag turnovers
         final totalCount =
-            availablePendingTurnovers.length + unlinkedTagTurnoverIds.length;
+            availablePendingTurnovers.length + unallocatedTagTurnovers.length;
 
         if (totalCount == 0) {
           return const SizedBox.shrink();

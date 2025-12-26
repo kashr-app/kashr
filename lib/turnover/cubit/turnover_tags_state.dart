@@ -22,8 +22,8 @@ abstract class TurnoverTagsState with _$TurnoverTagsState {
     @Default([]) List<TagSuggestion> suggestions,
     String? errorMessage,
     @Default(false) bool isManualAccount,
-    @Default([]) List<TagTurnover> associatedPendingTagTurnovers,
-    @Default([]) List<TagTurnover> unlinkedTagTurnovers,
+    @Default([]) List<TagTurnover> allocatedPendingTagTurnovers,
+    @Default([]) List<TagTurnover> unallocatedTagTurnovers,
     @Default({}) Map<UuidValue, TransferWithDetails> transferByTagTurnoverId,
   }) = _TurnoverTagsState;
 

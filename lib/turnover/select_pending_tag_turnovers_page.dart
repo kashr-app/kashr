@@ -54,7 +54,7 @@ class _SelectPendingTagTurnoversPageState
 
       final unmatched = await tagTurnoverRepository.getUnmatched();
 
-      // Filter out tag turnovers that are already associated with this turnover
+      // Filter out TagTurnovers that are already associated with this turnover
       final existingTagTurnoverIds = widget
           .cubit
           .state
@@ -66,10 +66,10 @@ class _SelectPendingTagTurnoversPageState
           .where((tt) => !existingTagTurnoverIds.contains(tt.id))
           .toList();
 
-      // Combine unmatched and unlinked tag turnovers
+      // Combine unmatched and unallocated TagTurnovers
       final allAvailable = [
         ...availableUnmatched,
-        ...widget.cubit.state.unlinkedTagTurnovers,
+        ...widget.cubit.state.unallocatedTagTurnovers,
       ];
 
       final withTagsAndAccounts = allAvailable.map((tt) {
@@ -143,7 +143,7 @@ class _SelectPendingTagTurnoversPageState
       if (action != AmountExceedingAction.scaleDown) return;
     }
 
-    // All confirmations passed, associate the tag turnovers
+    // All confirmations passed, associate the TagTurnovers
     widget.cubit.allocatePendingTagTurnovers(selectedTagTurnovers);
 
     if (mounted) {
