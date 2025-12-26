@@ -16,7 +16,7 @@ enum TransferItemType { transfer, unlinkedTagTurnover }
 class TransferItemPointer {
   final UuidValue id;
   final TransferItemType type;
-  final DateTime sortDate;
+  final DateTime? sortDate;
 
   const TransferItemPointer({
     required this.id,
@@ -432,7 +432,9 @@ class TransferRepository {
       return TransferItemPointer(
         id: UuidValue.fromString(row['id'] as String),
         type: type,
-        sortDate: DateTime.parse(row['sort_date'] as String),
+        sortDate: row['sort_date'] == null
+            ? null
+            : DateTime.parse(row['sort_date'] as String),
       );
     }).toList();
   }
