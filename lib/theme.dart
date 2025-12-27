@@ -3,26 +3,41 @@ import 'package:flutter/material.dart';
 
 class ThemeBuilder {
   ThemeData lightMode() {
-    return buildTheme(
-      ThemeData(
+    final primary = const Color(0xFF28CA97);
+    final bg = Color(0xFFE5E5E5);
+    
+    final t =  ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
-        colorSchemeSeed: const Color(0xFF28CA97),
+        colorSchemeSeed: primary,
+      );
+
+    return buildTheme(
+      t.copyWith(
+        scaffoldBackgroundColor: bg,
+        colorScheme: t.colorScheme.copyWith(
+          surface: bg,
+        ),
       ),
     );
   }
 
   ThemeData darkMode() {
+    final primary = const Color(0xFF28CA97);
+    final bg = Color(0xFF333333);
+    
     final t = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorSchemeSeed: const Color(0xFF28CA97),
+      colorSchemeSeed: primary,
     );
+
 
     return buildTheme(
       t.copyWith(
+        scaffoldBackgroundColor: bg,
         colorScheme: t.colorScheme.copyWith(
-          // onSurface: const Color(0xFFFFFFFF),
+          surface: bg,
         ),
       ),
     );

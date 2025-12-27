@@ -3,6 +3,7 @@ import 'package:kashr/local_auth/cubit/local_auth_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:local_auth/local_auth.dart';
 
 part '../_gen/local_auth/local_auth_login_page.g.dart';
 
@@ -39,32 +40,17 @@ class _LocalAuthLoginPageState extends State<LocalAuthLoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Authenticate")),
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? Colors
+                .white // because the logo slogan does not work well on grey
+          : null,
       body: SafeArea(
         child: BlocBuilder<LocalAuthCubit, LocalAuthState>(
           builder: (context, state) {
             switch (state) {
               case LocalAuthInitial():
               case LocalAuthLoggedOut():
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.account_circle,
-                        color: Theme.of(context).primaryColor,
-                        size: 64,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text("Welcome", textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _startAuthentication,
-                        child: const Text("Authenticate"),
-                      ),
-                    ],
-                  ),
-                );
+                return _buildBody(context);
               case LocalAuthLoading():
                 return Center(
                   child: Column(
@@ -95,29 +81,47 @@ class _LocalAuthLoginPageState extends State<LocalAuthLoginPage> {
                     ),
                   ],
                 );
-              case LocalAuthError():
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error, color: Colors.red, size: 64),
-                      const SizedBox(height: 8),
-                      Text(
-                        state.message,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _startAuthentication,
-                        child: const Text("Retry"),
-                      ),
-                    ],
-                  ),
-                );
+              case LocalAuthError(:String message, :var code):
+                return _buildBody(context, error: message, errorCode: code);
             }
           },
         ),
+      ),
+    );
+  }
+
+  Center _buildBody(
+    BuildContext context, {
+    String? error,
+    LocalAuthExceptionCode? errorCode,
+  }) {
+    final errorColor = Theme.of(context).colorScheme.error;
+    return Center(
+      child: Column(
+        children: [
+          Expanded(child: Image.asset('assets/logo-transparent.png')),
+          if (error != null || errorCode != null) ...[
+            Icon(Icons.error, color: errorColor, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              errorCode?.name ?? error ?? 'Unknown error.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: errorColor),
+            ),
+            const SizedBox(height: 32),
+          ],
+          Column(
+            children: [
+              Text('Authenticate to enter the app'),
+              SizedBox(height: 16),
+              FilledButton(
+                onPressed: _startAuthentication,
+                child: const Text("Authenticate"),
+              ),
+            ],
+          ),
+          SizedBox(height: 64),
+        ],
       ),
     );
   }
