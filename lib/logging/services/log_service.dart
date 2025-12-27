@@ -17,8 +17,10 @@ class LogService {
 
   LogService() {
     log = Logger(
+      level: Level.all,
       output: LogServiceOutput(this),
       printer: PrettyPrinter(colors: false),
+      filter: ProductionFilter(),
     );
     instance = this;
   }
@@ -33,9 +35,14 @@ class LogService {
   Stream<void> get logsUpdated => _logsUpdatedController.stream;
 
   Future<void> initialize() async {
-    _logFile = await _getLogFile();
-    await _cleanupOldLogs();
-    log.i('LogService initialized at ${_logFile?.path}');
+    try {
+      _logFile = await _getLogFile();
+      await _cleanupOldLogs();
+      log.i('LogService initialized at ${_logFile?.path}');
+    } catch (e, stack) {
+      debugPrint('CRITICAL: LogService initialization failed: $e\n$stack');
+      rethrow;
+    }
   }
 
   void dispose() {
@@ -83,14 +90,15 @@ class LogService {
 
       await _appendLogEntry(entry);
     } catch (e, stack) {
-      if (kDebugMode) {
-        print('Failed to write log entry: $e\n$stack');
-      }
+      debugPrint('Failed to write log entry: $e\n$stack');
     }
   }
 
   Future<void> _appendLogEntry(LogEntry entry) async {
-    if (_logFile == null) return;
+    if (_logFile == null) {
+      debugPrint('WARNING: Cannot write log - LogService not initialized');
+      return;
+    }
 
     // Append the new log as a single line
     await _logFile!.writeAsString(
@@ -207,5 +215,12 @@ class LogServiceOutput extends LogOutput {
       // ignore: deprecated_member_use
       Level.off || Level.nothing => LogLevelSetting.off,
     };
+  }
+}
+
+class ProductionLogFilter extends LogFilter {
+  @override
+  bool shouldLog(LogEvent event) {
+    return true;
   }
 }
