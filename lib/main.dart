@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:kashr/account/account_module.dart';
 import 'package:kashr/backup/backup_module.dart';
@@ -28,20 +29,47 @@ LogService? _logService;
 void main() async {
   runZonedGuarded(
     () async {
+      developer.log('main() started', name: 'kashr.main');
       WidgetsFlutterBinding.ensureInitialized();
+      developer.log('WidgetsFlutterBinding initialized', name: 'kashr.main');
 
       final loggingModule = LoggingModule();
-      await loggingModule.logService.initialize();
+      developer.log('LoggingModule created', name: 'kashr.main');
+
+      // Add timeout protection to prevent indefinite hanging
+      await loggingModule.logService.initialize().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          developer.log(
+            'LogService initialization timed out after 10s',
+            name: 'kashr.main',
+            level: 900,
+          );
+        },
+      );
+      developer.log('LogService initialized', name: 'kashr.main');
+
       _logService = loggingModule.logService;
 
       _setupErrorHandlers(loggingModule.logService);
+      developer.log('Error handlers configured', name: 'kashr.main');
+
+      developer.log('Starting runApp()', name: 'kashr.main');
       runApp(
         RestartWidget(
           child: MyApp(loggingModule, AppRouter(loggingModule.logService.log)),
         ),
       );
+      developer.log('runApp() completed', name: 'kashr.main');
     },
     (error, stack) {
+      developer.log(
+        'Uncaught Zone error',
+        name: 'kashr.main',
+        level: 1000,
+        error: error,
+        stackTrace: stack,
+      );
       _logService?.logToFile(
         level: LogLevelSetting.error,
         message: 'Uncaught zone error',

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:kashr/logging/model/log_entry.dart';
@@ -32,14 +33,40 @@ class LogService {
 
   final _logsUpdatedController = StreamController<void>.broadcast();
 
+  bool _isCleanupRunning = false;
+  bool _hasRunInitialCleanup = false;
+  int _logWriteCount = 0;
+  final List<LogEntry> _writeBuffer = [];
+
   Stream<void> get logsUpdated => _logsUpdatedController.stream;
 
   Future<void> initialize() async {
     try {
+      final startTime = DateTime.now();
+      developer.log('LogService.initialize() started', name: 'kashr.log_service');
+
       _logFile = await _getLogFile();
-      await _cleanupOldLogs();
+      developer.log(
+        'Log file ready: ${DateTime.now().difference(startTime).inMilliseconds}ms',
+        name: 'kashr.log_service',
+      );
+
+      // Don't run cleanup on startup to avoid blocking
+      // Cleanup will run lazily when needed or can be triggered manually
+
       log.i('LogService initialized at ${_logFile?.path}');
+      developer.log(
+        'LogService.initialize() completed: ${DateTime.now().difference(startTime).inMilliseconds}ms',
+        name: 'kashr.log_service',
+      );
     } catch (e, stack) {
+      developer.log(
+        'CRITICAL: LogService initialization failed',
+        name: 'kashr.log_service',
+        level: 1000,
+        error: e,
+        stackTrace: stack,
+      );
       debugPrint('CRITICAL: LogService initialization failed: $e\n$stack');
       rethrow;
     }
@@ -100,14 +127,93 @@ class LogService {
       return;
     }
 
-    // Append the new log as a single line
+    // If cleanup is running, buffer the entry to avoid file corruption
+    if (_isCleanupRunning) {
+      _writeBuffer.add(entry);
+      return;
+    }
+
+    // Write directly to file
+    await _writeLogEntryToFile(entry);
+
+    _logWriteCount++;
+
+    // Run cleanup lazily: after first 50 writes, then every 500 writes
+    // This prevents blocking on every log write
+    if (!_hasRunInitialCleanup && _logWriteCount >= 50) {
+      _hasRunInitialCleanup = true;
+      _runCleanupIfNeeded();
+    } else if (_hasRunInitialCleanup && _logWriteCount % 500 == 0) {
+      _runCleanupIfNeeded();
+    }
+
+    _logsUpdatedController.add(null);
+  }
+
+  Future<void> _writeLogEntryToFile(LogEntry entry) async {
     await _logFile!.writeAsString(
       '${jsonEncode(entry.toJson())}\n',
       mode: FileMode.append,
     );
+  }
 
-    // Trim the file if it grows too large
-    await _trimLogsIfNeeded();
+  void _runCleanupIfNeeded() {
+    if (_isCleanupRunning) return;
+
+    _isCleanupRunning = true;
+
+    // Run cleanup in background without blocking
+    unawaited(_performCleanup());
+  }
+
+  Future<void> _performCleanup() async {
+    try {
+      await _trimLogsIfNeeded();
+      await _cleanupOldLogs();
+    } catch (e, stack) {
+      developer.log(
+        'Cleanup failed (non-critical)',
+        name: 'kashr.log_service',
+        level: 900,
+        error: e,
+        stackTrace: stack,
+      );
+    } finally {
+      // Mark cleanup as complete first
+      _isCleanupRunning = false;
+
+      // Flush any buffered entries that accumulated during cleanup
+      await _flushWriteBuffer();
+    }
+  }
+
+  Future<void> _flushWriteBuffer() async {
+    if (_writeBuffer.isEmpty) return;
+
+    developer.log(
+      'Flushing ${_writeBuffer.length} buffered log entries',
+      name: 'kashr.log_service',
+    );
+
+    // Copy and clear buffer to avoid modifications during iteration
+    final bufferedEntries = List<LogEntry>.from(_writeBuffer);
+    _writeBuffer.clear();
+
+    // Write all buffered entries
+    for (final entry in bufferedEntries) {
+      try {
+        await _writeLogEntryToFile(entry);
+        _logWriteCount++;
+      } catch (e, stack) {
+        developer.log(
+          'Failed to flush buffered log entry',
+          name: 'kashr.log_service',
+          level: 900,
+          error: e,
+          stackTrace: stack,
+        );
+      }
+    }
 
     _logsUpdatedController.add(null);
   }
