@@ -133,31 +133,30 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             onPressed: () => const AccountsRoute().go(context),
-            icon: const Icon(Icons.account_balance),
+            icon: const Icon(Icons.account_balance_outlined),
             tooltip: 'Accounts',
           ),
           IconButton(
             onPressed: () => const TurnoversRoute().go(context),
-            icon: const Icon(Icons.list_alt),
+            icon: const Icon(Icons.list_alt_outlined),
             tooltip: 'Turnovers',
           ),
           IconButton(
             onPressed: () => const SavingsRoute().go(context),
-            icon: const Icon(Icons.savings),
+            icon: const Icon(Icons.savings_outlined),
             tooltip: 'Savings',
           ),
           IconButton(
             onPressed: () => const AnalyticsRoute().go(context),
-            icon: const Icon(Icons.analytics),
+            icon: const Icon(Icons.analytics_outlined),
             tooltip: 'Analytics',
           ),
           IconButton(
             onPressed: () => const SettingsRoute().go(context),
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
           ),
         ],
