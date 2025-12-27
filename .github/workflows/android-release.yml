@@ -26,6 +26,8 @@ jobs:
       version_code: ${{ steps.version.outputs.version_code }}
       flutter_version: ${{ steps.fvm.outputs.flutter_version }}
       release_tag: ${{ steps.tag.outputs.tag }}
+      apk_filename: ${{ steps.filename.outputs.apk_filename }}
+      artifact_name: ${{ steps.filename.outputs.artifact_name }}
 
     steps:
       - name: Checkout repository
@@ -86,17 +88,25 @@ jobs:
             echo "tag=v${{ steps.version.outputs.version_name }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Set APK filename variables
+        id: filename
+        run: |
+          APK_FILENAME="kashr-${{ steps.tag.outputs.tag }}+${{ steps.version.outputs.version_code }}-release.apk"
+          ARTIFACT_NAME="kashr-${{ steps.tag.outputs.tag }}+${{ steps.version.outputs.version_code }}-release-apk"
+          echo "apk_filename=$APK_FILENAME" >> $GITHUB_OUTPUT
+          echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+
       - name: Rename APK
         run: |
           mkdir -p release
           cp build/app/outputs/flutter-apk/app-release.apk \
-             release/kashr-${{ steps.tag.outputs.tag }}-release.apk
+             release/${{ steps.filename.outputs.apk_filename }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kashr-${{ steps.tag.outputs.tag }}-release-apk
-          path: release/kashr-${{ steps.tag.outputs.tag }}-release.apk
+          name: ${{ steps.filename.outputs.artifact_name }}
+          path: release/${{ steps.filename.outputs.apk_filename }}
           retention-days: 30
 
   release:
@@ -116,7 +126,7 @@ jobs:
       - name: Download APK artifact
         uses: actions/download-artifact@v4
         with:
-          name: kashr-${{ needs.build.outputs.release_tag }}-release-apk
+          name: ${{ needs.build.outputs.artifact_name }}
           path: release
 
       - name: Generate release notes
@@ -153,7 +163,7 @@ jobs:
           name: Kashr ${{ needs.build.outputs.release_tag }}
           body_path: final_body.md
           files: |
-            release/kashr-${{ needs.build.outputs.release_tag }}-${{ needs.build.outputs.version_code }}-release.apk
+            release/${{ needs.build.outputs.apk_filename }}
           draft: false
           prerelease: false
         env:
