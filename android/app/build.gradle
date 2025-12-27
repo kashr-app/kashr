@@ -45,15 +45,29 @@ android {
 
     signingConfigs {
         def propertiesFile = rootProject.file("signing/signing.properties")
-        if (propertiesFile.exists()) {
+        def keystoreFile = rootProject.file("signing/signing.keystore")
+        def missingFiles = []
+        if (!propertiesFile.exists()) missingFiles.add("signing.properties")
+        if (!keystoreFile.exists()) missingFiles.add("signing.keystore")
+        def isCI = System.getenv("CI") == "true"
+
+        if (missingFiles.isEmpty()) {
             release {
                 def properties = new Properties()
                 properties.load(propertiesFile.newDataInputStream())
 
-                storeFile file("${propertiesFile.parentFile}/signing.keystore")
+                storeFile keystoreFile
                 storePassword properties['STORE_PASSWORD']
                 keyAlias properties['KEY_ALIAS']
                 keyPassword properties['KEY_PASSWORD']
+            }
+        } else {
+            def errorMsg = "❌ Release signing not configured: missing ${missingFiles.join(', ')}"
+            if (isCI) {
+                throw new GradleException("${errorMsg}. Cannot build release APK in CI without proper signing.")
+            } else {
+                logger.warn("⚠️  ${errorMsg}")
+                logger.warn("   Release builds will fall back to debug signing.")
             }
         }
     }

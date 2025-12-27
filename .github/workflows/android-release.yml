@@ -57,6 +57,8 @@ jobs:
           EOF
 
       - name: Build APK
+        env:
+          CI: true
         run: flutter build apk --release
 
       - name: Extract version from pubspec.yaml
