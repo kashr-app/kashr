@@ -53,7 +53,7 @@ Compare the output with the hash published in the release notes.
 If you discover a security vulnerability in Kashr, please report it responsibly:
 
 1. **DO NOT** open a public GitHub issue for security vulnerabilities
-2. **DO** create a Report via (Security Advisory)[https://github.com/kashr-app/kashr/security/advisories]
+2. **DO** create a Report via [Security Advisory](https://github.com/kashr-app/kashr/security/advisories)
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce
