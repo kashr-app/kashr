@@ -3,6 +3,7 @@ import 'package:kashr/db/db_helper.dart';
 import 'package:kashr/home/home_page.dart';
 import 'package:kashr/logging/log_viewer_page.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
+import 'package:kashr/local_auth/auth_delay.dart';
 import 'package:kashr/settings/banks_page.dart';
 import 'package:kashr/settings/settings_cubit.dart';
 import 'package:kashr/settings/settings_state.dart';
@@ -104,6 +105,22 @@ class _SettingsPageState extends State<SettingsPage> {
                           },
                         ),
                         onTap: () => _showFastFormModeInfo(context),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.lock_clock),
+                        title: const Text("Auto Lock App"),
+                        subtitle: Text(state.authDelay.displayName),
+                        onTap: () async {
+                          final newValue = await showAuthDelayDialog(
+                            context,
+                            state.authDelay,
+                          );
+                          if (newValue != null && context.mounted) {
+                            context.read<SettingsCubit>().setAuthDelay(
+                              newValue,
+                            );
+                          }
+                        },
                       ),
                     ],
                   ),

@@ -1,6 +1,5 @@
 import 'package:kashr/local_auth/cubit/local_auth_cubit.dart';
 import 'package:kashr/home/home_page.dart' as home;
-import 'package:kashr/main.dart';
 import 'package:kashr/local_auth/local_auth_login_page.dart'
     as local_auth;
 import 'package:flutter/widgets.dart';
@@ -17,9 +16,8 @@ class AppRouter {
       initialLocation: const local_auth.LocalAuthLoginRoute().location,
       routes: [...local_auth.$appRoutes, ...home.$appRoutes],
       redirect: (BuildContext context, GoRouterState state) {
-        final isAuthenticated =
-            isDevelopment ||
-            context.read<LocalAuthCubit>().state is LocalAuthSuccess;
+        final localAuthCubit = context.read<LocalAuthCubit>();
+        final isAuthenticated = localAuthCubit.state is LocalAuthSuccess;
 
         final bool loggingIn =
             state.matchedLocation ==
@@ -30,6 +28,14 @@ class AppRouter {
           return const local_auth.LocalAuthLoginRoute().location;
         }
         if (isAuthenticated && loggingIn) {
+          final savedLocation = localAuthCubit.popSavedLocation();
+          if (savedLocation != null &&
+              savedLocation !=
+                  const local_auth.LocalAuthLoginRoute().location) {
+            _log.d('Redirecting to saved location: $savedLocation');
+            return savedLocation;
+          }
+          _log.d('Redirecting to home');
           return const home.HomeRoute().location;
         }
         return null;

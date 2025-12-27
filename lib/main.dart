@@ -23,8 +23,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 
-const bool isDevelopment = bool.fromEnvironment('dart.vm.product') == false;
-
 LogService? _logService;
 
 void main() async {
@@ -100,11 +98,17 @@ class _MyAppState extends State<MyApp> {
 
     // Initialize dependency tree
     final log = widget.loggingModule.logService.log;
+    final settingsModule = SettingsModule(widget.loggingModule.logService);
     final turnoverModule = TurnoverModule(log);
     _modules = [
       widget.loggingModule,
-      LocalAuthModule(_appLifeCycleListeners, log),
-      SettingsModule(widget.loggingModule.logService),
+      settingsModule,
+      LocalAuthModule(
+        _appLifeCycleListeners,
+        settingsModule.settingsCubit,
+        widget.router.router,
+        log,
+      ),
       BackupModule(log),
       turnoverModule,
       SavingsModule(turnoverModule, log),

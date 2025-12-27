@@ -16,5 +16,6 @@ class LocalAuthLoggedOut extends LocalAuthState {}
 
 class LocalAuthError extends LocalAuthState {
   final String message;
-  LocalAuthError(this.message);
+  final LocalAuthExceptionCode? code;
+  LocalAuthError(this.message, {this.code});
 }

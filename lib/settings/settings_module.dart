@@ -8,16 +8,17 @@ import 'package:provider/single_child_widget.dart';
 
 class SettingsModule implements Module {
   final LogService logService;
+  late final SettingsCubit settingsCubit;
 
   @override
   late final List<SingleChildWidget> providers;
 
   SettingsModule(this.logService) {
+    settingsCubit = SettingsCubit(SettingsRepository(), logService);
+
     providers = [
       Provider.value(value: this),
-      BlocProvider(
-        create: (_) => SettingsCubit(SettingsRepository(), logService),
-      ),
+      BlocProvider.value(value: settingsCubit),
     ];
   }
 
