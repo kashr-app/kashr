@@ -49,70 +49,72 @@ class LogViewerPage extends StatelessWidget {
           ),
         ],
       ),
-      body: BlocBuilder<LogViewerCubit, LogViewerState>(
-        builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    state.error!,
-                    style: TextStyle(
+      body: SafeArea(
+        child: BlocBuilder<LogViewerCubit, LogViewerState>(
+          builder: (context, state) {
+            if (state.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+        
+            if (state.error != null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
                       color: Theme.of(context).colorScheme.error,
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () => context.read<LogViewerCubit>().loadLogs(),
-                    child: const Text('Retry'),
-                  ),
-                ],
+                    SizedBox(height: 16),
+                    Text(
+                      state.error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => context.read<LogViewerCubit>().loadLogs(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
+        
+            if (state.logs.isEmpty) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 48,
+                      color: Colors.green,
+                    ),
+                    SizedBox(height: 16),
+                    Text('No logs to display'),
+                  ],
+                ),
+              );
+            }
+        
+            return RefreshIndicator(
+              onRefresh: () => context.read<LogViewerCubit>().loadLogs(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: state.logs.length,
+                itemBuilder: (context, index) {
+                  final log = state.logs[index];
+                  return _LogEntryCard(
+                    entry: log,
+                    onTap: () => _showLogDetails(context, log),
+                  );
+                },
               ),
             );
-          }
-
-          if (state.logs.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    size: 48,
-                    color: Colors.green,
-                  ),
-                  SizedBox(height: 16),
-                  Text('No logs to display'),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => context.read<LogViewerCubit>().loadLogs(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: state.logs.length,
-              itemBuilder: (context, index) {
-                final log = state.logs[index];
-                return _LogEntryCard(
-                  entry: log,
-                  onTap: () => _showLogDetails(context, log),
-                );
-              },
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }
