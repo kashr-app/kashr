@@ -25,6 +25,7 @@ jobs:
       release_tag: ${{ steps.tag.outputs.tag }}
       apk_filename: ${{ steps.filename.outputs.apk_filename }}
       artifact_name: ${{ steps.filename.outputs.artifact_name }}
+      apk_sha256: ${{ steps.hash.outputs.sha256 }}
 
     steps:
       - uses: actions/checkout@v4
@@ -94,6 +95,17 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk \
              release/${{ steps.filename.outputs.apk_filename }}
 
+      - name: Compute APK SHA256
+        id: hash
+        run: |
+          cd release
+          SHA256=$(sha256sum ${{ steps.filename.outputs.apk_filename }} | awk '{print $1}')
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "SHA256: $SHA256"
+          # Create .sha256 file
+          echo "$SHA256  ${{ steps.filename.outputs.apk_filename }}" > ${{ steps.filename.outputs.apk_filename }}.sha256
+          cd ..
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -134,7 +146,7 @@ jobs:
       - name: Create release notes footer
         id: footer
         run: |
-          cat > release_footer.md << EOF
+          cat > release_footer.md << 'EOF'
 
           ---
 
@@ -142,6 +154,43 @@ jobs:
           Download the APK file below and install it on your Android device.
 
           **Note:** You may need to enable "Install from Unknown Sources" in your device settings.
+
+          ## 🔐 Security Verification
+
+          ### APK SHA-256 Hash
+          ```
+          ${{ needs.build.outputs.apk_sha256 }}
+          ```
+
+          **Verify the downloaded APK:**
+          ```bash
+          # Linux/macOS - verify against .sha256 file
+          sha256sum -c ${{ needs.build.outputs.apk_filename }}.sha256
+
+          # Or manually compare
+          sha256sum ${{ needs.build.outputs.apk_filename }}
+
+          # Windows (PowerShell)
+          Get-FileHash ${{ needs.build.outputs.apk_filename }} -Algorithm SHA256
+          ```
+
+          ### Signing Certificate Fingerprints
+          All official releases are signed with our release certificate. Verify using:
+          ```bash
+          apksigner verify --print-certs ${{ needs.build.outputs.apk_filename }}
+          ```
+
+          *Expected SHA-256 fingerprint:*
+          ```
+          A9:E0:42:FB:F2:AB:1C:4A:B0:FD:46:AD:61:C0:35:74:9A:FA:1D:8D:B6:8D:7E:6A:E6:85:1F:1D:DC:54:CF:59
+          ```
+
+          *Expected SHA-1 fingerprint:*
+          ```
+          E5:65:E1:2E:80:6E:C3:B5:E8:74:38:59:2A:BE:72:41:48:01:C8:65
+          ```
+
+          📖 For more security information, see [SECURITY.md](https://github.com/kashr-app/kashr/blob/main/SECURITY.md).
           EOF
 
       - name: Combine notes and footer
@@ -156,6 +205,7 @@ jobs:
           body_path: final_body.md
           files: |
             release/${{ needs.build.outputs.apk_filename }}
+            release/${{ needs.build.outputs.apk_filename }}.sha256
           draft: false
           prerelease: false
         env:

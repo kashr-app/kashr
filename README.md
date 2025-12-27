@@ -33,6 +33,16 @@ Kashr, derived from the German word *'Kescher'* (pronounced *Késcher* like cas
 - You can store (optionally encrypted) backups in any of the supported backends (e.g. Nextcloud/WebDAV).
 - We provide a dockerized decryption tool independent of the app, see [ENCRYPTION_README.md](ENCRYPTION_README.md).
 
+## Security
+
+All official releases are signed with our release certificate. Before installing any APK, verify:
+
+- **APK Hash:** Each release includes SHA-256 hash files for integrity verification
+- **Signing Certificate:** Verify the APK signature matches our official fingerprints
+- **Download Source:** Only download from our [official GitHub Releases](https://github.com/kashr-app/kashr/releases)
+
+For detailed verification instructions and our signing certificate fingerprints, see [SECURITY.md](SECURITY.md).
+
 ## Trustful Business Model: Good Software, Not Data!
 
 - **You're the customer**, not the product.
