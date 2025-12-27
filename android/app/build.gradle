@@ -34,7 +34,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "app.kashr.kashr"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
@@ -44,11 +43,24 @@ android {
         versionName = flutterVersionName
     }
 
+    signingConfigs {
+        def propertiesFile = rootProject.file("signing/signing.properties")
+        if (propertiesFile.exists()) {
+            release {
+                def properties = new Properties()
+                properties.load(propertiesFile.newDataInputStream())
+
+                storeFile file("${propertiesFile.parentFile}/signing.keystore")
+                storePassword properties['STORE_PASSWORD']
+                keyAlias properties['KEY_ALIAS']
+                keyPassword properties['KEY_PASSWORD']
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            signingConfig = signingConfigs.findByName('release') ?: signingConfigs.debug
         }
     }
 }

@@ -52,7 +52,7 @@ app.*.map.json
 .fvm/
 
 # Android signing files (sensitive - never commit these!)
-android/key.properties
-android/app/*.jks
-android/app/*.keystore
-keystore-base64.txt
+signing.properties
+*.jks
+*.keystore
+signing

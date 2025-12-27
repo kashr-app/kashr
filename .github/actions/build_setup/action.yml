@@ -1,0 +1,29 @@
+name: "Pre Build"
+description: "Setup for build environment"
+runs:
+  using: "composite"
+  steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        distribution: "temurin"
+        java-version: 17
+        cache: "gradle"
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v5
+
+    - name: Read Flutter version from .fvmrc
+      id: fvm
+      shell: bash
+      run: |
+        FLUTTER_VERSION=$(cat .fvmrc | grep -o '"flutter"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)".*/\1/')
+        echo "flutter_version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+        echo "Using Flutter version: $FLUTTER_VERSION"
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ steps.fvm.outputs.flutter_version }}
+        channel: "stable"
+        cache: true

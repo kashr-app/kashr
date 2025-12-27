@@ -10,9 +10,6 @@ on:
         description: 'Version tag (e.g., v1.0.0)'
         required: false
 
-env:
-  JAVA_VERSION: '17'
-
 jobs:
   build:
     name: Build APK
@@ -30,41 +27,34 @@ jobs:
       artifact_name: ${{ steps.filename.outputs.artifact_name }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Read Flutter version from .fvmrc
-        id: fvm
-        run: |
-          FLUTTER_VERSION=$(cat .fvmrc | grep -o '"flutter"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)".*/\1/')
-          echo "flutter_version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
-          echo "Using Flutter version: $FLUTTER_VERSION"
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: 'gradle'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ steps.fvm.outputs.flutter_version }}
-          channel: 'stable'
-          cache: true
+      - uses: ./.github/actions/build_setup
 
       - name: Get dependencies
+        shell: bash
         run: flutter pub get
 
       - name: Run code generation
+        shell: bash
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Analyze code
-        run: flutter analyze
-        continue-on-error: true
+      - name: Setup Android signing
+        run: |
+          # Create signing directory
+          mkdir -p android/signing
+
+          # Decode and save keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_GITHUB_BASE64 }}" | base64 -d > android/signing/signing.keystore
+
+          # Create signing.properties file
+          cat > android/signing/signing.properties << EOF
+          STORE_PASSWORD=${{ secrets.ANDROID_STORE_PASSWORD_GITHUB }}
+          KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS_GITHUB }}
+          KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD_GITHUB }}
+          EOF
 
       - name: Build APK
         run: flutter build apk --release
