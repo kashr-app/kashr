@@ -110,6 +110,7 @@ class TagTurnoverRepository {
 
   /// Batch adds a tag to multiple turnovers.
   /// For each turnover, allocates the remaining unallocated amount to the tag.
+  /// If the remaining unallocated amount was 0 the tag is still added.
   Future<void> batchAddTagToTurnovers(
     List<Turnover> turnovers,
     UuidValue tagId,
@@ -154,24 +155,21 @@ class TagTurnoverRepository {
           allocatedByTurnover[turnover.id.uuid] ?? Decimal.zero;
       final remainingAmount = turnover.amountValue - allocatedAmount;
 
-      // Only create if there's remaining amount to allocate
-      if (remainingAmount != Decimal.zero) {
-        final tagTurnover = TagTurnover(
-          id: const Uuid().v4obj(),
-          turnoverId: turnover.id,
-          tagId: tag.id,
-          amountValue: remainingAmount,
-          amountUnit: turnover.amountUnit,
-          counterPart: turnover.counterPart,
-          note: null,
-          createdAt: DateTime.now(),
-          bookingDate: turnover.bookingDate ?? DateTime.now(),
-          accountId: turnover.accountId,
-        );
+      final tagTurnover = TagTurnover(
+        id: const Uuid().v4obj(),
+        turnoverId: turnover.id,
+        tagId: tagId,
+        amountValue: remainingAmount,
+        amountUnit: turnover.amountUnit,
+        counterPart: turnover.counterPart,
+        note: null,
+        createdAt: DateTime.now(),
+        bookingDate: turnover.bookingDate ?? DateTime.now(),
+        accountId: turnover.accountId,
+      );
 
-        batch.insert('tag_turnover', tagTurnover.toJson());
-        createdTagTurnovers.add(tagTurnover);
-      }
+      batch.insert('tag_turnover', tagTurnover.toJson());
+      createdTagTurnovers.add(tagTurnover);
     }
 
     await batch.commit(noResult: true);
