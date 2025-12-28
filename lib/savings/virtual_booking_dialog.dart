@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/account/account_selector_dialog.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/constants.dart';
@@ -63,7 +64,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
   final _formKey = GlobalKey<FormState>();
   final _noteController = TextEditingController();
 
-  Account? _selectedAccount;
+  UuidValue? _selectedAccountId;
   int? _amountScaled;
   DateTime _bookingDate = DateTime.now();
   bool _isAllocating =
@@ -82,6 +83,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
   void _initializeFromBooking() {
     final booking = widget.booking!;
     final absAmount = booking.amountValue.abs();
+    _selectedAccountId = booking.accountId;
     _amountScaled = (absAmount * Decimal.fromInt(100)).toBigInt().toInt();
     _isAllocating = booking.amountValue >= Decimal.zero;
     _noteController.text = booking.note ?? '';
@@ -94,8 +96,8 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
     super.dispose();
   }
 
-  Future<void> _selectAmount() async {
-    if (_selectedAccount == null) {
+  Future<void> _selectAmount(Account? account) async {
+    if (account == null) {
       setState(() {
         _errorMessage = 'Please select an account first';
       });
@@ -104,7 +106,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
     final result = await AmountDialog.show(
       context,
-      currencyUnit: _selectedAccount!.currency,
+      currencyUnit: account.currency,
       initialAmountScaled: _amountScaled?.abs() ?? 0,
       showSignSwitch: false,
       initialIsNegative: false,
@@ -133,13 +135,9 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
     }
   }
 
-  String _formatAmount(int scaledAmount) {
+  String _formatAmount(int scaledAmount, Account account) {
     final decimal = decimalUnscale(scaledAmount)!;
-    final currencyUnit =
-        widget.booking?.amountUnit ?? _selectedAccount?.currency;
-    if (currencyUnit == null) {
-      return decimal.toString();
-    }
+    final currencyUnit = widget.booking?.amountUnit ?? account.currency;
     final currency = Currency.currencyFrom(currencyUnit);
     return currency.format(decimal);
   }
@@ -193,9 +191,9 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
     }
   }
 
-  Future<void> _save() async {
+  Future<void> _save(Account? account) async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedAccount == null) {
+    if (account == null) {
       setState(() {
         _errorMessage = 'Please select an account';
       });
@@ -221,9 +219,9 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
       final booking = SavingsVirtualBooking(
         id: widget.booking?.id ?? const Uuid().v4obj(),
         savingsId: widget.savings.id,
-        accountId: _selectedAccount!.id,
+        accountId: account.id,
         amountValue: adjustedAmount,
-        amountUnit: _selectedAccount!.currency,
+        amountUnit: account.currency,
         note: _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
@@ -252,6 +250,10 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
   @override
   Widget build(BuildContext context) {
     final isEditMode = widget.booking != null;
+    final account = context
+        .read<AccountCubit>()
+        .state
+        .accountById[_selectedAccountId];
 
     return AlertDialog(
       title: Text(isEditMode ? 'Edit Adjustment' : 'Adjust Savings'),
@@ -287,11 +289,11 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                   onTap: () async {
                     final a = await AccountSelectorDialog.show(
                       context,
-                      selectedId: _selectedAccount?.id,
+                      selectedId: account?.id,
                     );
                     if (a != null) {
                       setState(() {
-                        _selectedAccount = a;
+                        _selectedAccountId = a.id;
                       });
                     }
                   },
@@ -302,10 +304,8 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                       suffixIcon: Icon(Icons.arrow_drop_down),
                     ),
                     child: Text(
-                      _selectedAccount != null
-                          ? _selectedAccount!.name
-                          : 'Select account',
-                      style: _selectedAccount == null
+                      account?.name ?? 'Select account',
+                      style: account == null
                           ? Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Theme.of(
                                 context,
@@ -319,7 +319,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
                 // Amount
                 InkWell(
-                  onTap: _selectAmount,
+                  onTap: () => _selectAmount(account),
                   child: InputDecorator(
                     decoration: const InputDecoration(
                       labelText: 'Amount',
@@ -327,8 +327,12 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                       suffixIcon: Icon(Icons.edit),
                     ),
                     child: Text(
-                      _amountScaled != null
-                          ? _formatAmount(_amountScaled!)
+                      account == null
+                          ? 'Select an account first'
+                          /* because formatting needs a currency unit
+                                which we take from account */
+                          : _amountScaled != null
+                          ? _formatAmount(_amountScaled!, account)
                           : 'Tap to enter amount',
                       style: _amountScaled == null
                           ? Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -418,7 +422,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _isLoading ? null : _save,
+          onPressed: _isLoading ? null : () => _save(account),
           child: _isLoading
               ? const SizedBox(
                   width: 16,
