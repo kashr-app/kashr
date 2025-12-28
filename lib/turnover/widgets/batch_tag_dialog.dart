@@ -92,7 +92,7 @@ class BatchTagDialog {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Remove "${tag.name}" from $affectedTurnoversCount turnovers?',
+              'Remove "${tag.name}" from up to $affectedTurnoversCount turnovers?',
             ),
             const SizedBox(height: 16),
             const Text(
