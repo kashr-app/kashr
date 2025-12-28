@@ -233,6 +233,7 @@ class _SavingsCard extends StatelessWidget {
                       children: [
                         Text(
                           tagName,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 4),

@@ -73,7 +73,7 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
         tagId: _selectedTag!.id,
         goalValue: _hasGoal && _goalAmountScaled != null
             ? (Decimal.fromInt(_goalAmountScaled!) / Decimal.fromInt(100))
-                .toDecimal(scaleOnInfinitePrecision: 2)
+                  .toDecimal(scaleOnInfinitePrecision: 2)
             : null,
         goalUnit: _hasGoal && _goalAmountScaled != null
             ? _goalCurrency.name
@@ -147,18 +147,21 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
                             children: [
                               TagAvatar(tag: _selectedTag!, radius: 12),
                               const SizedBox(width: 8),
-                              Text(_selectedTag!.name),
+                              Expanded(
+                                child: Text(
+                                  _selectedTag!.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
                           )
                         : Text(
                             'Tap to select or create tag',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                           ),
                   ),
@@ -194,10 +197,10 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
                             : 'Tap to enter amount',
                         style: _goalAmountScaled == null
                             ? Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                )
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              )
                             : null,
                       ),
                     ),

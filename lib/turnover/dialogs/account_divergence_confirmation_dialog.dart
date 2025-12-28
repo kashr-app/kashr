@@ -142,6 +142,7 @@ class _DivergingAccountItem extends StatelessWidget {
                     children: [
                       Text(
                         tt.note ?? tag?.name ?? '',
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       Text(

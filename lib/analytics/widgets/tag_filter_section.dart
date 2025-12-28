@@ -64,7 +64,7 @@ class TagFilterSection extends StatelessWidget {
                         children: [
                           TagAvatar(tag: tag, radius: 12),
                           const SizedBox(width: 8),
-                          Text(tag.name),
+                          Flexible(child: Text(tag.name)),
                         ],
                       ),
                       selected: isSelected,

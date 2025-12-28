@@ -285,7 +285,10 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text('Log Transaction', style: theme.textTheme.titleLarge),
+                        Text(
+                          'Log Transaction',
+                          style: theme.textTheme.titleLarge,
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'Account: ${widget.account.name}',
@@ -380,7 +383,12 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
                                             radius: 12,
                                           ),
                                           const SizedBox(width: 8),
-                                          Text(_selectedTag!.name),
+                                          Expanded(
+                                            child: Text(
+                                              _selectedTag!.name,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
                                         ],
                                       )
                                     : Text(

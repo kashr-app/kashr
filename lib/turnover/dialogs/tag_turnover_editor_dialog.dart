@@ -321,7 +321,7 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
                               children: [
                                 TagAvatar(tag: tag, radius: 12),
                                 const SizedBox(width: 8),
-                                Expanded(child: Text(tag.name)),
+                                Expanded(child: Text(tag.name, overflow: TextOverflow.ellipsis,)),
                               ],
                             ),
                           ),
@@ -341,7 +341,7 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
                                   children: [
                                     Icon(account.accountType.icon, size: 20),
                                     const SizedBox(width: 8),
-                                    Expanded(child: Text(account.name)),
+                                    Expanded(child: Text(account.name, overflow: TextOverflow.ellipsis,)),
                                   ],
                                 ),
                               ),

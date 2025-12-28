@@ -441,7 +441,7 @@ class _TagTurnoversFilterDialogState extends State<TagTurnoversFilterDialog> {
                                     label: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(tag.name),
+                                        Flexible(child: Text(tag.name)),
                                         if (isLocked) ...[
                                           const SizedBox(width: 4),
                                           const Icon(Icons.lock, size: 14),
@@ -515,7 +515,7 @@ class _TagTurnoversFilterDialogState extends State<TagTurnoversFilterDialog> {
                                     label: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(account.name),
+                                        Flexible(child: Text(account.name)),
                                         if (isLocked) ...[
                                           const SizedBox(width: 4),
                                           const Icon(Icons.lock, size: 14),

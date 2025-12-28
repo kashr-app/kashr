@@ -179,6 +179,7 @@ class _LinkedSideCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         tag!.name,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleMedium,
                       ),
                     ),
@@ -211,33 +212,45 @@ class _LinkedSideCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 14,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    dateFormat.format(tagTurnover.bookingDate),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  Spacer(),
-                  if (account != null) ...[
-                    Icon(
-                      account!.accountType.icon,
-                      size: 14,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    SizedBox(width: 4),
-                    Text(
-                      account!.name,
-                      style: theme.textTheme.bodySmall?.copyWith(
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 14,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
+                      const SizedBox(width: 4),
+                      Text(
+                        dateFormat.format(tagTurnover.bookingDate),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (account != null)
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(
+                            account!.accountType.icon,
+                            size: 14,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              account!.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
                 ],
               ),
               if (tagTurnover.note != null && tagTurnover.note!.isNotEmpty) ...[

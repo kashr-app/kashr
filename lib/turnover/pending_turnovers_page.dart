@@ -428,6 +428,7 @@ class _PendingTurnoverItem extends StatelessWidget {
                           children: [
                             Text(
                               tt.note ?? tag?.name ?? 'Unknown',
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w500,
                               ),
@@ -435,6 +436,7 @@ class _PendingTurnoverItem extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               tag?.name ?? 'Unknown',
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: theme.colorScheme.onSurfaceVariant,
@@ -483,14 +485,16 @@ class _PendingTurnoverItem extends StatelessWidget {
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        account?.name ?? 'Unknown Account',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
+                      Expanded(
+                        child: Text(
+                          account?.name ?? 'Unknown Account',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       Icon(
                         tt.isMatched
                             ? Icons.check_circle_outline

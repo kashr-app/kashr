@@ -41,6 +41,7 @@ class MergeFinalConfirmationDialog extends StatelessWidget {
         color: theme.colorScheme.error,
         size: 48,
       ),
+      scrollable: true,
       title: const Text('Merge Tags?'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -55,7 +56,8 @@ class MergeFinalConfirmationDialog extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'All transactions from "${sourceTag.name}" will be moved to "${targetTag.name}". The tag "${sourceTag.name}" will be permanently deleted.',
+            'All transactions from "${sourceTag.name}" will be moved to "${targetTag.name}".'
+            ' The tag "${sourceTag.name}" will be permanently deleted.',
             style: theme.textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),

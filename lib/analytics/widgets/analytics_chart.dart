@@ -139,8 +139,8 @@ class AnalyticsChart extends StatelessWidget {
   ) {
     final months = state.dataSummaries.keys.toList()..sort();
 
-    final tagColorMap = <String, Color>{};
-    final tagDataMap = <String, List<FlSpot>>{};
+    final tagColorMap = <UuidValue, Color>{};
+    final tagDataMap = <UuidValue, List<FlSpot>>{};
 
     for (var i = 0; i < months.length; i++) {
       final month = months[i];
@@ -154,12 +154,12 @@ class AnalyticsChart extends StatelessWidget {
         if (tag == null) continue;
 
         tagColorMap.putIfAbsent(
-          tag.name,
+          tag.id,
           () => ColorUtils.parseColor(tag.color) ?? _generateColor(tag.name),
         );
 
-        tagDataMap.putIfAbsent(tag.name, () => []);
-        tagDataMap[tag.name]!.add(
+        tagDataMap.putIfAbsent(tag.id, () => []);
+        tagDataMap[tag.id]!.add(
           FlSpot(i.toDouble(), summary.totalAmount.toDouble()),
         );
       }
@@ -169,7 +169,8 @@ class AnalyticsChart extends StatelessWidget {
     final tagNames = <String>[];
 
     for (final entry in tagDataMap.entries) {
-      tagNames.add(entry.key);
+      final tag = tagById[entry.key]!;
+      tagNames.add(tag.name);
       lines.add(
         LineChartBarData(
           spots: entry.value,

@@ -305,6 +305,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                     ),
                     child: Text(
                       account?.name ?? 'Select account',
+                      overflow: TextOverflow.ellipsis,
                       style: account == null
                           ? Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Theme.of(

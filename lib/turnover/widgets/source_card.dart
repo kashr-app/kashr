@@ -61,6 +61,7 @@ class SourceCard extends StatelessWidget {
                   children: [
                     Text(
                       tag.name,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
@@ -70,10 +71,13 @@ class SourceCard extends StatelessWidget {
                         children: [
                           Icon(account.accountType.icon, size: 16),
                           SizedBox(width: 4),
-                          Text(
-                            account.name,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                          Expanded(
+                            child: Text(
+                              account.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ),
                         ],

@@ -56,12 +56,15 @@ class TagSummaryRow extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          label,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontStyle: isUnallocated
-                                ? FontStyle.italic
-                                : FontStyle.normal,
+                        Expanded(
+                          child: Text(
+                            label,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontStyle: isUnallocated
+                                  ? FontStyle.italic
+                                  : FontStyle.normal,
+                            ),
                           ),
                         ),
                         Text(

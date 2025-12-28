@@ -109,7 +109,12 @@ class _TurnoverInfoCardContent extends StatelessWidget {
                 size: 16,
               ),
               const SizedBox(width: 4),
-              Text(state.accountById[turnover.accountId]?.name ?? ''),
+              Expanded(
+                child: Text(
+                  state.accountById[turnover.accountId]?.name ?? '',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
@@ -140,11 +145,13 @@ class _TurnoverInfoCardContent extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(turnover.formatDate() ?? '', style: theme.textTheme.bodySmall),
-            Text(
-              turnover.formatAmount(),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).decimalColor(turnover.amountValue),
+            Flexible(
+              child: Text(
+                turnover.formatAmount(),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).decimalColor(turnover.amountValue),
+                ),
               ),
             ),
           ],

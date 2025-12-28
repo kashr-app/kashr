@@ -336,9 +336,12 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    tag?.name ?? 'Unknown',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  Expanded(
+                    child: Text(
+                      overflow: TextOverflow.ellipsis,
+                      tag?.name ?? 'Unknown',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                   ),
                   Text(
                     currency.format(amount.savingsOnAccount),

@@ -390,6 +390,7 @@ class _SavingsRow extends StatelessWidget {
       ),
       title: Text(
         tag.name,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w500),
       ),
       trailing: Text(

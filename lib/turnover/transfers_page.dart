@@ -342,15 +342,22 @@ class _InvalidTransferCard extends StatelessWidget {
         if (tag != null) ...[
           TagAvatar(tag: tag, radius: 12),
           const SizedBox(width: 8),
-          Text(tag.name, style: theme.textTheme.bodyMedium),
-        ] else
+          Expanded(
+            child: Text(
+              tag.name,
+              style: theme.textTheme.bodyMedium,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ] else ...[
           Text(
             'Unknown Tag',
             style: theme.textTheme.bodyMedium?.copyWith(
               fontStyle: FontStyle.italic,
             ),
           ),
-        const Spacer(),
+          const Spacer(),
+        ],
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -445,6 +452,7 @@ class _UnlinkedFromTransferCard extends StatelessWidget {
                       children: [
                         Text(
                           tag.name,
+                          overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.w500,
                           ),

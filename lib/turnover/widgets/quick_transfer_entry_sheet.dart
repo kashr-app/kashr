@@ -351,8 +351,9 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
                                       : 'Tap to enter amount',
                                   style: _amountScaled == null
                                       ? theme.textTheme.bodyMedium?.copyWith(
-                                          color:
-                                              theme.colorScheme.onSurfaceVariant,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                         )
                                       : null,
                                 ),
@@ -360,7 +361,10 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
                             ),
                             if (_amountError != null)
                               Padding(
-                                padding: const EdgeInsets.only(left: 12, top: 4),
+                                padding: const EdgeInsets.only(
+                                  left: 12,
+                                  top: 4,
+                                ),
                                 child: Text(
                                   _amountError!,
                                   style: theme.textTheme.bodySmall?.copyWith(
@@ -403,22 +407,31 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
                                             radius: 12,
                                           ),
                                           const SizedBox(width: 8),
-                                          Text(_selectedTag!.name),
+                                          Expanded(
+                                            child: Text(
+                                              _selectedTag!.name,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
                                         ],
                                       )
                                     : Text(
                                         'Tap to select tag',
                                         style: theme.textTheme.bodyMedium
                                             ?.copyWith(
-                                          color:
-                                              theme.colorScheme.onSurfaceVariant,
-                                        ),
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
                                       ),
                               ),
                             ),
                             if (_tagError != null)
                               Padding(
-                                padding: const EdgeInsets.only(left: 12, top: 4),
+                                padding: const EdgeInsets.only(
+                                  left: 12,
+                                  top: 4,
+                                ),
                                 child: Text(
                                   _tagError!,
                                   style: theme.textTheme.bodySmall?.copyWith(

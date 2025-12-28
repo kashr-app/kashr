@@ -89,8 +89,8 @@ class TagTurnoverCard extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 tag?.name ?? '(Unknown)',
-                                style: theme.textTheme.titleMedium,
                                 overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleMedium,
                               ),
                             ),
                             Text(
@@ -117,10 +117,10 @@ class TagTurnoverCard extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 account?.name ?? '(Unknown)',
+                                overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 8),
