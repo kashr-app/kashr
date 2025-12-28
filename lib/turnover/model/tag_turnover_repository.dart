@@ -90,22 +90,19 @@ class TagTurnoverRepository {
     if (tts.isEmpty) return;
 
     final db = await DatabaseHelper().database;
-    final batch = db.batch();
 
-    final result = <TagTurnover>[];
+    final (placeholders, args) = db.inClause(tts, toArg: (it) => it.id.uuid);
 
-    for (final t in tts) {
-      batch.update(
-        'tag_turnover',
-        {'turnover_id': null},
-        where: 'id = ?',
-        whereArgs: [t.id.uuid],
-      );
-      result.add(t.copyWith(turnoverId: null));
-    }
+    db.update(
+      'tag_turnover',
+      {'turnover_id': null},
+      where: 'id IN ($placeholders)',
+      whereArgs: args.toList(),
+    );
 
-    await batch.commit(noResult: true);
-    _changeController.add(TagTurnoversUpdated(result));
+    final updated = tts.map((t) => t.copyWith(turnoverId: null)).toList();
+
+    _changeController.add(TagTurnoversUpdated(updated));
   }
 
   /// Batch adds a tag to multiple turnovers.
