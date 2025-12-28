@@ -13,7 +13,7 @@ import 'package:uuid/uuid.dart';
 class TagPickerDialog extends StatefulWidget {
   final Set<UuidValue> excludeTagIds;
   final String title;
-  final String subtitle;
+  final String? subtitle;
 
   const TagPickerDialog({
     super.key,
@@ -27,7 +27,7 @@ class TagPickerDialog extends StatefulWidget {
     BuildContext context, {
     Set<UuidValue> excludeTagIds = const {},
     required String title,
-    required String subtitle,
+    String? subtitle,
   }) {
     return showDialog<Tag>(
       context: context,
@@ -90,17 +90,15 @@ class _TagPickerDialogState extends State<TagPickerDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  widget.title,
-                  style: theme.textTheme.titleLarge,
-                ),
+                Text(widget.title, style: theme.textTheme.titleLarge),
                 const SizedBox(height: 8),
-                Text(
-                  widget.subtitle,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                if (widget.subtitle != null)
+                  Text(
+                    widget.subtitle!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _searchController,
@@ -115,9 +113,7 @@ class _TagPickerDialogState extends State<TagPickerDialog> {
                 const SizedBox(height: 16),
                 Flexible(
                   child: filteredTags.isEmpty
-                      ? const Center(
-                          child: Text('No other tags available'),
-                        )
+                      ? const Center(child: Text('No other tags available'))
                       : ListView.builder(
                           shrinkWrap: true,
                           itemCount: filteredTags.length,

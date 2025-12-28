@@ -5,8 +5,6 @@ import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/map_values.dart';
 import 'package:kashr/home/home_page.dart';
 import 'package:kashr/logging/services/log_service.dart';
-import 'package:kashr/turnover/cubit/tag_cubit.dart';
-import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover_change.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
@@ -365,16 +363,14 @@ class _TurnoversPageState extends State<TurnoversPage> {
   Future<void> _batchAddTag() async {
     if (_selectedTurnoverIds.isEmpty) return;
 
-    final allTags = context.read<TagCubit>().state.tags;
-
-    final selectedTag = await showDialog<Tag>(
-      context: context,
-      builder: (context) =>
-          BatchTagDialog(availableTags: allTags, mode: BatchTagMode.add),
+    final result = await BatchTagDialog.show(
+      context,
+      affectedTurnoversCount: _selectedTurnoverIds.length,
+      mode: BatchTagMode.add,
     );
 
-    if (selectedTag == null || !mounted) return;
-    await _applyBatchTagOperation(selectedTag, isAdd: true);
+    if (result == null || !mounted) return;
+    await _applyBatchTagOperation(result);
   }
 
   Future<void> _batchRemoveTag() async {
@@ -393,46 +389,53 @@ class _TurnoversPageState extends State<TurnoversPage> {
       );
       return;
     }
-    final tagById = context.read<TagCubit>().state.tagById;
-
-    final availableTags = tagIds.map((it) => tagById[it]).nonNulls.toList();
-
     if (!mounted) return;
 
-    final selectedTag = await showDialog<Tag>(
-      context: context,
-      builder: (context) => BatchTagDialog(
-        availableTags: availableTags,
-        mode: BatchTagMode.remove,
-      ),
+    final result = await BatchTagDialog.show(
+      context,
+      affectedTurnoversCount: _selectedTurnoverIds.length,
+      mode: BatchTagMode.remove,
     );
 
-    if (selectedTag == null || !mounted) return;
-    await _applyBatchTagOperation(selectedTag, isAdd: false);
+    if (result == null || !mounted) return;
+    await _applyBatchTagOperation(result);
   }
 
-  Future<void> _applyBatchTagOperation(Tag tag, {required bool isAdd}) async {
+  Future<void> _applyBatchTagOperation(BatchTagResult result) async {
     final turnovers = _selectedTurnovers.map((t) => t.turnover).toList();
+    final turnoverIds = turnovers.map((it) => it.id).toList();
+    final tag = result.tag;
+    final isAdd = result.mode == BatchTagMode.add;
 
     try {
       if (isAdd) {
-        await _tagTurnoverRepository.batchAddTagToTurnovers(turnovers, tag);
+        await _tagTurnoverRepository.batchAddTagToTurnovers(turnovers, tag.id);
       } else {
-        await _tagTurnoverRepository.batchDeleteByTurnoverInAndTag(
-          turnovers,
-          tag,
-        );
+        if (result.deleteTaggings) {
+          await _tagTurnoverRepository.batchDeleteByTurnoverInAndTag(
+            turnoverIds,
+            tag.id,
+          );
+        } else {
+          await _tagTurnoverRepository.batchUnallocateByTurnoverInAndTag(
+            turnoverIds,
+            tag.id,
+          );
+        }
       }
 
       _clearSelection();
       await _refresh();
 
       if (mounted) {
-        final action = isAdd ? 'Added' : 'Removed';
+        final action = isAdd
+            ? 'Added'
+            : (result.deleteTaggings ? 'Deleted' : 'Unallocated');
+        final preposition = isAdd ? 'to' : 'from';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '$action tag "${tag.name}" ${isAdd ? 'to' : 'from'} '
+              '$action tag "${tag.name}" $preposition '
               '${turnovers.length} turnovers',
             ),
           ),
