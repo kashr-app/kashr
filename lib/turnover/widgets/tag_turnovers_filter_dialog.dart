@@ -70,9 +70,10 @@ class _TagTurnoversFilterDialogState extends State<TagTurnoversFilterDialog> {
   }
 
   Future<void> _pickTag() async {
-    final tag = await TagPickerDialog.show(
+    final tag = await TagPickerDialog.showWithExclusions(
       context,
       excludeTagIds: _selectedTagIds,
+      allowCreate: false,
       title: 'Select Tag',
       subtitle: 'Choose a tag to filter by:',
     );

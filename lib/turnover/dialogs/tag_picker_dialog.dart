@@ -2,40 +2,77 @@ import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
+import 'package:kashr/turnover/widgets/tag_edit_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 
-/// A dialog for selecting a tag.
+/// A dialog for selecting or creating a tag.
 ///
-/// Allows searching existing tags while excluding specified tag IDs.
-/// Returns the selected [Tag] or null if cancelled.
+/// Allows searching existing tags with optional filtering, and optionally
+/// creating new tags if no exact match is found.
+/// Returns the selected/created [Tag] or null if cancelled.
 class TagPickerDialog extends StatefulWidget {
-  final Set<UuidValue> excludeTagIds;
-  final String title;
+  final bool Function(Tag)? filter;
+  final String? title;
   final String? subtitle;
+  final bool allowCreate;
+  final TagSemantic? defaultSemantic;
 
   const TagPickerDialog({
     super.key,
-    this.excludeTagIds = const {},
-    required this.title,
-    required this.subtitle,
+    this.filter,
+    this.title,
+    this.subtitle,
+    this.allowCreate = true,
+    this.defaultSemantic,
   });
 
-  /// Shows the dialog and returns the selected tag or null if cancelled.
+  /// Shows the dialog and returns the selected/created tag or null if cancelled.
+  ///
+  /// If [filter] is provided, only tags matching the filter will be shown.
+  /// If [allowCreate] is true, users can create new tags.
+  /// If [defaultSemantic] is provided, new tags will be created with that semantic.
   static Future<Tag?> show(
     BuildContext context, {
-    Set<UuidValue> excludeTagIds = const {},
-    required String title,
+    bool Function(Tag)? filter,
+    String? title,
     String? subtitle,
+    bool allowCreate = true,
+    TagSemantic? defaultSemantic,
   }) {
     return showDialog<Tag>(
       context: context,
       builder: (context) => TagPickerDialog(
-        excludeTagIds: excludeTagIds,
+        filter: filter,
         title: title,
         subtitle: subtitle,
+        allowCreate: allowCreate,
+        defaultSemantic: defaultSemantic,
       ),
+    );
+  }
+
+  /// Shows the dialog with tag ID exclusions.
+  ///
+  /// Convenience method that converts [excludeTagIds] to a filter function.
+  static Future<Tag?> showWithExclusions(
+    BuildContext context, {
+    Set<UuidValue> excludeTagIds = const {},
+    String title = 'Select Tag',
+    String? subtitle,
+    bool allowCreate = false,
+    TagSemantic? defaultSemantic,
+  }) {
+    return show(
+      context,
+      filter: excludeTagIds.isEmpty
+          ? null
+          : (tag) => !excludeTagIds.contains(tag.id),
+      title: title,
+      subtitle: subtitle,
+      allowCreate: allowCreate,
+      defaultSemantic: defaultSemantic,
     );
   }
 
@@ -60,19 +97,22 @@ class _TagPickerDialogState extends State<TagPickerDialog> {
 
   List<Tag> _getFilteredTags(List<Tag> allTags) {
     final query = _searchController.text;
+    var filtered = allTags;
 
-    var filtered = allTags
-        .where((tag) => !widget.excludeTagIds.contains(tag.id))
-        .toList();
-
-    if (query.isEmpty) {
-      return filtered;
+    // Apply custom filter if specified
+    if (widget.filter != null) {
+      filtered = filtered.where(widget.filter!).toList();
     }
 
-    final lowerQuery = query.toLowerCase();
-    return filtered
-        .where((tag) => tag.name.toLowerCase().contains(lowerQuery))
-        .toList();
+    // Filter by search query
+    if (query.isNotEmpty) {
+      final lowerQuery = query.toLowerCase();
+      filtered = filtered
+          .where((tag) => tag.name.toLowerCase().contains(lowerQuery))
+          .toList();
+    }
+
+    return filtered;
   }
 
   @override
@@ -85,35 +125,65 @@ class _TagPickerDialogState extends State<TagPickerDialog> {
         child: BlocBuilder<TagCubit, TagState>(
           builder: (context, tagState) {
             final filteredTags = _getFilteredTags(tagState.tags);
+            final searchQuery = _searchController.text.trim();
+            final exactMatch = filteredTags.any(
+              (tag) => tag.name.toLowerCase() == searchQuery.toLowerCase(),
+            );
 
             return Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(widget.title, style: theme.textTheme.titleLarge),
-                const SizedBox(height: 8),
-                if (widget.subtitle != null)
+                Text(
+                  widget.title ?? 'Select Tag',
+                  style: theme.textTheme.titleLarge,
+                ),
+                if (widget.subtitle != null) ...[
+                  const SizedBox(height: 8),
                   Text(
                     widget.subtitle!,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
+                ],
                 const SizedBox(height: 16),
                 TextField(
                   controller: _searchController,
-                  decoration: const InputDecoration(
-                    labelText: 'Search tags',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.search),
+                  decoration: InputDecoration(
+                    labelText: widget.allowCreate
+                        ? 'Search or create tag'
+                        : 'Search tags',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.search),
                   ),
+                  textCapitalization: TextCapitalization.words,
                   autofocus: true,
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 16),
+                if (widget.allowCreate &&
+                    searchQuery.isNotEmpty &&
+                    !exactMatch) ...[
+                  ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.add)),
+                    title: Text('Create "$searchQuery"'),
+                    onTap: () async {
+                      final newTag = await TagEditBottomSheet.show(
+                        context,
+                        initialName: searchQuery,
+                        initialSemantic: widget.defaultSemantic,
+                      );
+                      if (context.mounted && newTag != null) {
+                        Navigator.of(context).pop(newTag);
+                      }
+                    },
+                  ),
+                  const Divider(),
+                ],
                 Flexible(
                   child: filteredTags.isEmpty
-                      ? const Center(child: Text('No other tags available'))
+                      ? const Center(child: Text('No tags found'))
                       : ListView.builder(
                           shrinkWrap: true,
                           itemCount: filteredTags.length,

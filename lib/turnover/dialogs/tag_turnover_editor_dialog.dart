@@ -9,7 +9,7 @@ import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
-import 'package:kashr/turnover/dialogs/add_tag_dialog.dart';
+import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
@@ -126,7 +126,7 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
   }
 
   Future<void> _selectTag() async {
-    final selectedTag = await AddTagDialog.show(context);
+    final selectedTag = await TagPickerDialog.show(context);
     if (selectedTag != null) {
       setState(() {
         _selectedTagId = selectedTag.id;

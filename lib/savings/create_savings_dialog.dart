@@ -3,7 +3,7 @@ import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/savings/cubit/savings_cubit.dart';
 import 'package:kashr/savings/model/savings.dart';
-import 'package:kashr/turnover/dialogs/add_tag_dialog.dart';
+import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
@@ -128,7 +128,7 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
                 // Tag selection
                 InkWell(
                   onTap: () async {
-                    final selectedTag = await AddTagDialog.show(context);
+                    final selectedTag = await TagPickerDialog.show(context);
                     if (selectedTag != null) {
                       setState(() {
                         _selectedTag = selectedTag;

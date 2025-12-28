@@ -9,7 +9,7 @@ import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/settings/settings_cubit.dart';
-import 'package:kashr/turnover/dialogs/add_tag_dialog.dart';
+import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/transfer.dart';
@@ -104,7 +104,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
 
   /// Returns if updated (true) or canceled (false)
   Future<bool> _selectTag() async {
-    final selectedTag = await AddTagDialog.show(
+    final selectedTag = await TagPickerDialog.show(
       context,
       filter: (tag) => tag.isTransfer,
       defaultSemantic: TagSemantic.transfer,

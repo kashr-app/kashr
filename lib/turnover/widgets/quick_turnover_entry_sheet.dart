@@ -9,7 +9,7 @@ import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/settings/settings_cubit.dart';
-import 'package:kashr/turnover/dialogs/add_tag_dialog.dart';
+import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
@@ -133,7 +133,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
       tagFilter = (tag) => tag.isNormal;
     }
 
-    final selectedTag = await AddTagDialog.show(context, filter: tagFilter);
+    final selectedTag = await TagPickerDialog.show(context, filter: tagFilter);
     if (selectedTag != null && mounted) {
       setState(() {
         _selectedTag = selectedTag;

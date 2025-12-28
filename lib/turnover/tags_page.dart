@@ -120,9 +120,10 @@ class _TagsPageState extends State<TagsPage> {
 
   Future<void> _showMergeDialog(BuildContext context, Tag sourceTag) async {
     // Step 1: Show tag picker dialog to select target tag
-    final targetTag = await TagPickerDialog.show(
+    final targetTag = await TagPickerDialog.showWithExclusions(
       context,
       excludeTagIds: {sourceTag.id},
+      allowCreate: false,
       title: 'Select Target Tag',
       subtitle: 'Merge "${sourceTag.name}" into:',
     );

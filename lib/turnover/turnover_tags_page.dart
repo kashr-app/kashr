@@ -7,7 +7,7 @@ import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/cubit/turnover_tags_cubit.dart';
 import 'package:kashr/turnover/cubit/turnover_tags_state.dart';
-import 'package:kashr/turnover/dialogs/add_tag_dialog.dart';
+import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/dialogs/delete_turnover_dialog.dart';
 import 'package:kashr/turnover/dialogs/edit_turnover_dialog.dart';
 import 'package:kashr/turnover/model/tag.dart';
@@ -260,7 +260,7 @@ class TurnoverTagsPage extends StatelessWidget {
   }
 
   Future<void> _showAddTagDialog(BuildContext context) async {
-    final selectedTag = await AddTagDialog.show(context);
+    final selectedTag = await TagPickerDialog.show(context);
     if (selectedTag != null && context.mounted) {
       context.read<TurnoverTagsCubit>().addTag(selectedTag);
     }
