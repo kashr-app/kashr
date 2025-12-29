@@ -4,10 +4,8 @@
 set -e
 
 CURRENT_BRANCH=$(git branch --show-current)
-FEATURE_BRANCH=""
 
 if [ "$CURRENT_BRANCH" != "main" ]; then
-    FEATURE_BRANCH="$CURRENT_BRANCH"
     echo "→ Switching to main branch..."
     git checkout main
 fi
@@ -16,21 +14,11 @@ echo "→ Fetching updates and pruning deleted remote branches..."
 git fetch --prune
 
 echo "→ Fast-forward merging origin/main..."
-git merge --ff-only origin/main
-
-if [ -n "$FEATURE_BRANCH" ]; then
-    echo "→ Checking if $FEATURE_BRANCH is fully merged..."
-
-    # Check if the branch is fully merged into main
-    if git merge-base --is-ancestor "$FEATURE_BRANCH" main; then
-        echo "→ Deleting local branch: $FEATURE_BRANCH"
-        git branch -d "$FEATURE_BRANCH"
-        echo "✓ Deleted branch: $FEATURE_BRANCH"
-    else
-        echo "⚠ WARNING: Branch $FEATURE_BRANCH has unmerged commits!"
-        echo "  Not deleting to prevent data loss."
-        echo "  If you want to delete it anyway, run: git branch -D $FEATURE_BRANCH"
-    fi
+if git merge --ff-only origin/main; then
+    echo "✓ Done! Local main is up to date."
+else
+    echo "✗ Fast-forward merge failed!"
+    echo "  This means your local main has diverged from origin/main."
+    echo "  You may need to resolve this manually."
+    exit 1
 fi
-
-echo "✓ Done! Local main is up to date."

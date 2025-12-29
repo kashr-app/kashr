@@ -33,7 +33,7 @@ bin/git-pr changelog:refactor
 bin/git-ship
 
 # After GitHub merges (you'll get a notification), sync local
-# switch to main, fetch & merge main, cleanup local branches
+# switch to main, fetch --prune, merge --ff-only origin/main
 bin/git-sync
 ```
 
