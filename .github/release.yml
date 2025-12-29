@@ -7,31 +7,31 @@ changelog:
   categories:
     - title: 🚨 Breaking Changes
       labels:
-        - changelog:breaking-change
+        - changelog:breaking
 
     - title: 🚀 Features
       labels:
-        - changelog:feature
+        - changelog:feat
 
     - title: 🌟 Enhancements
       labels:
-        - changelog:enhancement
+        - changelog:enhance
 
     - title: 🐛 Bug Fixes
       labels:
-        - changelog:bugfix
+        - changelog:fix
 
     - title: 🚀 Performance Improvements
       labels:
-        - changelog:performance
+        - changelog:perf
 
     - title: 📚 Documentation
       labels:
-        - changelog:documentation
+        - changelog:docs
 
     - title: 🔧 Maintenance
       labels:
-        - changelog:maintenance
+        - changelog:chore
 
     - title: ♻️ Code Refactoring
       labels:
