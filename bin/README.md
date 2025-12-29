@@ -10,13 +10,15 @@ The aims are:
 
 ### Usage
 
-
 ### Requirements
 
 - [GitHub CLI (`gh`)](https://cli.github.com/) installed and authenticated
 - Repository settings:
   - `allow_auto_merge`: enabled
   - `delete_branch_on_merge`: enabled
+
+### Setup Shell Integration
+Add `source /path/to/kashr/bin/.bashrc` to your `~/.bashrc` for aliases (`kashr-git-pr`, `kashr-git-ship`, `kashr-git-sync`) and tab completion. Or replace the `kashr-git` with `./bin/git`.
 
 ### Complete Workflow Example
 
@@ -27,14 +29,14 @@ The aims are:
 git checkout -b refactor/tag_pickers
 git commit -m 'refactor: merge AddTagDialog into TagPickerDialog'
 
-# Create PR 
-bin/git-pr changelog:refactor
+# Create PR
+kashr-git-pr changelog:refactor
 # Enable auto-merge with rebase for current PR + delete remote branch
-bin/git-ship
+kashr-git-ship
 
 # After GitHub merges (you'll get a notification), sync local
 # switch to main, fetch --prune, merge --ff-only origin/main
-bin/git-sync
+kashr-git-sync
 ```
 
 ## Other Utils
