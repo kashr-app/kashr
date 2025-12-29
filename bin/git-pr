@@ -1,0 +1,26 @@
+#!/bin/bash
+# Create PR with push and required changelog label
+
+set -e
+
+if [ -z "$1" ] || [[ ! "$1" =~ ^changelog: ]]; then
+    echo "Error: changelog label required"
+    echo ""
+    echo "Usage: bin/git-pr <changelog:type>"
+    echo ""
+    echo "Examples:"
+    echo "  bin/git-pr changelog:refactor"
+    echo "  bin/git-pr changelog:fix"
+    echo "  bin/git-pr changelog:feat"
+    exit 1
+fi
+
+LABEL="$1"
+
+echo "→ Pushing branch to origin..."
+git push -u origin HEAD
+
+echo "→ Creating PR with label: $LABEL"
+gh pr create -f -l "$LABEL"
+
+echo "✓ Done! PR created."

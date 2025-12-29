@@ -1,0 +1,10 @@
+#!/bin/bash
+# Enable auto-merge with rebase for the current PR
+
+set -e
+
+echo "→ Enabling auto-merge with rebase..."
+gh pr merge --auto --rebase --delete-branch
+
+echo "✓ Done! PR will auto-merge when checks pass."
+echo "  Remote branch will be automatically deleted after merge."
