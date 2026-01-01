@@ -3,19 +3,19 @@
 
 set -e
 
-CURRENT_BRANCH=$(git branch --show-current)
+BRANCH=$(git branch --show-current)
 
-if [ "$CURRENT_BRANCH" = "main" ]; then
+if [ "$BRANCH" = "main" ]; then
     echo "✗ Error: Cannot ship from main branch"
     echo "  Switch to a feature branch first: git checkout feature/name"
     exit 1
 fi
 
-echo "→ Checking for open PR on branch: $CURRENT_BRANCH..."
+echo "→ Checking for open PR on branch: $BRANCH..."
 
 # Check if an open PR exists for the current branch
 if ! PR_DATA=$(gh pr view --json url,title,state 2>&1); then
-    echo "✗ Error: No PR found for branch '$CURRENT_BRANCH'"
+    echo "✗ Error: No PR found for branch '$BRANCH'"
     echo "  Create a PR first with: bin/git-pr changelog:<type>"
     exit 1
 fi
@@ -23,7 +23,7 @@ fi
 # Check if the PR is open
 PR_STATE=$(echo "$PR_DATA" | jq -r .state)
 if [ "$PR_STATE" != "OPEN" ]; then
-    echo "✗ Error: PR for branch '$CURRENT_BRANCH' is $PR_STATE (not open)"
+    echo "✗ Error: PR for branch '$BRANCH' is $PR_STATE (not open)"
     echo "  Create a new PR with: bin/git-pr changelog:<type>"
     exit 1
 fi
