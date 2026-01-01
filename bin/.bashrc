@@ -7,7 +7,7 @@ alias kashr-git-sync='bin/git-sync'
 _kashr-git-pr_completion() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local types="breaking feat enhance fix perf docs chore refactor translation"
+    local types="breaking feat enhance fix perf docs chore refactor translation skip"
 
     # Case 1: First argument - suggest "changelog:" prefix
     if [[ ${COMP_CWORD} -eq 1 ]]; then
