@@ -44,14 +44,11 @@ echo "→ Attempting fast-forward merge of $BRANCH..."
 if git merge --ff-only "$BRANCH"; then
     echo "✓ Merge successful"
     
-    echo "→ Pushing to origin..."
-    git push origin
-    
+    echo "→ Pushing to origin/main..."
+    git push origin main
+
     echo "→ Deleting local branch $BRANCH..."
     git branch -d "$BRANCH"
-
-    echo "→ Closing PR..."
-    gh pr close "$BRANCH"
 
     echo "→ Deleting remote branch..."
     if ! git push origin --delete "$BRANCH" 2>&1; then
