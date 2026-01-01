@@ -409,28 +409,31 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
         ),
       ),
       actions: [
-        if (isEditMode)
-          TextButton(
-            onPressed: _isLoading ? null : _delete,
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
+        Row(
+          children: [
+            if (isEditMode)
+              IconButton(
+                onPressed: _isLoading ? null : _delete,
+                icon: Icon(Icons.delete_outline),
+                color: Theme.of(context).colorScheme.error,
+              ),
+            const Spacer(),
+            TextButton(
+              onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
             ),
-            child: const Text('Delete'),
-          ),
-        const Spacer(),
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _isLoading ? null : () => _save(account),
-          child: _isLoading
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Save'),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: _isLoading ? null : () => _save(account),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+            ),
+          ],
         ),
       ],
     );
