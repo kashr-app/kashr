@@ -52,7 +52,7 @@ class TagSuggestionService {
       INNER JOIN turnover tv ON tt.turnover_id = tv.id
       WHERE tv.id != ?
         AND tv.amount_value ${turnover.amountValue >= Decimal.zero ? '>=' : '<'} 0
-      ORDER BY tt.created_at DESC
+      ORDER BY tv.created_at DESC
       LIMIT ?
       ''',
       [turnover.id.uuid, _maxHistoricalRecords],
@@ -183,6 +183,7 @@ class TagSuggestionService {
 
     // Sort by score and return top N
     suggestions.sort((a, b) => b.score.compareTo(a.score));
+    suggestions.first;
     return suggestions.take(_maxSuggestions).toList();
   }
 
