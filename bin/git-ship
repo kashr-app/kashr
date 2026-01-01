@@ -49,10 +49,15 @@ if git merge --ff-only "$BRANCH"; then
     
     echo "→ Deleting local branch $BRANCH..."
     git branch -d "$BRANCH"
-    
-    echo "→ Closing PR and deleting remote branch..."
-    gh pr close "$BRANCH" --delete-branch
-    
+
+    echo "→ Closing PR..."
+    gh pr close "$BRANCH"
+
+    echo "→ Deleting remote branch..."
+    if ! git push origin --delete "$BRANCH" 2>&1; then
+        echo "  (Remote branch already deleted or doesn't exist)"
+    fi
+
     echo "✓ Done! Branch $BRANCH has been merged and cleaned up."
 else
     echo "✗ Fast-forward merge failed!"
