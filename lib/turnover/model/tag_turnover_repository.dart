@@ -108,18 +108,18 @@ class TagTurnoverRepository {
   /// Batch adds a tag to multiple turnovers.
   /// For each turnover, allocates the remaining unallocated amount to the tag.
   /// If the remaining unallocated amount was 0 the tag is still added.
-  Future<void> batchAddTagToTurnovers(
+  /// Returns count of created [TagTurnover]s
+  Future<int> batchAddTagToTurnovers(
     List<Turnover> turnovers,
     UuidValue tagId,
   ) async {
-    if (turnovers.isEmpty) return;
-
-    final db = await DatabaseHelper().database;
+    if (turnovers.isEmpty) return 0;
 
     // Get all turnover IDs
     final turnoverIds = turnovers.map((t) => t.id).toList();
 
-    if (turnoverIds.isEmpty) return;
+    final db = await DatabaseHelper().database;
+
 
     // Fetch all existing tag turnovers for these turnovers in one query
     final (placeholders, args) = db.inClause(
@@ -174,19 +174,19 @@ class TagTurnoverRepository {
     if (createdTagTurnovers.isNotEmpty) {
       _changeController.add(TagTurnoversInserted(createdTagTurnovers));
     }
+    return turnovers.length;
   }
 
   /// Batch deletes all tag_turnover entries for the specified [tagId] across
   /// the given [turnoverIds].
-  Future<void> batchDeleteByTurnoverInAndTag(
+  /// Returns the count of dleted [TagTurnover]s
+  Future<int> batchDeleteByTurnoverInAndTag(
     List<UuidValue> turnoverIds,
     UuidValue tagId,
   ) async {
-    if (turnoverIds.isEmpty) return;
+    if (turnoverIds.isEmpty) return 0;
 
     final db = await DatabaseHelper().database;
-
-    if (turnoverIds.isEmpty) return;
 
     // Build the SQL query with placeholders
     final (placeholders, args) = db.inClause(
@@ -208,7 +208,7 @@ class TagTurnoverRepository {
         .toList();
 
     // Delete all tag_turnover entries for this tag and these turnovers
-    await db.delete(
+    final deletedCount = await db.delete(
       'tag_turnover',
       where: 'tag_id = ? AND turnover_id IN ($placeholders)',
       whereArgs: [tagId.uuid, ...args],
@@ -217,16 +217,18 @@ class TagTurnoverRepository {
     if (deletedIds.isNotEmpty) {
       _changeController.add(TagTurnoversDeleted(deletedIds));
     }
+    return deletedCount;
   }
 
   /// Batch unallocates all tag_turnover entries for the specified [tagId]
   /// across the given [turnoverIds] by setting their turnover_id to null.
   /// This keeps the taggings but removes them from the turnovers.
-  Future<void> batchUnallocateByTurnoverInAndTag(
+  /// Returns the count of unallocated [TagTurnover]s
+  Future<int> batchUnallocateByTurnoverInAndTag(
     List<UuidValue> turnoverIds,
     UuidValue tagId,
   ) async {
-    if (turnoverIds.isEmpty) return;
+    if (turnoverIds.isEmpty) return 0;
 
     final db = await DatabaseHelper().database;
 
@@ -250,6 +252,7 @@ class TagTurnoverRepository {
     if (tagTurnovers.isNotEmpty) {
       await unallocateManyFromTurnover(tagTurnovers);
     }
+    return tagTurnovers.length;
   }
 
   Future<Map<UuidValue, Map<UuidValue, TagTurnover>>> getByTurnoverIds(

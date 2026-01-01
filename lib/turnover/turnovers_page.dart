@@ -407,20 +407,23 @@ class _TurnoversPageState extends State<TurnoversPage> {
     final tag = result.tag;
     final isAdd = result.mode == BatchTagMode.add;
 
+    int affected = 0;
+
     try {
       if (isAdd) {
-        await _tagTurnoverRepository.batchAddTagToTurnovers(turnovers, tag.id);
+        affected = await _tagTurnoverRepository.batchAddTagToTurnovers(
+          turnovers,
+          tag.id,
+        );
       } else {
         if (result.deleteTaggings) {
-          await _tagTurnoverRepository.batchDeleteByTurnoverInAndTag(
+          affected = await _tagTurnoverRepository.batchDeleteByTurnoverInAndTag(
             turnoverIds,
             tag.id,
           );
         } else {
-          await _tagTurnoverRepository.batchUnallocateByTurnoverInAndTag(
-            turnoverIds,
-            tag.id,
-          );
+          affected = await _tagTurnoverRepository
+              .batchUnallocateByTurnoverInAndTag(turnoverIds, tag.id);
         }
       }
 
@@ -436,7 +439,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
           SnackBar(
             content: Text(
               '$action tag "${tag.name}" $preposition '
-              '${turnovers.length} turnovers',
+              '$affected turnover${affected == 1 ? '' : 's'}',
             ),
           ),
         );
