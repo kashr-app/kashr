@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/home/home_page.dart';
-import 'package:kashr/savings/create_savings_dialog.dart';
+import 'package:kashr/savings/dialogs/create_savings_dialog.dart';
 import 'package:kashr/savings/cubit/savings_cubit.dart';
 import 'package:kashr/savings/cubit/savings_state.dart';
 import 'package:kashr/savings/model/savings.dart';
