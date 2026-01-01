@@ -35,7 +35,7 @@ class TagPickerDialog extends StatefulWidget {
   /// If [defaultSemantic] is provided, new tags will be created with that semantic.
   static Future<Tag?> show(
     BuildContext context, {
-    bool Function(Tag)? filter,
+    bool Function(Tag tag)? filter,
     String? title,
     String? subtitle,
     bool allowCreate = true,

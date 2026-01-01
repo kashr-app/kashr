@@ -394,6 +394,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
     final result = await BatchTagDialog.show(
       context,
       affectedTurnoversCount: _selectedTurnoverIds.length,
+      filter: (tag) => tagIds.contains(tag.id),
       mode: BatchTagMode.remove,
     );
 

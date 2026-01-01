@@ -19,16 +19,23 @@ class BatchTagResult {
 }
 
 /// Dialog for selecting a tag to add or remove from multiple turnovers.
+/// If [filter] is set, it only shows tags passing the filter.
 class BatchTagDialog {
   static Future<BatchTagResult?> show(
     BuildContext context, {
     required int affectedTurnoversCount,
     required BatchTagMode mode,
+    bool Function(Tag tag)? filter,
   }) async {
     final isAdd = mode == BatchTagMode.add;
 
     final selectedTag = await TagPickerDialog.show(
       context,
+      filter: filter,
+      allowCreate: isAdd,
+      subtitle: isAdd
+          ? null
+          : 'Only tags used within the selected turnovers are shown.',
       title: isAdd ? 'Select Tag to Add' : 'Select Tag to Remove',
     );
 
