@@ -84,4 +84,5 @@ echo "Version updated successfully!"
 # Git operations
 git checkout -b chore/bump-version-${NEW_VERSION}
 git add pubspec.yaml
+git commit -m "chore: bump version to ${NEW_VERSION}"
 bin/git-pr changelog:skip
