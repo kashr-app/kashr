@@ -1,0 +1,2 @@
+#!/bin/bash
+adb exec-out run-as app.kashr.kashr cat /data/data/app.kashr.kashr/app_flutter/logs/log.json > log.json

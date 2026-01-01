@@ -1,4 +1,5 @@
 app_database.db
+log.json
 
 # generated files
 /gen/
