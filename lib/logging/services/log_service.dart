@@ -95,6 +95,23 @@ class LogService {
     return File(path.join(logsDir.path, 'log.json'));
   }
 
+  /// Sanitizes text to ensure it can be safely encoded in JSON.
+  ///
+  /// Removes null bytes and limits length to prevent file corruption.
+  String? _sanitizeText(String? text, {int maxLength = 50000}) {
+    if (text == null) return null;
+
+    // Remove null bytes and other problematic control characters
+    var sanitized = text.replaceAll('\u0000', '').replaceAll('\r', '\n');
+
+    // Truncate if too long
+    if (sanitized.length > maxLength) {
+      sanitized = '${sanitized.substring(0, maxLength)}\n... (truncated ${sanitized.length - maxLength} characters)';
+    }
+
+    return sanitized;
+  }
+
   Future<void> logToFile({
     required LogLevelSetting level,
     required String message,
@@ -111,10 +128,10 @@ class LogService {
       final entry = LogEntry(
         timestamp: DateTime.now().toUtc(),
         level: level,
-        message: message,
+        message: _sanitizeText(message, maxLength: 10000) ?? message,
         loggerName: loggerName,
-        error: error,
-        stackTrace: stackTrace,
+        error: _sanitizeText(error),
+        stackTrace: _sanitizeText(stackTrace),
         context: context,
       );
 
@@ -154,10 +171,49 @@ class LogService {
   }
 
   Future<void> _writeLogEntryToFile(LogEntry entry) async {
-    await _logFile!.writeAsString(
-      '${jsonEncode(entry.toJson())}\n',
-      mode: FileMode.append,
-    );
+    try {
+      final jsonString = jsonEncode(entry.toJson());
+      await _logFile!.writeAsString(
+        '$jsonString\n',
+        mode: FileMode.append,
+        flush: true,
+      );
+    } catch (e, stack) {
+      // If JSON encoding or writing fails, try to write a simplified entry
+      developer.log(
+        'Failed to write log entry, attempting fallback',
+        name: 'kashr.log_service',
+        level: 900,
+        error: e,
+        stackTrace: stack,
+      );
+
+      try {
+        // Create a minimal fallback entry
+        final fallbackEntry = LogEntry(
+          timestamp: entry.timestamp,
+          level: entry.level,
+          message: 'Log write failed: ${entry.message.substring(0, 100)}...',
+          loggerName: entry.loggerName,
+          error: 'Original log entry could not be encoded',
+          stackTrace: null,
+          context: null,
+        );
+        final jsonString = jsonEncode(fallbackEntry.toJson());
+        await _logFile!.writeAsString(
+          '$jsonString\n',
+          mode: FileMode.append,
+          flush: true,
+        );
+      } catch (fallbackError) {
+        developer.log(
+          'Critical: Could not write even fallback log entry',
+          name: 'kashr.log_service',
+          level: 1000,
+          error: fallbackError,
+        );
+      }
+    }
   }
 
   void _runCleanupIfNeeded() {
