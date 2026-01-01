@@ -31,7 +31,7 @@ git commit -m 'refactor: merge AddTagDialog into TagPickerDialog'
 
 # Create PR
 kashr-git-pr changelog:refactor
-# Enable auto-merge with rebase for current PR + delete remote branch
+# ff-merge and close current PR + delete remote branch
 kashr-git-ship
 
 # After GitHub merges (you'll get a notification), sync local

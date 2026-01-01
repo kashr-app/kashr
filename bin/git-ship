@@ -34,8 +34,31 @@ PR_URL=$(echo "$PR_DATA" | jq -r .url)
 echo "  Found PR: $PR_TITLE"
 echo "  URL: $PR_URL"
 
-echo "→ Enabling auto-merge with rebase..."
-gh pr merge --auto --rebase --delete-branch
+echo "→ Switching to main..."
+git checkout main
 
-echo "✓ Done! PR will auto-merge when checks pass."
-echo "  Remote branch will be automatically deleted after merge."
+echo "→ Pulling latest changes..."
+git pull --prune
+
+echo "→ Attempting fast-forward merge of $BRANCH..."
+if git merge --ff-only "$BRANCH"; then
+    echo "✓ Merge successful"
+    
+    echo "→ Pushing to origin..."
+    git push origin
+    
+    echo "→ Deleting local branch $BRANCH..."
+    git branch -d "$BRANCH"
+    
+    echo "→ Closing PR and deleting remote branch..."
+    gh pr close "$BRANCH" --delete-branch
+    
+    echo "✓ Done! Branch $BRANCH has been merged and cleaned up."
+else
+    echo "✗ Fast-forward merge failed!"
+    echo "  This means main has diverged. You need to rebase your branch first:"
+    echo "  git checkout $BRANCH"
+    echo "  git rebase main"
+    echo "  git push --force-with-lease"
+    exit 1
+fi
