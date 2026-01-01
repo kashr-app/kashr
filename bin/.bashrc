@@ -2,6 +2,7 @@
 alias kashr-git-pr='bin/git-pr'
 alias kashr-git-ship='bin/git-ship'
 alias kashr-git-sync='bin/git-sync'
+alias kashr-git-bump-version='bin/bump_version'
 
 # Tab completion for kashr-git-pr (suggest changelog types)
 _kashr-git-pr_completion() {
@@ -34,3 +35,16 @@ _kashr-git-pr_completion() {
 
 # Enable completion for kashr-git-pr
 complete -F _kashr-git-pr_completion kashr-git-pr
+
+# Tab completion for kashr-git-bump-version (suggest version bump types)
+_kashr-git-bump-version_completion() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local types="major minor patch"
+
+    if [[ ${COMP_CWORD} -eq 1 ]]; then
+        COMPREPLY=($(compgen -W "$types" -- "$cur"))
+    fi
+}
+
+# Enable completion for kashr-git-bump-version
+complete -F _kashr-git-bump-version_completion kashr-git-bump-version

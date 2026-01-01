@@ -1,0 +1,87 @@
+#!/bin/bash
+
+set -e
+
+# Ensure we're in the project root directory
+if [[ $(basename "$PWD") == "bin" ]]; then
+  cd ..
+fi
+
+if [[ ! -f "pubspec.yaml" ]]; then
+  echo "Error: pubspec.yaml not found. Please run this script from the project root or bin directory."
+  exit 1
+fi
+
+# Validate parameter
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 <major|minor|patch>"
+  exit 1
+fi
+
+BUMP_TYPE=$1
+
+if [[ ! "$BUMP_TYPE" =~ ^(major|minor|patch)$ ]]; then
+  echo "Error: Invalid bump type. Must be one of: major, minor, patch"
+  exit 1
+fi
+
+# Extract current version from pubspec.yaml
+CURRENT_VERSION=$(grep -E "^version:" pubspec.yaml | sed 's/version: //')
+
+if [[ -z "$CURRENT_VERSION" ]]; then
+  echo "Error: Could not find version in pubspec.yaml"
+  exit 1
+fi
+
+# Parse version and build number
+if [[ "$CURRENT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)\+([0-9]+)$ ]]; then
+  MAJOR="${BASH_REMATCH[1]}"
+  MINOR="${BASH_REMATCH[2]}"
+  PATCH="${BASH_REMATCH[3]}"
+  BUILD="${BASH_REMATCH[4]}"
+else
+  echo "Error: Version format must be MAJOR.MINOR.PATCH+BUILD (e.g., 1.2.3+4)"
+  exit 1
+fi
+
+# Bump the appropriate version component
+case "$BUMP_TYPE" in
+  major)
+    MAJOR=$((MAJOR + 1))
+    MINOR=0
+    PATCH=0
+    ;;
+  minor)
+    MINOR=$((MINOR + 1))
+    PATCH=0
+    ;;
+  patch)
+    PATCH=$((PATCH + 1))
+    ;;
+esac
+
+# Always increment build number
+BUILD=$((BUILD + 1))
+
+NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}+${BUILD}"
+
+echo "Current version: ${CURRENT_VERSION}"
+echo "New version:     ${NEW_VERSION}"
+echo ""
+read -p "Do you want to proceed with this version bump? (y/N) " -n 1 -r
+echo ""
+
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+  echo "Version bump cancelled."
+  exit 0
+fi
+
+# Update pubspec.yaml
+sed -i "s/^version: .*/version: ${NEW_VERSION}/" pubspec.yaml
+
+echo "Version updated successfully!"
+
+# Git operations
+git checkout -b chore/bump-version-${NEW_VERSION}
+git add pubspec.yaml
+bin/git-pr changelog:skip
