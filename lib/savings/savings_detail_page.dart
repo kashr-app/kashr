@@ -573,7 +573,8 @@ class _TransactionTile extends StatelessWidget {
     final label = switch (transaction) {
       TagTurnoverItem() => 'Transaction',
       VirtualBookingItem item =>
-        accountById[item.booking.accountId]?.name ?? '(Unknown Account)',
+        '${transaction.amountValue < Decimal.zero ? 'To' : 'From'}'
+            ' ${accountById[item.booking.accountId]?.name ?? '(Unknown Account)'} Balance',
     };
 
     final onTap = switch (transaction) {
