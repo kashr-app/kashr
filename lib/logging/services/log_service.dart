@@ -43,7 +43,10 @@ class LogService {
   Future<void> initialize() async {
     try {
       final startTime = DateTime.now();
-      developer.log('LogService.initialize() started', name: 'kashr.log_service');
+      developer.log(
+        'LogService.initialize() started',
+        name: 'kashr.log_service',
+      );
 
       _logFile = await _getLogFile();
       developer.log(
@@ -218,19 +221,50 @@ class LogService {
     _logsUpdatedController.add(null);
   }
 
+  /// Reads file lines with resilient UTF-8 decoding.
+  ///
+  /// Handles files with invalid UTF-8 by replacing bad bytes instead of failing.
+  Future<List<String>> _readLinesResilient(File file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      final content = utf8.decode(bytes, allowMalformed: true);
+      return const LineSplitter().convert(content);
+    } catch (e, stack) {
+      developer.log(
+        'Failed to read log file resiliently',
+        name: 'kashr.log_service',
+        level: 900,
+        error: e,
+        stackTrace: stack,
+      );
+      return [];
+    }
+  }
+
   /// Read logs with optional pagination.
   ///
   /// Reads complete file into memory, but only parses json for selected page.
   Future<List<LogEntry>> readLogsPage({int offset = 0, int limit = 100}) async {
     if (_logFile == null || !await _logFile!.exists()) return [];
 
-    final lines = await _logFile!.readAsLines();
+    final lines = await _readLinesResilient(_logFile!);
 
     final selectedLines = lines.reversed.skip(offset).take(limit);
     return selectedLines
-        .map(
-          (line) => LogEntry.fromJson(jsonDecode(line) as Map<String, dynamic>),
-        )
+        .map((line) {
+          try {
+            if (line.trim().isEmpty) return null;
+            return LogEntry.fromJson(jsonDecode(line) as Map<String, dynamic>);
+          } catch (e) {
+            developer.log(
+              'Skipping malformed log entry\n$line',
+              name: 'kashr.log_service',
+              level: 900,
+            );
+            return null;
+          }
+        })
+        .nonNulls
         .toList();
   }
 
@@ -238,7 +272,7 @@ class LogService {
   Future<void> _trimLogsIfNeeded() async {
     if (_logFile == null || !await _logFile!.exists()) return;
 
-    final lines = await _logFile!.readAsLines();
+    final lines = await _readLinesResilient(_logFile!);
 
     // Estimate each entry ~500 bytes (adjust if needed)
     final estimatedSize = lines.length * 500;
@@ -256,11 +290,23 @@ class LogService {
     if (_logFile == null || !await _logFile!.exists()) return;
 
     final cutoffDate = DateTime.now().subtract(Duration(days: _retentionDays));
-    final lines = await _logFile!.readAsLines();
+    final lines = await _readLinesResilient(_logFile!);
 
     final filteredLines = lines.where((line) {
-      final entry = LogEntry.fromJson(jsonDecode(line) as Map<String, dynamic>);
-      return entry.timestamp.isAfter(cutoffDate);
+      try {
+        if (line.trim().isEmpty) return false;
+        final entry = LogEntry.fromJson(
+          jsonDecode(line) as Map<String, dynamic>,
+        );
+        return entry.timestamp.isAfter(cutoffDate);
+      } catch (e) {
+        developer.log(
+          'Skipping malformed log entry during cleanup',
+          name: 'kashr.log_service',
+          level: 500,
+        );
+        return false;
+      }
     }).toList();
 
     if (filteredLines.length < lines.length) {
