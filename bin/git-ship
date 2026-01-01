@@ -51,7 +51,7 @@ if git merge --ff-only "$BRANCH"; then
     git branch -d "$BRANCH"
 
     echo "→ Deleting remote branch..."
-    if ! git push origin --delete "$BRANCH" 2>&1; then
+    if ! git push origin --delete "$BRANCH" 2>/dev/null; then
         echo "  (Remote branch already deleted or doesn't exist)"
     fi
 
