@@ -142,7 +142,13 @@ class ComdirectService implements DataIngestor {
               counterIban: counterPartInfo.iban,
               purpose: cleanPurpose(transaction.remittanceInfo),
               apiId: transaction.reference,
-              apiRaw: jsonEncode(transaction.toJson()),
+              apiRaw: jsonEncode(
+                // we mark all transactions as non-new here to prevent
+                // future syncs from telling the user that turnovers
+                // would have been updated just because the user visited
+                // their bank account and saw the transaction there.
+                transaction.copyWith(newTransaction: false).toJson(),
+              ),
               apiTurnoverType: transaction.transactionType.key,
             );
             turnoversById[turnover.id] = turnover;

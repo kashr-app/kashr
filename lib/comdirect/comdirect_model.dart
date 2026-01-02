@@ -459,50 +459,38 @@ class AccountTransactionAggregate {
   Map<String, dynamic> toJson() => _$AccountTransactionAggregateToJson(this);
 }
 
-@JsonSerializable()
-class AccountTransaction {
-  final String bookingStatus;
-  final DateTime? bookingDate;
-  final Amount amount;
-  final AccountInformation? remitter;
+@freezed
+abstract class AccountTransaction with _$AccountTransaction {
+  const factory AccountTransaction({
+    required String bookingStatus,
+    DateTime? bookingDate,
+    required Amount amount,
+    AccountInformation? remitter,
 
-  @JsonKey(
-    name: 'deptor',
-  ) // yes, the API uses "deptor" instead of "debtor" even if the docs say "debtor"
-  final AccountInformation? debtor;
-  final AccountInformation? creditor;
-  final String reference;
-  final String? endToEndReference;
-  // might be a non-valid date, e.g. 20.02.2019
-  final String valutaDate;
-  final String? directDebitCreditorId;
-  final String? directDebitMandateId;
-  final EnumText transactionType;
-  // purpose / booking text
-  final String remittanceInfo;
-  // false if seen by user in web
-  final bool newTransaction;
+    // yes, the API uses "deptor" instead of "debtor" even if the docs say "debtor"
+    // ignore: invalid_annotation_target
+    @JsonKey(name: 'deptor') AccountInformation? debtor,
 
-  AccountTransaction({
-    required this.bookingStatus,
-    this.bookingDate,
-    required this.amount,
-    this.remitter,
-    this.debtor,
-    this.creditor,
-    required this.reference,
-    this.endToEndReference,
-    required this.valutaDate,
-    this.directDebitCreditorId,
-    this.directDebitMandateId,
-    required this.transactionType,
-    required this.remittanceInfo,
-    required this.newTransaction,
-  });
+    AccountInformation? creditor,
+    required String reference,
+    String? endToEndReference,
+
+    // might be a non-valid date, e.g. 20.02.2019
+    required String valutaDate,
+
+    String? directDebitCreditorId,
+    String? directDebitMandateId,
+    required EnumText transactionType,
+
+    // purpose / booking text
+    required String remittanceInfo,
+
+    // false if seen by user in web
+    required bool newTransaction,
+  }) = _AccountTransaction;
 
   factory AccountTransaction.fromJson(Map<String, dynamic> json) =>
       _$AccountTransactionFromJson(json);
-  Map<String, dynamic> toJson() => _$AccountTransactionToJson(this);
 }
 
 @JsonSerializable()
