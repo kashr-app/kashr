@@ -299,14 +299,14 @@ class _TurnoversPageState extends State<TurnoversPage> {
 
   void _updateFilter(TurnoverFilter newFilter) {
     setState(() => _filter = newFilter);
-    _refresh();
+    unawaited(_refresh());
   }
 
   void _updateSort(TurnoverSort sort) {
     setState(() {
       _sort = sort;
     });
-    _refresh();
+    unawaited(_refresh());
   }
 
   Future<void> _openFilterDialog() async {
@@ -324,7 +324,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
     );
     if (result != null) {
       setState(() => _sort = result);
-      _refresh();
+      unawaited(_refresh());
     }
   }
 
