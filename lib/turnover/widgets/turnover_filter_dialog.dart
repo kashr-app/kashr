@@ -53,7 +53,7 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
   }
 
   void _applyFilters() {
-    final filter = TurnoverFilter(
+    final filter = widget.initialFilter.copyWith(
       unallocatedOnly: _unallocatedOnly ? true : null,
       period: _period,
       tagIds: _selectedTagIds.isEmpty ? null : _selectedTagIds.toList(),
