@@ -17,7 +17,7 @@ class TagAmountBar extends StatelessWidget {
     required this.totalAmount,
     required this.tagTurnovers,
     required this.tagById,
-    this.height = 8.0,
+    this.height = 4,
     super.key,
   });
 
@@ -35,18 +35,15 @@ class TagAmountBar extends StatelessWidget {
       return _buildEmptyBar(context);
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(height / 2),
-      child: SizedBox(
-        height: height,
-        child: Row(
-          children: segments.map((segment) {
-            return Expanded(
-              flex: (segment.percentage * 1000).toInt(),
-              child: Container(color: segment.color, child: null),
-            );
-          }).toList(),
-        ),
+    return SizedBox(
+      height: height,
+      child: Row(
+        children: segments.map((segment) {
+          return Expanded(
+            flex: (segment.percentage * 1000).toInt(),
+            child: Container(color: segment.color, child: null),
+          );
+        }).toList(),
       ),
     );
   }

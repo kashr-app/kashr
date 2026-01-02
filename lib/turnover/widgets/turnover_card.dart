@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/color_utils.dart';
 import 'package:kashr/theme.dart';
@@ -57,161 +58,140 @@ class TurnoverCard extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: BlocBuilder<TagCubit, TagState>(
-            builder: (context, tagState) {
-              final tagById = tagState.tagById;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Show checkbox in batch mode
-                  if (isBatchMode)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Icon(
-                          isSelected
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: isSelected
-                              ? colorScheme.primary
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  // Transfer badges
-                  if (hasTransfer) ...[
-                    Row(
-                      children: [
-                        const TransferBadge.badge(),
-                        if (transferNeedsReview) ...[
-                          const SizedBox(width: 8),
-                          TransferBadge.needsReview(),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  // Header: Counter party and amount
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: BlocBuilder<TagCubit, TagState>(
+          builder: (context, tagState) {
+            final tagById = tagState.tagById;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      // Show checkbox in batch mode
+                      if (isBatchMode)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Icon(
+                              isSelected
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked,
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      // Transfer badges
+                      if (hasTransfer) ...[
+                        Row(
                           children: [
-                            Text(
-                              _calcCounterPart(turnover, tagById),
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              turnover.formatDate() ?? 'Not booked',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
+                            const TransferBadge.badge(),
+                            if (transferNeedsReview) ...[
+                              const SizedBox(width: 8),
+                              TransferBadge.needsReview(),
+                            ],
                           ],
                         ),
+                        const SizedBox(height: 8),
+                      ],
+                      // Header: Counter party and amount
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _calcCounterPart(turnover, tagById),
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  turnover.formatDate() ?? 'Not booked',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            turnover.formatAmount(),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: amountColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      Text(
-                        turnover.formatAmount(),
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: amountColor,
-                          fontWeight: FontWeight.bold,
+                    ],
+                  ),
+                ),
+                if (turnoverWithTags.tagTurnovers.isNotEmpty) ...[
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      TagAmountBar(
+                        totalAmount: turnover.amountValue,
+                        tagTurnovers: turnoverWithTags.tagTurnovers,
+                        tagById: tagById,
+                      ),
+                      ...turnoverWithTags.tagTurnovers.mapIndexed(
+                        (i, tt) => TagNoteDisplay(
+                          tagTurnover: tt,
+                          tag: tagById[tt.tagId],
+                          bgColor: i % 2 == 0
+                              ? colorScheme.surfaceContainerHigh
+                              : colorScheme.surfaceContainer,
+                          isLast: i == turnoverWithTags.tagTurnovers.length - 1,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  if (turnoverWithTags.tagTurnovers.isNotEmpty) ...[
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.5,
+                      ),
+                      borderRadius: BorderRadius.vertical(
+                        bottom: Radius.circular(8),
+                      ),
+                    ),
+                    child: Row(
                       children: [
-                        TagAmountBar(
-                          totalAmount: turnover.amountValue,
-                          tagTurnovers: turnoverWithTags.tagTurnovers,
-                          tagById: tagById,
+                        Icon(
+                          Icons.label_off_outlined,
+                          size: 16,
+                          color: colorScheme.onSurfaceVariant,
                         ),
-                        const SizedBox(height: 8),
-                        ...turnoverWithTags.tagTurnovers
-                            .where((tt) => tt.note?.isNotEmpty == true)
-                            .map(
-                              (tt) => TagNoteDisplay(
-                                tagTurnover: tt,
-                                tag: tagById[tt.tagId],
-                              ),
-                            ),
-                        // Tag chips
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: turnoverWithTags.tagTurnovers.map((
-                            tagTurnover,
-                          ) {
-                            final tag = tagById[tagTurnover.tagId];
-                            final tagName = tag?.name ?? '(Unknown)';
-                            final tagColor =
-                                ColorUtils.parseColor(
-                                  tag?.color,
-                                )?.withValues(alpha: 0.1) ??
-                                Colors.grey.shade400;
-                            return Chip(
-                              label: Text(
-                                '$tagName: ${tagTurnover.format()}',
-                                style: theme.textTheme.bodySmall,
-                              ),
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                              ),
-                              backgroundColor: tagColor,
-                            );
-                          }).toList(),
+                        const SizedBox(width: 8),
+                        Text(
+                          'No tags assigned',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
                         ),
                       ],
                     ),
-                  ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withValues(
-                          alpha: 0.5,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.label_off_outlined,
-                            size: 16,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'No tags assigned',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ],
-              );
-            },
-          ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -239,42 +219,62 @@ class TagNoteDisplay extends StatelessWidget {
     super.key,
     required this.tagTurnover,
     required this.tag,
+    required this.bgColor,
+    required this.isLast,
   });
 
   final TagTurnover tagTurnover;
   final Tag? tag;
+  final Color bgColor;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tagName = tag?.name ?? '(Unknown)';
     final colorScheme = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.note,
-              size: 16,
-              color:
-                  ColorUtils.parseColor(tag?.color) ??
-                  colorScheme.onSurfaceVariant,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: isLast
+            ? BorderRadius.vertical(bottom: Radius.circular(8))
+            : null,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.label,
+            size: 16,
+            color:
+                ColorUtils.parseColor(tag?.color) ??
+                colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(tagName, style: theme.textTheme.labelSmall),
+                    ),
+                    Text(
+                      tagTurnover.format(),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+                if (tagTurnover.note?.isNotEmpty == true)
+                  Text('${tagTurnover.note}', style: theme.textTheme.bodySmall),
+              ],
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '${tagTurnover.note}',
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
