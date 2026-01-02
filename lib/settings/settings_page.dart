@@ -88,7 +88,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             context,
                           );
                           if (newValue != null && context.mounted) {
-                            context.read<SettingsCubit>().setTheme(newValue);
+                            await context.read<SettingsCubit>().setTheme(newValue);
                           }
                         },
                       ),
@@ -116,7 +116,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             state.authDelay,
                           );
                           if (newValue != null && context.mounted) {
-                            context.read<SettingsCubit>().setAuthDelay(
+                            await context.read<SettingsCubit>().setAuthDelay(
                               newValue,
                             );
                           }
@@ -208,7 +208,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         state.logLevel,
                       );
                       if (newValue != null && context.mounted) {
-                        context.read<SettingsCubit>().setLogLevel(newValue);
+                        await context.read<SettingsCubit>().setLogLevel(newValue);
                       }
                     },
                   ),

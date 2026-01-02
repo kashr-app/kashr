@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:kashr/backup/cubit/backup_cubit.dart';
 import 'package:kashr/backup/cubit/backup_state.dart';
 import 'package:kashr/backup/cubit/cloud_backup_cubit.dart';
@@ -363,7 +365,7 @@ class _BackupListView extends StatelessWidget {
                           .downloadFromNextcloud(selectedFilename);
                       if (success) {
                         // refresh list to show the downloaded backup
-                        backupCubit.loadBackups();
+                        unawaited(backupCubit.loadBackups());
                       }
                     }
                   },

@@ -145,7 +145,7 @@ class DatabaseHelper {
 
   Future<void> close() async {
     if (_database != null) {
-      _database!.close();
+      await _database!.close();
       _database = null;
       _initCompleter = null;
     }

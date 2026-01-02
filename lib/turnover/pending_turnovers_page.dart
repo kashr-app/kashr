@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:decimal/decimal.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
@@ -80,7 +82,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Pending turnover deleted')),
         );
-        _loadPendingTurnovers();
+        unawaited(_loadPendingTurnovers());
       }
     } catch (e) {
       if (mounted) {
@@ -113,7 +115,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Pending turnover updated')),
             );
-            _loadPendingTurnovers();
+            unawaited(_loadPendingTurnovers());
           }
         } catch (e) {
           if (mounted) {
@@ -159,7 +161,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Turnover unmatched successfully')),
           );
-          _loadPendingTurnovers();
+          unawaited(_loadPendingTurnovers());
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Failed to unmatch turnover')),
@@ -230,7 +232,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Turnover materialized successfully')),
         );
-        _loadPendingTurnovers();
+        unawaited(_loadPendingTurnovers());
       }
     } catch (e) {
       if (mounted) {
@@ -276,7 +278,7 @@ class _PendingTurnoversPageState extends State<PendingTurnoversPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Match confirmed')));
-        _loadPendingTurnovers();
+        unawaited(_loadPendingTurnovers());
       }
     } catch (e) {
       setState(() {
@@ -520,11 +522,8 @@ class _PendingTurnoverItem extends StatelessWidget {
               ),
               if (onMaterialize != null ||
                   onFindMatch != null ||
-                  onUnmatch != null)
+                  onUnmatch != null) ...[
                 const SizedBox(height: 8),
-              if (onMaterialize != null ||
-                  onFindMatch != null ||
-                  onUnmatch != null)
                 Row(
                   children: [
                     if (onMaterialize != null)
@@ -553,6 +552,7 @@ class _PendingTurnoverItem extends StatelessWidget {
                       ),
                   ],
                 ),
+              ],
             ],
           ),
         ),

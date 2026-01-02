@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:kashr/account/account_all_turnovers_page.dart';
@@ -347,7 +348,7 @@ class HomePage extends StatelessWidget {
 
     // Refresh dashboard if turnover was saved
     if (result != null && context.mounted) {
-      context.read<DashboardCubit>().loadMonthData();
+      unawaited(context.read<DashboardCubit>().loadMonthData());
     }
   }
 
@@ -386,7 +387,7 @@ class HomePage extends StatelessWidget {
 
       // Refresh dashboard if turnover was saved
       if (wasAdded == true && context.mounted) {
-        context.read<DashboardCubit>().loadMonthData();
+        unawaited(context.read<DashboardCubit>().loadMonthData());
       }
     }
   }

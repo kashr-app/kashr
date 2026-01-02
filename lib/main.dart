@@ -27,7 +27,7 @@ import 'package:provider/provider.dart';
 LogService? _logService;
 
 void main() async {
-  runZonedGuarded(
+  await runZonedGuarded(
     () async {
       developer.log('main() started', name: 'kashr.main');
       WidgetsFlutterBinding.ensureInitialized();

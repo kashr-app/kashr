@@ -24,7 +24,7 @@ class SettingsCubit extends Cubit<SettingsState> {
 
   Future<void> setTheme(ThemeMode value) async {
     final newState = state.copyWith(themeMode: value);
-    _upsertAndEmit('themeMode', newState);
+    await _upsertAndEmit('themeMode', newState);
   }
 
   Future<void> setFastFormMode(bool value) async {

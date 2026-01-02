@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:kashr/core/color_utils.dart';
@@ -184,11 +185,13 @@ class TagTurnoverTagListener extends TagListener {
     try {
       // Show loading indicator
       if (context.mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) =>
-              const Center(child: CircularProgressIndicator()),
+        unawaited(
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) =>
+                const Center(child: CircularProgressIndicator()),
+          ),
         );
       }
 
@@ -291,10 +294,13 @@ class TagTurnoverTagListener extends TagListener {
     if (!context.mounted) return;
     try {
       // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+      unawaited(
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
+        ),
       );
 
       final count = await tagTurnoverRepository.updateTagByTagId(

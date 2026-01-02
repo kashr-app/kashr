@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:decimal/decimal.dart';
 import 'package:kashr/account/account_all_turnovers_page.dart';
 import 'package:kashr/account/accounts_page.dart';
@@ -51,14 +53,17 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   bool _isLoadingTurnovers = false;
 
   @override
-  void initState() {
+  void initState() async {
     super.initState();
-    _loadData();
+    unawaited(_loadData());
   }
 
   Future<void> _loadData() async {
-    _loadSavingsBreakdown();
-    _loadRecentTurnovers();
+    await Future.wait([
+      //
+      _loadSavingsBreakdown(),
+      _loadRecentTurnovers(),
+    ]);
   }
 
   Future<void> _loadSavingsBreakdown() async {

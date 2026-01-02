@@ -169,7 +169,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     switch (result.status) {
       case ResultStatus.success:
         setBankDownloadStatus(Status.success);
-        loadMonthData();
+        unawaited(loadMonthData());
       case ResultStatus.unauthed:
         setBankDownloadStatus(Status.initial);
       case ResultStatus.otherError:

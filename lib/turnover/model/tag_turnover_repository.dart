@@ -93,7 +93,7 @@ class TagTurnoverRepository {
 
     final (placeholders, args) = db.inClause(tts, toArg: (it) => it.id.uuid);
 
-    db.update(
+    await db.update(
       'tag_turnover',
       {'turnover_id': null},
       where: 'id IN ($placeholders)',

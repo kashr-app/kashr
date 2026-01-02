@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:decimal/decimal.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/account/model/account_repository.dart';
@@ -75,10 +77,10 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       );
 
       // Load transfers asynchronously (don't block the UI)
-      loadTransfers();
+      unawaited(loadTransfers());
 
       // Load suggestions asynchronously (don't block the UI)
-      _loadSuggestions(turnover);
+      unawaited(_loadSuggestions(turnover));
     } catch (e, s) {
       _log.e('Failed to load turnover', error: e, stackTrace: s);
       emit(

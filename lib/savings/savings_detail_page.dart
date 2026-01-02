@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:decimal/decimal.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
@@ -167,7 +169,7 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
     );
 
     if (result == true && mounted) {
-      _loadDetails();
+      unawaited(_loadDetails());
     }
   }
 
@@ -175,7 +177,7 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
     final result = await EditSavingsGoalDialog.show(context, savings);
 
     if (result == true && mounted) {
-      _loadDetails();
+      unawaited(_loadDetails());
     }
   }
 

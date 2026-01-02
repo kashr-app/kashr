@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:kashr/home/home_page.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/turnover/dialogs/tag_turnover_editor_dialog.dart';
@@ -288,7 +290,9 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
 
     if (item.isMatched) {
       await TurnoverTagsRoute(turnoverId: item.turnoverId!.uuid).push(context);
-      if (context.mounted) context.read<TagTurnoversCubit>().refresh();
+      if (context.mounted) {
+        unawaited(context.read<TagTurnoversCubit>().refresh());
+      }
     } else {
       final result = await TagTurnoverEditorDialog.show(
         context,
@@ -330,7 +334,9 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
       await TransferEditorRoute(
         transferId: transferDetails.transfer.id.uuid,
       ).push(context);
-      if (context.mounted) context.read<TagTurnoversCubit>().refresh();
+      if (context.mounted) {
+        unawaited(context.read<TagTurnoversCubit>().refresh());
+      }
     } else if (isUnlinkedTransfer) {
       final requiredSign = item.sign == TurnoverSign.expense
           ? TurnoverSign.income
@@ -372,7 +378,9 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
         if (transferId != null) {
           await TransferEditorRoute(transferId: transferId.uuid).push(context);
         }
-        if (context.mounted) context.read<TagTurnoversCubit>().refresh();
+        if (context.mounted) {
+          unawaited(context.read<TagTurnoversCubit>().refresh());
+        }
       }
     }
   }
