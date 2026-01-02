@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:kashr/core/async_lock.dart';
 import 'package:kashr/logging/model/log_entry.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:flutter/foundation.dart';
@@ -33,10 +34,11 @@ class LogService {
 
   final _logsUpdatedController = StreamController<void>.broadcast();
 
-  bool _isCleanupRunning = false;
   bool _hasRunInitialCleanup = false;
   int _logWriteCount = 0;
-  final List<LogEntry> _writeBuffer = [];
+
+  // Lock to serialize all file operations
+  final _fileLock = AsyncLock();
 
   Stream<void> get logsUpdated => _logsUpdatedController.stream;
 
@@ -95,21 +97,13 @@ class LogService {
     return File(path.join(logsDir.path, 'log.json'));
   }
 
-  /// Sanitizes text to ensure it can be safely encoded in JSON.
+  /// Truncates text to prevent extremely large log entries.
   ///
-  /// Removes null bytes and limits length to prevent file corruption.
-  String? _sanitizeText(String? text, {int maxLength = 50000}) {
-    if (text == null) return null;
+  /// Protects against pathological cases like infinite recursion stack traces.
+  String? _truncateIfNeeded(String? text, {int maxLength = 50000}) {
+    if (text == null || text.length <= maxLength) return text;
 
-    // Remove null bytes and other problematic control characters
-    var sanitized = text.replaceAll('\u0000', '').replaceAll('\r', '\n');
-
-    // Truncate if too long
-    if (sanitized.length > maxLength) {
-      sanitized = '${sanitized.substring(0, maxLength)}\n... (truncated ${sanitized.length - maxLength} characters)';
-    }
-
-    return sanitized;
+    return '${text.substring(0, maxLength)}\n... (truncated ${text.length - maxLength} characters)';
   }
 
   Future<void> logToFile({
@@ -128,10 +122,10 @@ class LogService {
       final entry = LogEntry(
         timestamp: DateTime.now().toUtc(),
         level: level,
-        message: _sanitizeText(message, maxLength: 10000) ?? message,
+        message: _truncateIfNeeded(message, maxLength: 10000) ?? message,
         loggerName: loggerName,
-        error: _sanitizeText(error),
-        stackTrace: _sanitizeText(stackTrace),
+        error: _truncateIfNeeded(error),
+        stackTrace: _truncateIfNeeded(stackTrace),
         context: context,
       );
 
@@ -147,19 +141,11 @@ class LogService {
       return;
     }
 
-    // If cleanup is running, buffer the entry to avoid file corruption
-    if (_isCleanupRunning) {
-      _writeBuffer.add(entry);
-      return;
-    }
-
-    // Write directly to file
     await _writeLogEntryToFile(entry);
 
     _logWriteCount++;
 
     // Run cleanup lazily: after first 50 writes, then every 500 writes
-    // This prevents blocking on every log write
     if (!_hasRunInitialCleanup && _logWriteCount >= 50) {
       _hasRunInitialCleanup = true;
       _runCleanupIfNeeded();
@@ -170,57 +156,56 @@ class LogService {
     _logsUpdatedController.add(null);
   }
 
+  /// Writes a single log entry to file with serialization lock.
   Future<void> _writeLogEntryToFile(LogEntry entry) async {
-    try {
-      final jsonString = jsonEncode(entry.toJson());
-      await _logFile!.writeAsString(
-        '$jsonString\n',
-        mode: FileMode.append,
-        flush: true,
-      );
-    } catch (e, stack) {
-      // If JSON encoding or writing fails, try to write a simplified entry
-      developer.log(
-        'Failed to write log entry, attempting fallback',
-        name: 'kashr.log_service',
-        level: 900,
-        error: e,
-        stackTrace: stack,
-      );
-
+    return _fileLock.synchronized(() async {
       try {
-        // Create a minimal fallback entry
-        final fallbackEntry = LogEntry(
-          timestamp: entry.timestamp,
-          level: entry.level,
-          message: 'Log write failed: ${entry.message.substring(0, 100)}...',
-          loggerName: entry.loggerName,
-          error: 'Original log entry could not be encoded',
-          stackTrace: null,
-          context: null,
-        );
-        final jsonString = jsonEncode(fallbackEntry.toJson());
+        final jsonString = jsonEncode(entry.toJson());
         await _logFile!.writeAsString(
           '$jsonString\n',
           mode: FileMode.append,
           flush: true,
         );
-      } catch (fallbackError) {
+      } catch (e, stack) {
+        // If JSON encoding or writing fails, try to write a simplified entry
         developer.log(
-          'Critical: Could not write even fallback log entry',
+          'Failed to write log entry, attempting fallback',
           name: 'kashr.log_service',
-          level: 1000,
-          error: fallbackError,
+          level: 900,
+          error: e,
+          stackTrace: stack,
         );
+
+        try {
+          // Create a minimal fallback entry
+          final fallbackEntry = LogEntry(
+            timestamp: entry.timestamp,
+            level: entry.level,
+            message: 'Log write failed: ${entry.message.substring(0, 100)}...',
+            loggerName: entry.loggerName,
+            error: 'Original log entry could not be encoded',
+            stackTrace: null,
+            context: null,
+          );
+          final jsonString = jsonEncode(fallbackEntry.toJson());
+          await _logFile!.writeAsString(
+            '$jsonString\n',
+            mode: FileMode.append,
+            flush: true,
+          );
+        } catch (fallbackError) {
+          developer.log(
+            'Critical: Could not write even fallback log entry',
+            name: 'kashr.log_service',
+            level: 1000,
+            error: fallbackError,
+          );
+        }
       }
-    }
+    });
   }
 
   void _runCleanupIfNeeded() {
-    if (_isCleanupRunning) return;
-
-    _isCleanupRunning = true;
-
     // Run cleanup in background without blocking
     unawaited(_performCleanup());
   }
@@ -237,44 +222,7 @@ class LogService {
         error: e,
         stackTrace: stack,
       );
-    } finally {
-      // Mark cleanup as complete first
-      _isCleanupRunning = false;
-
-      // Flush any buffered entries that accumulated during cleanup
-      await _flushWriteBuffer();
     }
-  }
-
-  Future<void> _flushWriteBuffer() async {
-    if (_writeBuffer.isEmpty) return;
-
-    developer.log(
-      'Flushing ${_writeBuffer.length} buffered log entries',
-      name: 'kashr.log_service',
-    );
-
-    // Copy and clear buffer to avoid modifications during iteration
-    final bufferedEntries = List<LogEntry>.from(_writeBuffer);
-    _writeBuffer.clear();
-
-    // Write all buffered entries
-    for (final entry in bufferedEntries) {
-      try {
-        await _writeLogEntryToFile(entry);
-        _logWriteCount++;
-      } catch (e, stack) {
-        developer.log(
-          'Failed to flush buffered log entry',
-          name: 'kashr.log_service',
-          level: 900,
-          error: e,
-          stackTrace: stack,
-        );
-      }
-    }
-
-    _logsUpdatedController.add(null);
   }
 
   /// Reads file lines with resilient UTF-8 decoding.
@@ -337,8 +285,10 @@ class LogService {
     final keepCount = (_maxFileSize / 500).floor();
     final trimmedLines = lines.take(keepCount);
 
-    await _logFile!.writeAsString('${trimmedLines.join('\n')}\n');
-    log.i('Trimmed logs to $keepCount entries');
+    await _fileLock.synchronized(() async {
+      await _logFile!.writeAsString('${trimmedLines.join('\n')}\n');
+      log.i('Trimmed logs to $keepCount entries');
+    });
   }
 
   // Cleanup old logs based on retention
@@ -366,25 +316,29 @@ class LogService {
     }).toList();
 
     if (filteredLines.length < lines.length) {
-      await _logFile!.writeAsString('${filteredLines.join('\n')}\n');
-      log.i(
-        'Cleaned up ${lines.length - filteredLines.length} old log entries',
-      );
+      await _fileLock.synchronized(() async {
+        await _logFile!.writeAsString('${filteredLines.join('\n')}\n');
+        log.i(
+          'Cleaned up ${lines.length - filteredLines.length} old log entries',
+        );
+      });
     }
   }
 
   Future<void> clearLogs() async {
-    try {
-      if (_logFile != null && await _logFile!.exists()) {
-        await _logFile!.delete();
-        _logFile = await _getLogFile();
-        log.i('All logs cleared');
-        _logsUpdatedController.add(null);
+    return _fileLock.synchronized(() async {
+      try {
+        if (_logFile != null && await _logFile!.exists()) {
+          await _logFile!.delete();
+          _logFile = await _getLogFile();
+          log.i('All logs cleared');
+          _logsUpdatedController.add(null);
+        }
+      } catch (e, stack) {
+        log.e('Failed to clear logs', error: e, stackTrace: stack);
+        rethrow;
       }
-    } catch (e, stack) {
-      log.e('Failed to clear logs', error: e, stackTrace: stack);
-      rethrow;
-    }
+    });
   }
 }
 
