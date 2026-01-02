@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:go_router/go_router.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/comdirect/comdirect_api.dart';
 import 'package:kashr/comdirect/comdirect_login_page.dart';
@@ -163,8 +164,11 @@ class LoadBankDataSection extends StatelessWidget {
     }
   }
 
-  Future<void> _navigateToLoginAndDownload(BuildContext context) async {
-    await ComdirectLoginRoute().push(context);
+  Future<void> _navigateToLoginAndDownload(
+    GoRouter router,
+    BuildContext context,
+  ) async {
+    await router.push(ComdirectLoginRoute().location);
     if (!context.mounted) return;
 
     final authState = context.read<ComdirectAuthCubit>().state;
@@ -174,12 +178,14 @@ class LoadBankDataSection extends StatelessWidget {
   }
 
   void _showLoginError(BuildContext context, String message) {
+    final router = GoRouter.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         action: SnackBarAction(
           label: 'Login',
-          onPressed: () async => await _navigateToLoginAndDownload(context),
+          onPressed: () async =>
+              await _navigateToLoginAndDownload(router, context),
         ),
       ),
     );
