@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
+import 'package:kashr/turnover/dialogs/tag_turnover_info_dialog.dart';
+import 'package:kashr/turnover/dialogs/turnover_info_dialog.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
@@ -51,69 +53,118 @@ class SourceCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              TagAvatar(tag: tag, radius: 16),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tag.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+          InkWell(
+            onTap: () async {
+              final selected = await showDialog<ShowDetails>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Close'),
                     ),
-                    if (account != null)
-                      Row(
-                        children: [
-                          Icon(account.accountType.icon, size: 16),
-                          SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              account.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                  ],
+                  title: Text('View Details'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        enabled: tagTurnover.turnoverId != null,
+                        onTap: () =>
+                            Navigator.pop(context, ShowDetails.turnover),
+                        title: Text('Turnover'),
+                        trailing: Icon(Icons.chevron_right),
+                      ),
+                      ListTile(
+                        onTap: () =>
+                            Navigator.pop(context, ShowDetails.tagTurnover),
+                        title: Text('TagTurnover'),
+                        trailing: Icon(Icons.chevron_right),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+              if (selected == null || !context.mounted) {
+                return;
+              }
+
+              switch (selected) {
+                case ShowDetails.turnover:
+                  await TurnoverInfoDialog.showById(
+                    context,
+                    tagTurnover.turnoverId!,
+                  );
+                case ShowDetails.tagTurnover:
+                  await TagTurnoverInfoDialog.show(context, tagTurnover);
+              }
+            },
+            child: Row(
+              children: [
+                TagAvatar(tag: tag, radius: 16),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tag.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (account != null)
+                        Row(
+                          children: [
+                            Icon(account.accountType.icon, size: 16),
+                            SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                account.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      if (tagTurnover.note != null &&
+                          tagTurnover.note!.isNotEmpty)
+                        Text(
+                          tagTurnover.note!,
+                          style: theme.textTheme.bodySmall,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      tagTurnover.format(),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
-                    if (tagTurnover.note != null &&
-                        tagTurnover.note!.isNotEmpty)
-                      Text(
-                        tagTurnover.note!,
-                        style: theme.textTheme.bodySmall,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      dateFormat.format(tagTurnover.bookingDate),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
+                    ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    tagTurnover.format(),
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    dateFormat.format(tagTurnover.bookingDate),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 }
+
+enum ShowDetails { turnover, tagTurnover }

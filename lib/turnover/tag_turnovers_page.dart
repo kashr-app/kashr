@@ -323,12 +323,13 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
   ) async {
     final transferDetails = transferByTagTurnoverId[item.id];
     final tagRepository = context.read<TagRepository>();
+
     final tagById = await tagRepository.getByIdsCached();
+    if (!context.mounted) return;
+
     final tag = tagById[item.tagId];
     final isTransferTag = tag?.isTransfer ?? false;
     final isUnlinkedTransfer = isTransferTag && transferDetails == null;
-
-    if (!context.mounted) return;
 
     if (transferDetails != null) {
       await TransferEditorRoute(
