@@ -1,4 +1,9 @@
+import 'dart:async';
+
+import 'package:kashr/core/associate_by.dart';
+import 'package:kashr/core/extensions/map_extensios.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/tag_turnover_change.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/tag_turnover_sort.dart';
 import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
@@ -17,6 +22,9 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
   final TransferService _transferService;
   final Logger _log;
 
+  StreamSubscription<TagTurnoverChange>? _tagTurnoverSubscription;
+  StreamSubscription<TransferChange>? _transferSubscription;
+
   static const _pageSize = 10;
 
   TagTurnoversCubit(
@@ -33,8 +41,87 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
            sort: initialSort,
          ),
        ) {
-    // Start loading async (no await)
-    loadMore();
+    unawaited(loadMore());
+
+    _tagTurnoverSubscription = _tagTurnoverRepository.watchChanges().listen(
+      _onTagTurnoverChanged,
+    );
+
+    _transferSubscription = _transferRepository.watchChanges().listen(
+      _onTransferChanged,
+    );
+  }
+
+  @override
+  Future<void> close() async {
+    await _tagTurnoverSubscription?.cancel();
+    await _transferSubscription?.cancel();
+    return super.close();
+  }
+
+  Future<void> _onTagTurnoverChanged(TagTurnoverChange change) async {
+    switch (change) {
+      case TagTurnoversInserted(:final tagTurnovers):
+        final copy = await _setItems(tagTurnovers.associateBy((it) => it.id));
+
+        final valueFn = state.sort.orderBy.valueFn;
+        final isAsc = state.sort.direction.isAsc;
+        final itemById = copy.itemById.sortedByValue(valueFn, isAsc: isAsc);
+
+        emit(copy.copyWith(itemById: itemById));
+      case TagTurnoversUpdated(:final tagTurnovers):
+        final newState = await _setItems(
+          tagTurnovers.associateBy((it) => it.id),
+        );
+        emit(newState);
+      case TagTurnoversDeleted(:final ids):
+        final idsSet = ids.toSet();
+        final itemByIdFiltered = state.itemById.where(
+          (id, _) => !idsSet.contains(id),
+        );
+        emit(state.copyWith(itemById: itemByIdFiltered));
+    }
+  }
+
+  Future<void> _onTransferChanged(TransferChange change) async {
+    switch (change) {
+      case TransferCreated(:final transfer):
+        emit(
+          state.copyWith(
+            transferByTagTurnoverId: {
+              ...state.transferByTagTurnoverId,
+              if (transfer.fromTagTurnover?.id != null)
+                transfer.fromTagTurnover!.id: transfer,
+              if (transfer.toTagTurnover?.id != null)
+                transfer.toTagTurnover!.id: transfer,
+            },
+          ),
+        );
+      case TransferUpdated(:final transfer):
+        final transferDetailsByTTId = await _loadTransfersForItems(
+          [transfer.fromTagTurnoverId, transfer.toTagTurnoverId].nonNulls,
+        );
+        final from = transferDetailsByTTId[transfer.fromTagTurnoverId];
+        final to = transferDetailsByTTId[transfer.toTagTurnoverId];
+
+        final newTransferByTTId = <UuidValue, TransferWithDetails>{
+          ...state.transferByTagTurnoverId.where(
+            (ttId, oldTransfer) => oldTransfer.transfer.id != transfer.id,
+          ),
+          if (transfer.fromTagTurnoverId != null && from != null)
+            transfer.fromTagTurnoverId!: from,
+          if (transfer.toTagTurnoverId != null && to != null)
+            transfer.toTagTurnoverId!: to,
+        };
+        emit(state.copyWith(transferByTagTurnoverId: newTransferByTTId));
+      case TransferDeleted(:final transfer):
+        final newTransferByTTId = <UuidValue, TransferWithDetails>{
+          ...state.transferByTagTurnoverId.where(
+            (ttId, oldTransfer) => oldTransfer.transfer.id != transfer.id,
+          ),
+        };
+        emit(state.copyWith(transferByTagTurnoverId: newTransferByTTId));
+    }
   }
 
   /// Updates the filter and reloads data.
@@ -53,7 +140,7 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
   Future<void> refresh() async {
     emit(
       state.copyWith(
-        items: [],
+        itemById: {},
         transferByTagTurnoverId: {},
         currentOffset: 0,
         hasMore: true,
@@ -63,6 +150,27 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
     await loadMore();
   }
 
+  Future<TagTurnoversState> _setItems(
+    Map<UuidValue, TagTurnover> itemById,
+  ) async {
+    // Fetch transfer information for new/updated items
+    final transfersMap = await _loadTransfersForItems(itemById.keys);
+
+    // keep order for existing items
+    final itemByIdNew = {...state.itemById};
+    for (final it in itemById.entries) {
+      itemByIdNew[it.key] = it.value;
+    }
+
+    return state.copyWith(
+      itemById: itemByIdNew,
+      transferByTagTurnoverId: {
+        ...state.transferByTagTurnoverId,
+        ...transfersMap,
+      },
+    );
+  }
+
   /// Loads the next page of tag turnovers.
   Future<void> loadMore() async {
     if (state.isLoading || !state.hasMore) return;
@@ -70,23 +178,17 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
     emit(state.copyWith(isLoading: true, error: null));
 
     try {
-      final newItems = await _tagTurnoverRepository.getTagTurnoversPaginated(
+      final newItems = (await _tagTurnoverRepository.getTagTurnoversPaginated(
         limit: _pageSize,
         offset: state.currentOffset,
         filter: state.filter,
         sort: state.sort,
-      );
+      )).associateBy((it) => it.id);
 
-      // Fetch transfer information for new items
-      final transfersMap = await _loadTransfersForItems(newItems);
+      final copy = await _setItems(newItems);
 
       emit(
-        state.copyWith(
-          items: [...state.items, ...newItems],
-          transferByTagTurnoverId: {
-            ...state.transferByTagTurnoverId,
-            ...transfersMap,
-          },
+        copy.copyWith(
           currentOffset: state.currentOffset + newItems.length,
           hasMore: newItems.length >= _pageSize,
           isLoading: false,
@@ -104,11 +206,9 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
 
   /// Loads transfer information for the given tag turnovers.
   Future<Map<UuidValue, TransferWithDetails>> _loadTransfersForItems(
-    List<TagTurnover> items,
+    Iterable<UuidValue> tagTurnoverIds,
   ) async {
     try {
-      final tagTurnoverIds = items.map((item) => item.id).toList();
-
       // Get transfer IDs for these tag turnovers
       final transferIdByTagTurnoverId = await _transferRepository
           .getTransferIdsForTagTurnovers(tagTurnoverIds);
@@ -167,7 +267,6 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
       await _tagTurnoverRepository.deleteTagTurnoversBatch(idsToDelete);
 
       clearSelection();
-      await refresh();
       return true;
     } catch (error, stackTrace) {
       _log.e(
@@ -184,7 +283,6 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
   Future<void> updateTagTurnover(TagTurnover tagTurnover) async {
     try {
       await _tagTurnoverRepository.updateTagTurnover(tagTurnover);
-      await refresh();
     } catch (error, stackTrace) {
       _log.e(
         'Error updating tag turnover',
@@ -199,7 +297,6 @@ class TagTurnoversCubit extends Cubit<TagTurnoversState> {
   Future<void> deleteTagTurnover(UuidValue id) async {
     try {
       await _tagTurnoverRepository.deleteTagTurnover(id);
-      await refresh();
     } catch (error, stackTrace) {
       _log.e(
         'Error deleting tag turnover',

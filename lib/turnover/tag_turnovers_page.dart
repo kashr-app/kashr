@@ -255,7 +255,6 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
   Future<void> _handleItemSelect(
     BuildContext context,
     TagTurnover item,
-    List<TagTurnover> items,
   ) async {
     final id = item.id;
 
@@ -290,9 +289,6 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
 
     if (item.isMatched) {
       await TurnoverTagsRoute(turnoverId: item.turnoverId!.uuid).push(context);
-      if (context.mounted) {
-        unawaited(context.read<TagTurnoversCubit>().refresh());
-      }
     } else {
       final result = await TagTurnoverEditorDialog.show(
         context,
@@ -335,9 +331,6 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
       await TransferEditorRoute(
         transferId: transferDetails.transfer.id.uuid,
       ).push(context);
-      if (context.mounted) {
-        unawaited(context.read<TagTurnoversCubit>().refresh());
-      }
     } else if (isUnlinkedTransfer) {
       final requiredSign = item.sign == TurnoverSign.expense
           ? TurnoverSign.income
@@ -379,9 +372,6 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
         if (transferId != null) {
           await TransferEditorRoute(transferId: transferId.uuid).push(context);
         }
-        if (context.mounted) {
-          unawaited(context.read<TagTurnoversCubit>().refresh());
-        }
       }
     }
   }
@@ -421,7 +411,7 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
                     onRefresh: () =>
                         context.read<TagTurnoversCubit>().refresh(),
                     child: TagTurnoversListContent(
-                      items: state.items,
+                      items: state.itemById.values.toList(),
                       isLoading: state.isLoading,
                       hasMore: state.hasMore,
                       error: state.error,
@@ -432,7 +422,7 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
                       transferByTagTurnoverId: state.transferByTagTurnoverId,
                       onItemTap: (item) => _handleItemTap(context, item),
                       onItemSelect: (item) =>
-                          _handleItemSelect(context, item, state.items),
+                          _handleItemSelect(context, item),
                       onItemLongPress: (item) =>
                           _handleItemLongPress(context, item),
                       onTransferAction: (item, sourceTransfer) =>
@@ -474,8 +464,8 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () {
-              final selectedItem = state.items.firstWhere(
-                (item) => state.selectedIds.contains(item.id),
+              final selectedItem = state.itemById.keys.firstWhere(
+                (id) => state.selectedIds.contains(id),
               );
               Navigator.of(context).pop(selectedItem);
             },

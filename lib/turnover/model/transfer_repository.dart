@@ -223,7 +223,7 @@ class TransferRepository {
   ///
   /// Returns a map of tagTurnoverId to transferId for those that are linked.
   Future<Map<UuidValue, UuidValue>> getTransferIdsForTagTurnovers(
-    List<UuidValue> tagTurnoverIds,
+    Iterable<UuidValue> tagTurnoverIds,
   ) async {
     if (tagTurnoverIds.isEmpty) return {};
 

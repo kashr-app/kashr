@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:kashr/turnover/model/tag_turnover.dart';
 
 part '../../_gen/turnover/model/tag_turnover_sort.freezed.dart';
 part '../../_gen/turnover/model/tag_turnover_sort.g.dart';
@@ -16,10 +17,23 @@ enum TagTurnoverSortField {
       TagTurnoverSortField.createdAt => 'Created',
     };
   }
+
+  Comparable Function(TagTurnover tt) get valueFn {
+    return switch (this) {
+      TagTurnoverSortField.bookingDate => (TagTurnover tt) => tt.bookingDate,
+      TagTurnoverSortField.amount => (TagTurnover tt) => tt.amountValue,
+      TagTurnoverSortField.createdAt => (TagTurnover tt) => tt.createdAt,
+    };
+  }
 }
 
 /// Enum for sort direction
-enum TagTurnoverSortDirection { asc, desc }
+enum TagTurnoverSortDirection {
+  asc,
+  desc;
+
+  bool get isAsc => this == asc;
+}
 
 /// Sort configuration for querying tag turnovers.
 @freezed

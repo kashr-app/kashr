@@ -10,7 +10,7 @@ part '../_gen/turnover/tag_turnovers_state.freezed.dart';
 @freezed
 abstract class TagTurnoversState with _$TagTurnoversState {
   const factory TagTurnoversState({
-    @Default([]) List<TagTurnover> items,
+    @Default({}) Map<UuidValue, TagTurnover> itemById,
     @Default({}) Map<UuidValue, TransferWithDetails> transferByTagTurnoverId,
     @Default(0) int currentOffset,
     @Default(false) bool isLoading,
