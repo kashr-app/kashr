@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/associate_by.dart';
-import 'package:kashr/core/extensions/decimal_extensions.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/home/cubit/dashboard_state.dart';
 import 'package:kashr/ingest/ingest.dart';
@@ -180,15 +179,18 @@ class DashboardCubit extends Cubit<DashboardState> {
 
   /// Loads data that does not depend on the selected period.
   Future<void> _loadNonPeriodData() async {
-    final unallocatedCountTotal = await _turnoverRepository
-        .countUnallocatedTurnovers();
-    final unallocatedSumTotal = await _turnoverRepository
-        .sumUnallocatedTurnovers();
-
-    final (pendingCount, pendingTotalAmount) = await _pending();
-
-    final transfersNeedingReviewCount = await _transferRepository
-        .countTransfersNeedingReview();
+    // Run all queries in parallel with type-safe record destructuring
+    final (
+      unallocatedCountTotal,
+      unallocatedSumTotal,
+      (pendingCount, pendingTotalAmount),
+      transfersNeedingReviewCount,
+    ) = await (
+      _turnoverRepository.countUnallocatedTurnovers(),
+      _turnoverRepository.sumUnallocatedTurnovers(),
+      _pending(),
+      _transferRepository.countTransfersNeedingReview(),
+    ).wait;
 
     emit(
       state.copyWith(
@@ -209,53 +211,57 @@ class DashboardCubit extends Cubit<DashboardState> {
   Future<void> loadMonthData({bool invalidateNonPeriodData = true}) async {
     emit(state.copyWith(status: Status.loading));
 
-    // Get current tags from repository
-    final tags = await _tagRepository.getAllTagsCached();
-    final tagById = tags.associateBy((it) => it.id);
-
     try {
+      // Load non-period data separately if needed
       if (invalidateNonPeriodData) {
         await _loadNonPeriodData();
       }
 
-      final turnovers = await _turnoverRepository.getTurnoversForMonth(
-        state.selectedPeriod,
-      );
+      // Run all independent queries in parallel with type-safe record destructuring
+      final (
+        tags,
+        turnovers,
+        tagTurnoverCount,
+        incomeTagSummaries,
+        expenseTagSummaries,
+        (transferTagSummaries, totalTransfers),
+        firstUnallocatedTurnovers,
+        unallocatedCountInPeriod,
+        ttData,
+      ) = await (
+        _tagRepository.getAllTagsCached(),
+        _turnoverRepository.getTurnoversForMonth(state.selectedPeriod),
+        _tagTurnoverRepository.count(state.selectedPeriod),
+        _tagTurnoverRepository.getTagSummariesForMonth(
+          state.selectedPeriod,
+          TurnoverSign.income,
+          semantic: null,
+        ),
+        _tagTurnoverRepository.getTagSummariesForMonth(
+          state.selectedPeriod,
+          TurnoverSign.expense,
+          semantic: null,
+        ),
+        _loadTransfersSummary(state.selectedPeriod),
+        _turnoverRepository.getUnallocatedTurnoversForMonth(
+          state.selectedPeriod,
+          limit: 1,
+        ),
+        _turnoverRepository.countUnallocatedTurnovers(
+          yearMonth: state.selectedPeriod,
+        ),
+        _tagTurnoverRepository.getTagTurnoversForMonthlyDashboard(
+          state.selectedPeriod,
+        ),
+      ).wait;
 
-      final tagTurnoverCount = await _tagTurnoverRepository.count(
-        state.selectedPeriod,
-      );
+      final tagById = tags.associateBy((it) => it.id);
 
-      final incomeTagSummaries = await _tagTurnoverRepository
-          .getTagSummariesForMonth(
-            state.selectedPeriod,
-            TurnoverSign.income,
-            semantic: null, // excludes transfers
-          );
-
-      final expenseTagSummaries = await _tagTurnoverRepository
-          .getTagSummariesForMonth(
-            state.selectedPeriod,
-            TurnoverSign.expense,
-            semantic: null, // excludes transfers
-          );
-
-      final (transferTagSummaries, totalTransfers) =
-          await _loadTransfersSummary(state.selectedPeriod);
-
-      final firstUnallocatedTurnovers = (await _turnoverRepository
-          .getUnallocatedTurnoversForMonth(state.selectedPeriod, limit: 1));
+      // Get first unallocated turnover with tags (depends on query above)
       final firstUnallocatedTurnover =
           (await _turnoverService.getTurnoversWithTags(
             firstUnallocatedTurnovers,
           )).firstOrNull;
-
-      final unallocatedCountInPeriod = await _turnoverRepository
-          .countUnallocatedTurnovers(yearMonth: state.selectedPeriod);
-
-      // Fetch tag turnovers for correct total calculation
-      final ttData = await _tagTurnoverRepository
-          .getTagTurnoversForMonthlyDashboard(state.selectedPeriod);
 
       // Calculate total income/expense using tag booking dates + untagged portions
 
@@ -287,7 +293,10 @@ class DashboardCubit extends Cubit<DashboardState> {
       for (final turnover in turnovers) {
         final turnoverId = turnover.id;
         final taggedAmount =
-            ttByTurnoverId[turnoverId]?.sum((it) => it.amountValue) ??
+            ttByTurnoverId[turnoverId]?.fold(
+              Decimal.zero,
+              (sum, it) => sum + it.amountValue,
+            ) ??
             Decimal.zero;
         final untaggedAmount = turnover.amountValue - taggedAmount;
         taggedAmountByTurnover[turnoverId] = taggedAmount;
