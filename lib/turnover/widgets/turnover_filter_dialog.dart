@@ -1,10 +1,10 @@
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -21,7 +21,7 @@ class TurnoverFilterDialog extends StatefulWidget {
 
 class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
   late bool _unallocatedOnly;
-  late YearMonth? _period;
+  late Period? _period;
   late Set<UuidValue> _selectedTagIds;
   late TurnoverSign? _sign;
 
@@ -154,7 +154,7 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Period filter (Year and Month together)
+                    // Period filter
                     CheckboxListTile(
                       title: Text(
                         'Filter by period',
@@ -164,10 +164,8 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                       onChanged: (value) {
                         setState(() {
                           if (value == true) {
-                            // Enable filter with current date if not already set
-                            _period = YearMonth.now();
+                            _period = Period.now(PeriodType.month);
                           } else {
-                            // Disable filter
                             _period = null;
                           }
                         });
@@ -177,8 +175,8 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                     if (_period != null) ...[
                       const SizedBox(height: 8),
                       InkWell(
-                        onTap: () =>
-                            MonthPickerDialog.show(context, _period!).then((v) {
+                        onTap: () => PeriodPickerDialog.show(context, _period!)
+                            .then((v) {
                               if (v != null) {
                                 setState(() {
                                   _period = v;
@@ -191,9 +189,7 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                             border: OutlineInputBorder(),
                             suffixIcon: Icon(Icons.calendar_month),
                           ),
-                          child: Text(
-                            '${_period!.year} ${_getMonthName(_period!.month)}',
-                          ),
+                          child: Text(_period!.format()),
                         ),
                       ),
                     ],
@@ -304,23 +300,5 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
         ),
       ),
     );
-  }
-
-  String _getMonthName(int month) {
-    const monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return monthNames[month - 1];
   }
 }

@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
+import 'package:jiffy/jiffy.dart';
 import 'package:kashr/account/model/account.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/services/turnover_matching_service.dart';
@@ -33,20 +35,12 @@ class ComdirectService implements DataIngestor {
   });
 
   @override
-  Future<DataIngestResult> ingest({
-    required DateTime minBookingDate,
-    required DateTime maxBookingDate,
-  }) => _fetchAccountsAndTurnovers(
-    minBookingDate: minBookingDate,
-    maxBookingDate: maxBookingDate,
-  );
+  Future<DataIngestResult> ingest(Period period) =>
+      _fetchAccountsAndTurnovers(period);
 
   /// Fetches accounts and turnovers from the Comdirect API.
   /// Also automatically updates the balance for existing accounts.
-  Future<DataIngestResult> _fetchAccountsAndTurnovers({
-    required DateTime minBookingDate,
-    required DateTime maxBookingDate,
-  }) async {
+  Future<DataIngestResult> _fetchAccountsAndTurnovers(Period period) async {
     try {
       // Fetch account balances
       final accountsPage = await comdirectAPI.getBalances();
@@ -122,8 +116,12 @@ class ComdirectService implements DataIngestor {
           // Fetch transactions for each account
           final transactionsResponse = await comdirectAPI.getTransactions(
             accountId: apiId,
-            minBookingDate: _apiDateFormat.format(minBookingDate),
-            maxBookingDate: _apiDateFormat.format(maxBookingDate),
+            minBookingDate: _apiDateFormat.format(period.startInclusive),
+            maxBookingDate: _apiDateFormat.format(
+              Jiffy.parseFromDateTime(
+                period.endExclusive,
+              ).subtract(days: 1).dateTime,
+            ),
             pageElementIndex: pageIndex * pageSize,
             pageSize: pageSize,
           );

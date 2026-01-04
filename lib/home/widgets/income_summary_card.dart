@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/home/widgets/turnover_summary_card.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
@@ -12,14 +12,14 @@ class IncomeSummaryCard extends StatelessWidget {
   final Decimal totalIncome;
   final Decimal unallocatedIncome;
   final List<TagSummary> tagSummaries;
-  final YearMonth selectedPeriod;
+  final Period period;
   final String currencyCode;
 
   const IncomeSummaryCard({
     required this.totalIncome,
     required this.unallocatedIncome,
     required this.tagSummaries,
-    required this.selectedPeriod,
+    required this.period,
     this.currencyCode = 'EUR',
     super.key,
   });
@@ -30,18 +30,15 @@ class IncomeSummaryCard extends StatelessWidget {
       totalAmount: totalIncome,
       unallocatedAmount: unallocatedIncome,
       tagSummaries: tagSummaries,
-      selectedPeriod: selectedPeriod,
+      period: period,
       currencyCode: currencyCode,
       title: 'Total Income',
       subtitle: 'Income by Tag',
-      emptyMessage: 'No income this month',
+      emptyMessage: 'No income this period',
       turnoverSign: TurnoverSign.income,
       onHeaderTap: () {
         TurnoversRoute(
-          filter: TurnoverFilter(
-            sign: TurnoverSign.income,
-            period: selectedPeriod,
-          ),
+          filter: TurnoverFilter(sign: TurnoverSign.income, period: period),
         ).go(context);
       },
     );

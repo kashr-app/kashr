@@ -121,7 +121,7 @@ class HomeRoute extends GoRouteData with $HomeRoute {
         context.read<TagRepository>(),
         context.read<TransferRepository>(),
         context.read<LogService>().log,
-      )..loadMonthData(),
+      )..loadPeriodData(),
       child: const HomePage(),
     );
   }
@@ -188,7 +188,7 @@ class HomePage extends StatelessWidget {
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () =>
-                          context.read<DashboardCubit>().loadMonthData(),
+                          context.read<DashboardCubit>().loadPeriodData(),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -200,9 +200,9 @@ class HomePage extends StatelessWidget {
               onHorizontalDragEnd: (details) {
                 final velocity = details.primaryVelocity ?? 0;
                 if (velocity > 0) {
-                  context.read<DashboardCubit>().previousMonth();
+                  context.read<DashboardCubit>().previousPeriod();
                 } else if (velocity < 0) {
-                  context.read<DashboardCubit>().nextMonth();
+                  context.read<DashboardCubit>().nextPeriod();
                 }
               },
               child: ListView(
@@ -231,19 +231,19 @@ class HomePage extends StatelessWidget {
                   ],
                   const SizedBox(height: 8),
                   PeriodSelector(
-                    selectedPeriod: state.selectedPeriod,
-                    onPreviousMonth: () =>
-                        context.read<DashboardCubit>().previousMonth(),
-                    onNextMonth: () =>
-                        context.read<DashboardCubit>().nextMonth(),
-                    onMonthSelected: (yearMonth) =>
-                        context.read<DashboardCubit>().selectMonth(yearMonth),
+                    selectedPeriod: state.period,
+                    onPreviousPeriod: () =>
+                        context.read<DashboardCubit>().previousPeriod(),
+                    onNextPeriod: () =>
+                        context.read<DashboardCubit>().nextPeriod(),
+                    onPeriodSelected: (period) =>
+                        context.read<DashboardCubit>().selectPeriod(period),
                   ),
                   const SizedBox(height: 8),
                   const LoadBankDataSection(),
                   const SizedBox(height: 8),
                   CashflowCard(
-                    period: state.selectedPeriod,
+                    period: state.period,
                     totalIncome: state.totalIncome,
                     totalExpenses: state.totalExpenses,
                     tagTurnoverCount: state.tagTurnoverCount,
@@ -253,28 +253,28 @@ class HomePage extends StatelessWidget {
                     firstUnallocatedTurnover: state.firstUnallocatedTurnover,
                     unallocatedCountInPeriod: state.unallocatedCountInPeriod,
                     onRefresh: () =>
-                        context.read<DashboardCubit>().loadMonthData(),
-                    selectedPeriod: state.selectedPeriod,
+                        context.read<DashboardCubit>().loadPeriodData(),
+                    period: state.period,
                   ),
                   const SizedBox(height: 16),
                   IncomeSummaryCard(
                     totalIncome: state.totalIncome,
                     unallocatedIncome: state.unallocatedIncome,
                     tagSummaries: state.incomeTagSummaries,
-                    selectedPeriod: state.selectedPeriod,
+                    period: state.period,
                   ),
                   const SizedBox(height: 16),
                   SpendingSummaryCard(
                     totalExpenses: -state.totalExpenses,
                     unallocatedExpenses: -state.unallocatedExpenses,
                     tagSummaries: state.expenseTagSummaries,
-                    selectedPeriod: state.selectedPeriod,
+                    period: state.period,
                   ),
                   const SizedBox(height: 16),
                   TransferSummaryCard(
                     totalTransfers: state.totalTransfers,
                     tagSummaries: state.transferTagSummaries,
-                    selectedPeriod: state.selectedPeriod,
+                    period: state.period,
                   ),
                 ],
               ),
@@ -348,7 +348,7 @@ class HomePage extends StatelessWidget {
 
     // Refresh dashboard if turnover was saved
     if (result != null && context.mounted) {
-      unawaited(context.read<DashboardCubit>().loadMonthData());
+      unawaited(context.read<DashboardCubit>().loadPeriodData());
     }
   }
 
@@ -387,7 +387,7 @@ class HomePage extends StatelessWidget {
 
       // Refresh dashboard if turnover was saved
       if (wasAdded == true && context.mounted) {
-        unawaited(context.read<DashboardCubit>().loadMonthData());
+        unawaited(context.read<DashboardCubit>().loadPeriodData());
       }
     }
   }

@@ -1,8 +1,7 @@
+import 'package:kashr/core/model/period.dart';
+
 abstract class DataIngestor {
-  Future<DataIngestResult> ingest({
-    required DateTime minBookingDate,
-    required DateTime maxBookingDate,
-  });
+  Future<DataIngestResult> ingest(Period period);
 }
 
 class DataIngestResult {

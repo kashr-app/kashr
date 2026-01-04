@@ -252,10 +252,7 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
     }
   }
 
-  Future<void> _handleItemSelect(
-    BuildContext context,
-    TagTurnover item,
-  ) async {
+  Future<void> _handleItemSelect(BuildContext context, TagTurnover item) async {
     final id = item.id;
 
     if (widget.forSelection) {
@@ -421,8 +418,7 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
                       forSelection: widget.forSelection,
                       transferByTagTurnoverId: state.transferByTagTurnoverId,
                       onItemTap: (item) => _handleItemTap(context, item),
-                      onItemSelect: (item) =>
-                          _handleItemSelect(context, item),
+                      onItemSelect: (item) => _handleItemSelect(context, item),
                       onItemLongPress: (item) =>
                           _handleItemLongPress(context, item),
                       onTransferAction: (item, sourceTransfer) =>

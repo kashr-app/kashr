@@ -14,7 +14,7 @@ abstract class ComdirectAPI {
   @GET("/banking/v1/accounts/{accountId}/transactions")
   Future<TransactionsPage> getTransactions({
       @Path("accountId") required String accountId,
-      @Query("min-bookingDate") required String minBookingDate, // Format dates as strings
+      @Query("min-bookingDate") required String minBookingDate,
       @Query("max-bookingDate") required String maxBookingDate,
       @Query("paging-count") int pageSize = 20,
       @Query("paging-first") int pageElementIndex = 0,

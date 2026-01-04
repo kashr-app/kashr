@@ -3,15 +3,16 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/extensions/date_time_extensions.dart';
 import 'package:kashr/db/db_helper.dart';
 import 'package:kashr/turnover/model/fts.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/tag_turnover_change.dart';
 import 'package:kashr/turnover/model/tag_turnover_sort.dart';
 import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
 import 'package:kashr/turnover/model/turnover.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
@@ -119,7 +120,6 @@ class TagTurnoverRepository {
     final turnoverIds = turnovers.map((t) => t.id).toList();
 
     final db = await DatabaseHelper().database;
-
 
     // Fetch all existing tag turnovers for these turnovers in one query
     final (placeholders, args) = db.inClause(
@@ -541,17 +541,14 @@ class TagTurnoverRepository {
     return _unscale(result.first['total']);
   }
 
-  /// Fetches tag summaries for a month and sign.
+  /// Fetches tag summaries for a period and sign.
   /// Excludes transfer tags (semantic = 'transfer').
-  Future<List<TagSummary>> getTagSummariesForMonth(
-    YearMonth yearMonth,
+  Future<List<TagSummary>> getTagSummariesForPeriod(
+    Period period,
     TurnoverSign sign, {
     required TagSemantic? semantic,
   }) async {
     final db = await DatabaseHelper().database;
-
-    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
-    final endDate = startDate.add(months: 1);
 
     final amountWhere = switch (sign) {
       TurnoverSign.income => 'AND tt.amount_value >= 0',
@@ -578,10 +575,7 @@ class TagTurnoverRepository {
       GROUP BY t.id, t.name, t.color, t.semantic
       ORDER BY total_amount DESC
       ''',
-      [
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
-      ],
+      [period.startInclusive.isoDate, period.endExclusive.isoDate],
     );
 
     return result.map((map) {
@@ -592,12 +586,14 @@ class TagTurnoverRepository {
     }).toList();
   }
 
-  /// Fetches tag summaries across multiple months for analytics.
+  /// Fetches [TagSummary]s for a period grouped by month.
+  ///
+  /// [tagIds] can be used to filter by tag.
+  ///
   /// Returns a map where the key is "YYYY-MM" and the value is
-  /// a list of TagSummary for that month.
-  Future<Map<String, List<TagSummary>>> getTagSummariesForDateRange({
-    required DateTime startDate,
-    required DateTime endDate,
+  /// a list of [TagSummary] for that period.
+  Future<Map<String, List<TagSummary>>> getTagSummariesForPeriodByMonth({
+    required Period period,
     List<UuidValue>? tagIds,
   }) async {
     final db = await DatabaseHelper().database;
@@ -627,8 +623,9 @@ class TagTurnoverRepository {
       ORDER BY month ASC, total_amount DESC
       ''',
       [
-        Jiffy.parseFromDateTime(startDate).format(pattern: isoDateFormat),
-        Jiffy.parseFromDateTime(endDate).format(pattern: isoDateFormat),
+        //
+        period.startInclusive.isoDate,
+        period.endExclusive.isoDate,
         ...tagArgs,
       ],
     );
@@ -647,11 +644,8 @@ class TagTurnoverRepository {
     return summariesByMonth;
   }
 
-  Future<int> count(YearMonth yearMonth) async {
+  Future<int> count(Period period) async {
     final db = await DatabaseHelper().database;
-
-    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
-    final endDate = startDate.add(months: 1);
 
     final result = await db.rawQuery(
       '''
@@ -659,43 +653,38 @@ class TagTurnoverRepository {
       FROM tag_turnover tt
       WHERE tt.booking_date >= ? AND tt.booking_date < ?
       ''',
-      [
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
-      ],
+      [period.startInclusive.isoDate, period.endExclusive.isoDate],
     );
 
     return result.first['count'] as int;
   }
 
-  /// Fetches tag turnovers needed for dashboard calculations.
+  /// Fetches [TagTurnover]s [period] allocation.
+  ///
   /// Returns two DISJOINT sets:
-  /// - allocatedInMonth: Tag turnovers with tt.booking_date in the month
+  /// - [allocatedInPeriod]: [TagTurnover]s with tt.booking_date in the period
   ///   (used for allocated sums)
-  /// - allocatedOutsideMonthButTurnoverInMonth: Tag turnovers where
-  ///   tv.booking_date is in the month but tt.booking_date is OUTSIDE
-  ///   the month (needed to calculate untagged portions IN the month)
+  /// - [allocatedOutsidePeriodButTurnoverInPeriod]: [TagTurnover]s where
+  ///   tv.booking_date is in the period but tt.booking_date is OUTSIDE
+  ///   the period (needed to calculate untagged portions IN the period)
   Future<
     ({
-      List<TagTurnover> allocatedInMonth,
-      List<TagTurnover> allocatedOutsideMonthButTurnoverInMonth,
+      List<TagTurnover> allocatedInPeriod,
+      List<TagTurnover> allocatedOutsidePeriodButTurnoverInPeriod,
     })
   >
-  getTagTurnoversForMonthlyDashboard(YearMonth yearMonth) async {
-    final startDate = yearMonth.toDateTime();
-    final endDate = Jiffy.parseFromDateTime(startDate).add(months: 1).dateTime;
-
+  getTagTurnoversPeriodAllocation(Period period) async {
     final db = await DatabaseHelper().database;
 
-    final start = isoDateFormatter.format(startDate);
-    final end = isoDateFormatter.format(endDate);
+    final start = period.startInclusive.isoDate;
+    final end = period.endExclusive.isoDate;
 
     final result = await db.rawQuery(
       '''
       SELECT DISTINCT tt.*,
         CASE WHEN tt.booking_date >= ? AND tt.booking_date < ?
              THEN 1 ELSE 0 END
-               as is_allocated_in_month
+               as is_allocated_in_period
       FROM tag_turnover tt
       INNER JOIN turnover tv ON tt.turnover_id = tv.id
       WHERE tt.turnover_id IS NOT NULL
@@ -713,12 +702,12 @@ class TagTurnoverRepository {
       ],
     );
 
-    // Group by is_allocated_in_month flag using groupBy for single pass
+    // Group by is_allocated_in_period flag using groupBy for single pass
     final grouped = result.groupListsBy(
-      (map) => map['is_allocated_in_month'] == 1,
+      (map) => map['is_allocated_in_period'] == 1,
     );
 
-    final allocatedInMonth = (grouped[true] ?? [])
+    final allocatedInPeriod = (grouped[true] ?? [])
         .map((map) => TagTurnover.fromJson(map))
         .toList();
 
@@ -727,8 +716,8 @@ class TagTurnoverRepository {
         .toList();
 
     return (
-      allocatedInMonth: allocatedInMonth,
-      allocatedOutsideMonthButTurnoverInMonth: allocatedOutside,
+      allocatedInPeriod: allocatedInPeriod,
+      allocatedOutsidePeriodButTurnoverInPeriod: allocatedOutside,
     );
   }
 
@@ -794,12 +783,10 @@ class TagTurnoverRepository {
 
     // Filter by period
     if (filter.period != null) {
-      final startDate = Jiffy.parseFromDateTime(filter.period!.toDateTime());
-      final endDate = startDate.add(months: 1);
       whereClauses.add('tt.booking_date >= ?');
       whereClauses.add('tt.booking_date < ?');
-      whereArgs.add(startDate.format(pattern: isoDateFormat));
-      whereArgs.add(endDate.format(pattern: isoDateFormat));
+      whereArgs.add(filter.period!.startInclusive.isoDate);
+      whereArgs.add(filter.period!.endExclusive.isoDate);
     }
 
     // Filter by tag IDs

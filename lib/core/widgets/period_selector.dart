@@ -1,6 +1,8 @@
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/year_month.dart';
+import 'package:kashr/turnover/model/year_week.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:jiffy/jiffy.dart';
 
 class OnAction {
   final String tooltip;
@@ -10,7 +12,7 @@ class OnAction {
   OnAction({required this.tooltip, required this.onAction, required this.icon});
 }
 
-/// A widget for selecting and navigating between periods (months).
+/// A widget for selecting and navigating between periods.
 ///
 /// Displays a card with the current period and navigation controls to move
 /// between periods. Optionally supports an action button.
@@ -18,33 +20,31 @@ class PeriodSelector extends StatelessWidget {
   /// Creates a period selector.
   ///
   /// [selectedPeriod] is the currently selected period to display.
-  /// [onPreviousMonth] is called when the user taps the previous month button.
-  /// [onNextMonth] is called when the user taps the next month button.
-  /// [onMonthSelected] is called when the user selects a month from the picker.
+  /// [onPreviousPeriod] is called when the user taps the previous period button.
+  /// [onNextPeriod] is called when the user taps the next period button.
+  /// [onPeriodSelected] is called when the user selects a period from the picker.
   /// [onAction] is optionally called when the user taps the delete button.
   /// [locked] if set true, the user cannot change nor remove the period.
   /// If [onAction] is null, the delete button will not be shown.
   const PeriodSelector({
     required this.selectedPeriod,
-    required this.onPreviousMonth,
-    required this.onNextMonth,
-    required this.onMonthSelected,
+    required this.onPreviousPeriod,
+    required this.onNextPeriod,
+    required this.onPeriodSelected,
     this.onAction,
     this.locked = false,
     super.key,
   });
 
-  final YearMonth selectedPeriod;
-  final VoidCallback onPreviousMonth;
-  final VoidCallback onNextMonth;
-  final void Function(YearMonth) onMonthSelected;
+  final Period selectedPeriod;
+  final VoidCallback onPreviousPeriod;
+  final VoidCallback onNextPeriod;
+  final void Function(Period period) onPeriodSelected;
   final OnAction? onAction;
   final bool locked;
 
   @override
   Widget build(BuildContext context) {
-    final monthName = DateFormat.yMMMM().format(selectedPeriod.toDateTime());
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -54,20 +54,20 @@ class PeriodSelector extends StatelessWidget {
             if (!locked)
               IconButton(
                 icon: const Icon(Icons.chevron_left),
-                onPressed: onPreviousMonth,
-                tooltip: 'Previous month',
+                onPressed: onPreviousPeriod,
+                tooltip: 'Previous period',
               ),
             Expanded(
               child: InkWell(
                 onTap: locked
                     ? null
                     : () async {
-                        final newSelected = await MonthPickerDialog.show(
+                        final newSelected = await PeriodPickerDialog.show(
                           context,
                           selectedPeriod,
                         );
                         if (newSelected != null) {
-                          onMonthSelected(newSelected);
+                          onPeriodSelected(newSelected);
                         }
                       },
                 borderRadius: BorderRadius.circular(8),
@@ -77,7 +77,7 @@ class PeriodSelector extends StatelessWidget {
                     vertical: 8,
                   ),
                   child: Text(
-                    monthName,
+                    selectedPeriod.format(),
                     style: Theme.of(context).textTheme.titleLarge,
                     textAlign: TextAlign.center,
                   ),
@@ -87,8 +87,8 @@ class PeriodSelector extends StatelessWidget {
             if (!locked)
               IconButton(
                 icon: const Icon(Icons.chevron_right),
-                onPressed: onNextMonth,
-                tooltip: 'Next month',
+                onPressed: onNextPeriod,
+                tooltip: 'Next period',
               ),
             if (onAction != null && !locked)
               IconButton(
@@ -103,35 +103,39 @@ class PeriodSelector extends StatelessWidget {
   }
 }
 
-/// A dialog for selecting a year and month.
-class MonthPickerDialog extends StatefulWidget {
-  const MonthPickerDialog({super.key, required this.selectedPeriod});
+/// A unified dialog for selecting periods (week, month, or year).
+///
+/// Allows users to switch between period types and select the appropriate
+/// time period based on the selected type.
+class PeriodPickerDialog extends StatefulWidget {
+  const PeriodPickerDialog({super.key, required this.initialPeriod});
 
-  final YearMonth selectedPeriod;
+  final Period initialPeriod;
 
-  static Future<YearMonth?> show(
-    BuildContext context,
-    YearMonth selectedPeriod,
-  ) {
-    return showDialog<YearMonth>(
+  static Future<Period?> show(BuildContext context, Period initialPeriod) {
+    return showDialog<Period>(
       context: context,
-      builder: (context) => MonthPickerDialog(selectedPeriod: selectedPeriod),
+      builder: (context) => PeriodPickerDialog(initialPeriod: initialPeriod),
     );
   }
 
   @override
-  State<MonthPickerDialog> createState() => _MonthPickerDialogState();
+  State<PeriodPickerDialog> createState() => _PeriodPickerDialogState();
 }
 
-class _MonthPickerDialogState extends State<MonthPickerDialog> {
+class _PeriodPickerDialogState extends State<PeriodPickerDialog> {
+  late PeriodType _periodType;
   late int _selectedYear;
   late int _selectedMonth;
+  late int _selectedWeek;
 
   @override
   void initState() {
     super.initState();
-    _selectedYear = widget.selectedPeriod.year;
-    _selectedMonth = widget.selectedPeriod.month;
+    _periodType = widget.initialPeriod.type;
+    _selectedYear = widget.initialPeriod.startInclusive.year;
+    _selectedMonth = widget.initialPeriod.startInclusive.month;
+    _selectedWeek = YearWeek.of(widget.initialPeriod.startInclusive).week;
   }
 
   void _selectToday() {
@@ -139,7 +143,22 @@ class _MonthPickerDialogState extends State<MonthPickerDialog> {
     setState(() {
       _selectedYear = now.year;
       _selectedMonth = now.month;
+      _selectedWeek = YearWeek.of(now).week;
     });
+  }
+
+  Period _buildPeriod() {
+    return switch (_periodType) {
+      PeriodType.week => YearWeek(
+        year: _selectedYear,
+        week: _selectedWeek,
+      ).period,
+      PeriodType.month => YearMonth(
+        year: _selectedYear,
+        month: _selectedMonth,
+      ).period,
+      PeriodType.year => Period.of(DateTime(_selectedYear), PeriodType.year),
+    };
   }
 
   @override
@@ -149,31 +168,78 @@ class _MonthPickerDialogState extends State<MonthPickerDialog> {
 
     return Dialog(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
+        constraints: const BoxConstraints(maxWidth: 400, maxHeight: 650),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Select Month', style: textTheme.headlineSmall),
+              Text('Select Period', style: textTheme.headlineSmall),
+              const SizedBox(height: 16),
+              SegmentedButton<PeriodType>(
+                segments: [
+                  ButtonSegment(
+                    value: PeriodType.week,
+                    label: Text(PeriodType.week.title(context)),
+                    icon: const Icon(Icons.view_week),
+                  ),
+                  ButtonSegment(
+                    value: PeriodType.month,
+                    label: Text(PeriodType.month.title(context)),
+                    icon: const Icon(Icons.calendar_month),
+                  ),
+                  ButtonSegment(
+                    value: PeriodType.year,
+                    label: Text(PeriodType.year.title(context)),
+                    icon: const Icon(Icons.calendar_today),
+                  ),
+                ],
+                selected: {_periodType},
+                onSelectionChanged: (Set<PeriodType> newSelection) {
+                  setState(() {
+                    _periodType = newSelection.first;
+                  });
+                },
+              ),
               const SizedBox(height: 24),
               _YearSelector(
                 selectedYear: _selectedYear,
                 onYearChanged: (year) {
                   setState(() {
                     _selectedYear = year;
+                    if (_periodType == PeriodType.week) {
+                      final maxWeeks = _getWeeksInYear(year);
+                      if (_selectedWeek > maxWeeks) {
+                        _selectedWeek = maxWeeks;
+                      }
+                    }
                   });
                 },
               ),
               const SizedBox(height: 24),
-              _MonthGrid(
-                selectedMonth: _selectedMonth,
-                onMonthSelected: (month) {
-                  setState(() {
-                    _selectedMonth = month;
-                  });
+              Flexible(
+                child: switch (_periodType) {
+                  PeriodType.month => _MonthGrid(
+                    selectedMonth: _selectedMonth,
+                    onMonthSelected: (month) {
+                      setState(() {
+                        _selectedMonth = month;
+                      });
+                    },
+                    colorScheme: colorScheme,
+                  ),
+                  PeriodType.week => _WeekGrid(
+                    selectedWeek: _selectedWeek,
+                    weeksInYear: _getWeeksInYear(_selectedYear),
+                    onWeekSelected: (week) {
+                      setState(() {
+                        _selectedWeek = week;
+                      });
+                    },
+                    colorScheme: colorScheme,
+                  ),
+                  PeriodType.year => const SizedBox.shrink(),
                 },
-                colorScheme: colorScheme,
               ),
               const SizedBox(height: 24),
               Row(
@@ -186,9 +252,7 @@ class _MonthPickerDialogState extends State<MonthPickerDialog> {
                   const Spacer(),
                   FilledButton(
                     onPressed: () {
-                      Navigator.of(context).pop(
-                        YearMonth(year: _selectedYear, month: _selectedMonth),
-                      );
+                      Navigator.of(context).pop(_buildPeriod());
                     },
                     child: const Text('OK'),
                   ),
@@ -199,6 +263,18 @@ class _MonthPickerDialogState extends State<MonthPickerDialog> {
         ),
       ),
     );
+  }
+
+  int _getWeeksInYear(int year) {
+    final dec31 = DateTime(year, 12, 31);
+    final jiffy = Jiffy.parseFromDateTime(dec31);
+    final weekday = dec31.weekday;
+
+    if (weekday == DateTime.thursday ||
+        (jiffy.isLeapYear && weekday == DateTime.friday)) {
+      return 53;
+    }
+    return 52;
   }
 }
 
@@ -291,6 +367,59 @@ class _MonthGrid extends StatelessWidget {
             child: Center(
               child: Text(
                 _monthNames[index],
+                style: TextStyle(
+                  color: isSelected
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSurface,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// A grid displaying all weeks in a year for selection.
+class _WeekGrid extends StatelessWidget {
+  const _WeekGrid({
+    required this.selectedWeek,
+    required this.weeksInYear,
+    required this.onWeekSelected,
+    required this.colorScheme,
+  });
+
+  final int selectedWeek;
+  final int weeksInYear;
+  final void Function(int) onWeekSelected;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 1.5,
+      ),
+      itemCount: weeksInYear,
+      itemBuilder: (context, index) {
+        final weekNumber = index + 1;
+        final isSelected = weekNumber == selectedWeek;
+
+        return Material(
+          color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            onTap: () => onWeekSelected(weekNumber),
+            borderRadius: BorderRadius.circular(8),
+            child: Center(
+              child: Text(
+                'W$weekNumber',
                 style: TextStyle(
                   color: isSelected
                       ? colorScheme.onPrimaryContainer

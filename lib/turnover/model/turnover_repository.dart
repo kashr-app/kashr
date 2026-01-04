@@ -2,12 +2,13 @@ import 'dart:async';
 
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/extensions/date_time_extensions.dart';
 import 'package:kashr/db/db_helper.dart';
 import 'package:kashr/turnover/model/fts.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/turnover_change.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/model/turnover_sort.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:uuid/uuid.dart';
 
@@ -56,20 +57,14 @@ class TurnoverRepository {
     return result.map(Turnover.fromJson).toList();
   }
 
-  /// Fetches turnovers for a specific month and year.
-  Future<List<Turnover>> getTurnoversForMonth(YearMonth yearMonth) async {
+  /// Fetches turnovers for a specific period.
+  Future<List<Turnover>> getTurnoversForPeriod(Period period) async {
     final db = await DatabaseHelper().database;
-
-    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
-    final endDate = startDate.add(months: 1);
 
     final maps = await db.query(
       'turnover',
       where: 'booking_date >= ? AND booking_date < ?',
-      whereArgs: [
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
-      ],
+      whereArgs: [period.startInclusive.isoDate, period.endExclusive.isoDate],
       orderBy: 'booking_date DESC',
     );
 
@@ -164,18 +159,16 @@ class TurnoverRepository {
   /// A turnover is considered unallocated if:
   /// - It has no tag_turnover entries, OR
   /// - The sum of tag_turnover amounts doesn't equal the turnover amount
-  Future<int> countUnallocatedTurnovers({YearMonth? yearMonth}) async {
+  Future<int> countUnallocatedTurnovers({Period? period}) async {
     final db = await DatabaseHelper().database;
 
     final whereClauses = <String>[];
     final whereArgs = <String>[];
-    if (yearMonth != null) {
-      final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
-      final endDate = startDate.add(months: 1);
+    if (period != null) {
       whereClauses.add('t.booking_date >= ? AND t.booking_date < ?');
       whereArgs.addAll([
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
+        period.startInclusive.isoDate,
+        period.endExclusive.isoDate,
       ]);
     }
 
@@ -203,18 +196,16 @@ class TurnoverRepository {
   /// A turnover is considered unallocated if:
   /// - It has no tag_turnover entries, OR
   /// - The sum of tag_turnover amounts doesn't equal the turnover amount
-  Future<Decimal> sumUnallocatedTurnovers({YearMonth? yearMonth}) async {
+  Future<Decimal> sumUnallocatedTurnovers({Period? period}) async {
     final db = await DatabaseHelper().database;
 
     final whereClauses = <String>[];
     final whereArgs = <String>[];
-    if (yearMonth != null) {
-      final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
-      final endDate = startDate.add(months: 1);
+    if (period != null) {
       whereClauses.add('t.booking_date >= ? AND t.booking_date < ?');
       whereArgs.addAll([
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
+        period.startInclusive.isoDate,
+        period.endExclusive.isoDate,
       ]);
     }
 
@@ -238,18 +229,15 @@ class TurnoverRepository {
     return decimalUnscale(result.first['total'] as int? ?? 0)!;
   }
 
-  /// Fetches unallocated turnovers for a specific month and year.
+  /// Fetches unallocated turnovers for a specific period.
   /// A turnover is considered unallocated if:
   /// - It has no tag_turnover entries, OR
   /// - The sum of tag_turnover amounts doesn't equal the turnover amount
-  Future<List<Turnover>> getUnallocatedTurnoversForMonth(
-    YearMonth yearMonth, {
+  Future<List<Turnover>> getUnallocatedTurnoversForPeriod(
+    Period period, {
     int limit = 5,
   }) async {
     final db = await DatabaseHelper().database;
-
-    final startDate = Jiffy.parseFromDateTime(yearMonth.toDateTime());
-    final endDate = startDate.add(months: 1);
 
     // Query to find turnovers that are not fully allocated
     // Orders by absolute amount DESC to prioritize high-value transactions
@@ -266,11 +254,7 @@ class TurnoverRepository {
       ORDER BY ABS(t.amount_value) DESC, t.booking_date DESC NULLS FIRST
       LIMIT ?
       ''',
-      [
-        startDate.format(pattern: isoDateFormat),
-        endDate.format(pattern: isoDateFormat),
-        limit,
-      ],
+      [period.startInclusive.isoDate, period.endExclusive.isoDate, limit],
     );
 
     if (turnoverMaps.isEmpty) {
@@ -415,13 +399,11 @@ class TurnoverRepository {
     final whereClauses = <String>[];
     final whereArgs = <Object>[];
 
-    // Period filter (year and month)
+    // Period filter
     if (filter.period != null) {
-      final startDate = Jiffy.parseFromDateTime(filter.period!.toDateTime());
-      final endDate = startDate.add(months: 1);
       whereClauses.add('t.booking_date >= ? AND t.booking_date < ?');
-      whereArgs.add(startDate.format(pattern: isoDateFormat));
-      whereArgs.add(endDate.format(pattern: isoDateFormat));
+      whereArgs.add(filter.period!.startInclusive.isoDate);
+      whereArgs.add(filter.period!.endExclusive.isoDate);
     }
 
     // Sign filter - filter by income (positive) or expense (negative)

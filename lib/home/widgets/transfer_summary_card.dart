@@ -1,12 +1,12 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/home/widgets/tag_summary_row.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
@@ -17,13 +17,13 @@ import 'package:uuid/uuid.dart';
 class TransferSummaryCard extends StatelessWidget {
   final Decimal totalTransfers;
   final List<TagSummary> tagSummaries;
-  final YearMonth selectedPeriod;
+  final Period period;
   final String currencyCode;
 
   const TransferSummaryCard({
     required this.totalTransfers,
     required this.tagSummaries,
-    required this.selectedPeriod,
+    required this.period,
     this.currencyCode = 'EUR',
     super.key,
   });
@@ -89,7 +89,7 @@ class TransferSummaryCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Center(
                   child: Text(
-                    'No transfers this month',
+                    'No transfers this period',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -122,10 +122,7 @@ class TransferSummaryCard extends StatelessWidget {
           currency: currency,
           onTap: () {
             TurnoversRoute(
-              filter: TurnoverFilter(
-                tagIds: [tagId],
-                period: selectedPeriod,
-              ),
+              filter: TurnoverFilter(tagIds: [tagId], period: period),
             ).go(context);
           },
           // No onTap for transfers - they're not filtered in turnovers

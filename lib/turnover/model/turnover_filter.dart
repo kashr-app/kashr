@@ -1,6 +1,6 @@
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/uuid_json_converter.dart';
 import 'package:kashr/turnover/model/turnover.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -15,9 +15,8 @@ abstract class TurnoverFilter with _$TurnoverFilter {
     /// or where tag amounts don't sum to turnover amount)
     bool? unallocatedOnly,
 
-    /// Filter by specific period (year and month)
-    /// Both year and month must be provided together to ensure a valid filter
-    YearMonth? period,
+    /// Filter by specific period
+    Period? period,
 
     /// Filter by specific tag IDs
     /// If provided, only turnovers with ALL these tags are shown

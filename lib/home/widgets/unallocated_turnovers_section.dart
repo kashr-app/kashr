@@ -1,7 +1,7 @@
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/model/turnover_sort.dart';
 import 'package:kashr/turnover/model/turnover_with_tag_turnovers.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:kashr/turnover/turnover_tags_page.dart';
 import 'package:kashr/turnover/turnovers_page.dart';
 import 'package:kashr/turnover/widgets/turnover_card.dart';
@@ -12,13 +12,13 @@ class UnallocatedTurnoversSection extends StatelessWidget {
   final TurnoverWithTagTurnovers? firstUnallocatedTurnover;
   final int unallocatedCountInPeriod;
   final VoidCallback onRefresh;
-  final YearMonth selectedPeriod;
+  final Period period;
 
   const UnallocatedTurnoversSection({
     required this.firstUnallocatedTurnover,
     required this.unallocatedCountInPeriod,
     required this.onRefresh,
-    required this.selectedPeriod,
+    required this.period,
     super.key,
   });
 
@@ -57,10 +57,7 @@ class UnallocatedTurnoversSection extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => TurnoversRoute(
-                filter: TurnoverFilter(
-                  unallocatedOnly: true,
-                  period: selectedPeriod,
-                ),
+                filter: TurnoverFilter(unallocatedOnly: true, period: period),
                 sort: const TurnoverSort(
                   orderBy: SortField.amount,
                   direction: SortDirection.desc,

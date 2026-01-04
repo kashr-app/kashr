@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:kashr/analytics/cubit/analytics_state.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
@@ -34,9 +35,13 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
 
       // Load data summaries for the selected date range
       final dataSummaries = await _tagTurnoverRepository
-          .getTagSummariesForDateRange(
-            startDate: state.startDate,
-            endDate: state.endDate,
+          .getTagSummariesForPeriodByMonth(
+            period: Period(
+              // TODO PeriodType.year is not really true because we show some months only, but good enough for now
+              PeriodType.year,
+              startInclusive: state.startDate,
+              endExclusive: state.endDate,
+            ),
             tagIds: selectedTagIds.isEmpty ? null : selectedTagIds,
           );
 
@@ -86,11 +91,6 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
 
   void deselectAllTags() {
     emit(state.copyWith(selectedTagIds: []));
-    loadData();
-  }
-
-  void setDateRange(DateTime startDate, DateTime endDate) {
-    emit(state.copyWith(startDate: startDate, endDate: endDate));
     loadData();
   }
 }

@@ -1,14 +1,14 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:kashr/turnover/tag_turnovers_page.dart';
 import 'package:flutter/material.dart';
 
 /// A card widget that displays the cashflow (income - expenses) for the month.
 class CashflowCard extends StatelessWidget {
-  final YearMonth period;
+  final Period period;
   final Decimal totalIncome;
   final Decimal totalExpenses;
   final int tagTurnoverCount;

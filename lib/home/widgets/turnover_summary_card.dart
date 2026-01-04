@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/home/widgets/tag_summary_row.dart';
 import 'package:kashr/theme.dart';
@@ -8,7 +9,6 @@ import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +24,7 @@ class TurnoverSummaryCard extends StatelessWidget {
   final Decimal totalAmount;
   final Decimal unallocatedAmount;
   final List<TagSummary> tagSummaries;
-  final YearMonth selectedPeriod;
+  final Period period;
   final String currencyCode;
   final String title;
   final String subtitle;
@@ -36,7 +36,7 @@ class TurnoverSummaryCard extends StatelessWidget {
     required this.totalAmount,
     required this.unallocatedAmount,
     required this.tagSummaries,
-    required this.selectedPeriod,
+    required this.period,
     required this.title,
     required this.subtitle,
     required this.emptyMessage,
@@ -183,7 +183,7 @@ class TurnoverSummaryCard extends StatelessWidget {
           filter: TurnoverFilter(
             tagIds: [tagId],
             sign: turnoverSign,
-            period: selectedPeriod,
+            period: period,
           ),
         ).go(context);
       },
@@ -205,7 +205,7 @@ class TurnoverSummaryCard extends StatelessWidget {
           filter: TurnoverFilter(
             unallocatedOnly: true,
             sign: turnoverSign,
-            period: selectedPeriod,
+            period: period,
           ),
         ).go(context);
       },

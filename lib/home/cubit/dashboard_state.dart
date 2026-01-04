@@ -1,8 +1,8 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/status.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/turnover_with_tag_turnovers.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '../../_gen/home/cubit/dashboard_state.freezed.dart';
@@ -12,7 +12,7 @@ abstract class DashboardState with _$DashboardState {
   const factory DashboardState({
     required Status status,
     required Status bankDownloadStatus,
-    required YearMonth selectedPeriod,
+    required Period period,
     required Decimal totalIncome,
     required Decimal totalExpenses,
     required Decimal totalTransfers,

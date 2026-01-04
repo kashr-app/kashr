@@ -1,4 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:jiffy/jiffy.dart';
+import 'package:kashr/core/model/period.dart';
 
 part '../../_gen/turnover/model/year_month.freezed.dart';
 part '../../_gen/turnover/model/year_month.g.dart';
@@ -19,12 +21,25 @@ abstract class YearMonth with _$YearMonth {
 
   /// Creates a YearMonth from the current date
   factory YearMonth.now() {
-    final now = DateTime.now();
-    return YearMonth(year: now.year, month: now.month);
+    return YearMonth.of(DateTime.now());
+  }
+
+  /// Creates a YearMonth from the given date
+  factory YearMonth.of(DateTime date) {
+    return YearMonth(year: date.year, month: date.month);
   }
 
   /// Creates a DateTime representing the first day of this month
   DateTime toDateTime() => DateTime(year, month);
+
+  Period get period {
+    final startDate = Jiffy.parseFromDateTime(toDateTime());
+    return Period(
+      PeriodType.month,
+      startInclusive: startDate.dateTime,
+      endExclusive: startDate.add(months: 1).dateTime,
+    );
+  }
 
   factory YearMonth.fromJson(Map<String, dynamic> json) =>
       _$YearMonthFromJson(json);

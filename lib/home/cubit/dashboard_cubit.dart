@@ -6,6 +6,7 @@ import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/home/cubit/dashboard_state.dart';
 import 'package:kashr/ingest/ingest.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
 import 'package:kashr/turnover/model/tag_turnover_change.dart';
@@ -14,10 +15,8 @@ import 'package:kashr/turnover/model/transfer_repository.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_change.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:kashr/turnover/services/turnover_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:jiffy/jiffy.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -49,7 +48,7 @@ class DashboardCubit extends Cubit<DashboardState> {
         DashboardState(
           status: Status.initial,
           bankDownloadStatus: Status.initial,
-          selectedPeriod: YearMonth.now(),
+          period: Period.now(PeriodType.month),
           totalIncome: Decimal.zero,
           totalExpenses: Decimal.zero,
           totalTransfers: Decimal.zero,
@@ -88,56 +87,55 @@ class DashboardCubit extends Cubit<DashboardState> {
   void _onTurnoverChanged(TurnoverChange change) {
     final shouldRefresh = switch (change) {
       TurnoversInserted(:final turnovers) => turnovers.any(
-        _affectsSelectedMonth,
+        _affectsSelectedPeriod,
       ),
       TurnoversUpdated(:final turnovers) => turnovers.any(
-        _affectsSelectedMonth,
+        _affectsSelectedPeriod,
       ),
       TurnoversDeleted() => true, // Conservative: always refresh on deletes
     };
 
     if (shouldRefresh) {
-      loadMonthData();
+      loadPeriodData();
     }
   }
 
   void _onTagTurnoverChanged(TagTurnoverChange change) {
     final shouldRefresh = switch (change) {
       TagTurnoversInserted(:final tagTurnovers) => tagTurnovers.any(
-        (tt) => _bookingDateInMonth(tt.bookingDate),
+        (tt) => _bookingDateInPeriod(tt.bookingDate),
       ),
       TagTurnoversUpdated(:final tagTurnovers) => tagTurnovers.any(
-        (tt) => _bookingDateInMonth(tt.bookingDate),
+        (tt) => _bookingDateInPeriod(tt.bookingDate),
       ),
       TagTurnoversDeleted() => true, // Conservative: always refresh on deletes
     };
 
     if (shouldRefresh) {
-      loadMonthData();
+      loadPeriodData();
     }
   }
 
   void _onTagsChanged(List<Tag>? tags) {
     final shouldRefresh = true;
     if (shouldRefresh) {
-      loadMonthData();
+      loadPeriodData();
     }
   }
 
   void _onTransferChanged(TransferChange change) {
-    loadMonthData();
+    loadPeriodData();
   }
 
-  /// Checks if a turnover affects the currently selected month.
-  bool _affectsSelectedMonth(Turnover turnover) {
+  /// Checks if a turnover affects the currently selected period.
+  bool _affectsSelectedPeriod(Turnover turnover) {
     final bookingDate = turnover.bookingDate;
-    return bookingDate != null && _bookingDateInMonth(bookingDate);
+    return bookingDate != null && _bookingDateInPeriod(bookingDate);
   }
 
-  /// Checks if a booking date falls within the selected month.
-  bool _bookingDateInMonth(DateTime date) {
-    final ym = YearMonth(year: date.year, month: date.month);
-    return ym == state.selectedPeriod;
+  /// Checks if a booking date falls within the selected period.
+  bool _bookingDateInPeriod(DateTime date) {
+    return state.period.contains(date);
   }
 
   @override
@@ -157,18 +155,12 @@ class DashboardCubit extends Cubit<DashboardState> {
 
     setBankDownloadStatus(Status.loading);
 
-    final start = state.selectedPeriod.toDateTime();
-    final end = Jiffy.parseFromDateTime(start).endOf(Unit.month).dateTime;
-
-    final result = await ingestor.ingest(
-      minBookingDate: start,
-      maxBookingDate: end,
-    );
+    final result = await ingestor.ingest(state.period);
 
     switch (result.status) {
       case ResultStatus.success:
         setBankDownloadStatus(Status.success);
-        unawaited(loadMonthData());
+        unawaited(loadPeriodData());
       case ResultStatus.unauthed:
         setBankDownloadStatus(Status.initial);
       case ResultStatus.otherError:
@@ -203,12 +195,12 @@ class DashboardCubit extends Cubit<DashboardState> {
     );
   }
 
-  /// Loads cashflow data for the currently selected month.
+  /// Loads cashflow data for the currently selected period.
   ///
   /// If [invalidateNonPeriodData] is false the hint data is not reloaded.
   /// This is particularly important as the metadata can be expensive
-  /// and does not change, e.g. when switching months.
-  Future<void> loadMonthData({bool invalidateNonPeriodData = true}) async {
+  /// and does not change, e.g. when switching period.
+  Future<void> loadPeriodData({bool invalidateNonPeriodData = true}) async {
     emit(state.copyWith(status: Status.loading));
 
     try {
@@ -217,6 +209,7 @@ class DashboardCubit extends Cubit<DashboardState> {
         await _loadNonPeriodData();
       }
 
+      final period = state.period;
       // Run all independent queries in parallel with type-safe record destructuring
       final (
         tags,
@@ -230,29 +223,22 @@ class DashboardCubit extends Cubit<DashboardState> {
         ttData,
       ) = await (
         _tagRepository.getAllTagsCached(),
-        _turnoverRepository.getTurnoversForMonth(state.selectedPeriod),
-        _tagTurnoverRepository.count(state.selectedPeriod),
-        _tagTurnoverRepository.getTagSummariesForMonth(
-          state.selectedPeriod,
+        _turnoverRepository.getTurnoversForPeriod(period),
+        _tagTurnoverRepository.count(period),
+        _tagTurnoverRepository.getTagSummariesForPeriod(
+          period,
           TurnoverSign.income,
           semantic: null,
         ),
-        _tagTurnoverRepository.getTagSummariesForMonth(
-          state.selectedPeriod,
+        _tagTurnoverRepository.getTagSummariesForPeriod(
+          period,
           TurnoverSign.expense,
           semantic: null,
         ),
-        _loadTransfersSummary(state.selectedPeriod),
-        _turnoverRepository.getUnallocatedTurnoversForMonth(
-          state.selectedPeriod,
-          limit: 1,
-        ),
-        _turnoverRepository.countUnallocatedTurnovers(
-          yearMonth: state.selectedPeriod,
-        ),
-        _tagTurnoverRepository.getTagTurnoversForMonthlyDashboard(
-          state.selectedPeriod,
-        ),
+        _loadTransfersSummary(period),
+        _turnoverRepository.getUnallocatedTurnoversForPeriod(period, limit: 1),
+        _turnoverRepository.countUnallocatedTurnovers(period: period),
+        _tagTurnoverRepository.getTagTurnoversPeriodAllocation(period),
       ).wait;
 
       final tagById = tags.associateBy((it) => it.id);
@@ -265,8 +251,8 @@ class DashboardCubit extends Cubit<DashboardState> {
 
       // Calculate total income/expense using tag booking dates + untagged portions
 
-      // 1. Sum from tag turnovers allocated in this month (by tt.booking_date)
-      final totalAbsTTByType = ttData.allocatedInMonth
+      // 1. Sum from tag turnovers allocated in this period (by tt.booking_date)
+      final totalAbsTTByType = ttData.allocatedInPeriod
           .groupFoldBy<TurnoverType, Decimal>(
             (it) => (tagById[it.tagId]?.isTransfer ?? false)
                 ? TurnoverType.transfer
@@ -281,11 +267,11 @@ class DashboardCubit extends Cubit<DashboardState> {
                   Decimal.fromInt(2))
               .toDecimal(scaleOnInfinitePrecision: 2);
 
-      // 2. Calculate untagged portions of turnovers in this month
+      // 2. Calculate untagged portions of turnovers in this period
       // Build map of tagged amounts per turnover
       final ttByTurnoverId = [
-        ...ttData.allocatedInMonth,
-        ...ttData.allocatedOutsideMonthButTurnoverInMonth,
+        ...ttData.allocatedInPeriod,
+        ...ttData.allocatedOutsidePeriodButTurnoverInPeriod,
       ].groupListsBy((it) => it.turnoverId);
 
       final taggedAmountByTurnover = <UuidValue, Decimal>{};
@@ -340,11 +326,11 @@ class DashboardCubit extends Cubit<DashboardState> {
         ),
       );
     } catch (e, s) {
-      log.e('Failed to load month data', error: e, stackTrace: s);
+      log.e('Failed to load period data', error: e, stackTrace: s);
       emit(
         state.copyWith(
           status: Status.error,
-          errorMessage: 'Failed to load spending data: $e',
+          errorMessage: 'Failed to load period data: $e',
         ),
       );
     }
@@ -360,7 +346,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   }
 
   Future<(List<TagSummary>, Decimal)> _loadTransfersSummary(
-    YearMonth yearMonth,
+    Period period,
   ) async {
     // LOGIC per prds/20251214-transfers.md O4:
     // Only use 'from' side (TurnoverSign.expense) for calculations.
@@ -368,8 +354,8 @@ class DashboardCubit extends Cubit<DashboardState> {
     // The 'to' side (TurnoverSign.income) is ignored to avoid double-counting.
 
     final expenseSummaries = await _tagTurnoverRepository
-        .getTagSummariesForMonth(
-          yearMonth,
+        .getTagSummariesForPeriod(
+          period,
           TurnoverSign.expense,
           semantic: TagSemantic.transfer,
         );
@@ -391,37 +377,22 @@ class DashboardCubit extends Cubit<DashboardState> {
     return (transferTagSummaries, totalTransfers);
   }
 
-  /// Navigates to the previous month.
-  Future<void> previousMonth() async {
-    final currentDate = state.selectedPeriod.toDateTime();
-    final previousDate = DateTime(currentDate.year, currentDate.month - 1);
-    emit(
-      state.copyWith(
-        selectedPeriod: YearMonth(
-          year: previousDate.year,
-          month: previousDate.month,
-        ),
-      ),
-    );
-    await loadMonthData(invalidateNonPeriodData: true);
+  /// Navigates to the previous period.
+  Future<void> previousPeriod() async {
+    emit(state.copyWith(period: state.period.add(delta: -1)));
+    await loadPeriodData(invalidateNonPeriodData: true);
   }
 
-  /// Navigates to the next month.
-  Future<void> nextMonth() async {
-    final currentDate = state.selectedPeriod.toDateTime();
-    final nextDate = DateTime(currentDate.year, currentDate.month + 1);
-    emit(
-      state.copyWith(
-        selectedPeriod: YearMonth(year: nextDate.year, month: nextDate.month),
-      ),
-    );
-    await loadMonthData(invalidateNonPeriodData: true);
+  /// Navigates to the next period.
+  Future<void> nextPeriod() async {
+    emit(state.copyWith(period: state.period.add()));
+    await loadPeriodData(invalidateNonPeriodData: true);
   }
 
-  /// Sets a specific month and year.
-  Future<void> selectMonth(YearMonth yearMonth) async {
-    emit(state.copyWith(selectedPeriod: yearMonth));
-    await loadMonthData(invalidateNonPeriodData: true);
+  /// Sets a specific period.
+  Future<void> selectPeriod(Period period) async {
+    emit(state.copyWith(period: period));
+    await loadPeriodData(invalidateNonPeriodData: true);
   }
 }
 

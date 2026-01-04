@@ -7,7 +7,6 @@ import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover_sort.dart';
 import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
 import 'package:kashr/turnover/model/turnover.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -42,10 +41,10 @@ class TagTurnoversFilterChips extends StatelessWidget {
             PeriodSelector(
               locked: lockedFilters.period != null,
               selectedPeriod: filter.period!,
-              onPreviousMonth: () => _navigatePeriod(context, -1),
-              onNextMonth: () => _navigatePeriod(context, 1),
-              onMonthSelected: (yearMonth) =>
-                  onFilterChanged(filter.copyWith(period: yearMonth)),
+              onPreviousPeriod: () => _navigatePeriod(context, -1),
+              onNextPeriod: () => _navigatePeriod(context, 1),
+              onPeriodSelected: (period) =>
+                  onFilterChanged(filter.copyWith(period: period)),
               onAction: OnAction(
                 tooltip: 'Clear period filter',
                 onAction: () => onFilterChanged(filter.copyWith(period: null)),
@@ -163,19 +162,7 @@ class TagTurnoversFilterChips extends StatelessWidget {
   }
 
   void _navigatePeriod(BuildContext context, int delta) {
-    final currentPeriod = filter.period!;
-    final newMonth = currentPeriod.month + delta;
-
-    final YearMonth newPeriod;
-    if (newMonth < 1) {
-      newPeriod = YearMonth(year: currentPeriod.year - 1, month: 12);
-    } else if (newMonth > 12) {
-      newPeriod = YearMonth(year: currentPeriod.year + 1, month: 1);
-    } else {
-      newPeriod = YearMonth(year: currentPeriod.year, month: newMonth);
-    }
-
-    onFilterChanged(filter.copyWith(period: newPeriod));
+    onFilterChanged(filter.copyWith(period: filter.period!.add(delta: delta)));
   }
 
   void _removeTagFilter(UuidValue tagId) {

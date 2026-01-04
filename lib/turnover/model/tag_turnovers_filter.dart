@@ -1,6 +1,6 @@
 import 'package:kashr/core/uuid_json_converter.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/turnover.dart';
-import 'package:kashr/turnover/model/year_month.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -21,8 +21,8 @@ abstract class TagTurnoversFilter with _$TagTurnoversFilter {
     /// sides even if the transfer needs review.
     bool? unfinishedTransfersOnly,
 
-    /// Filter by specific period (year and month)
-    YearMonth? period,
+    /// Filter by specific period
+    Period? period,
 
     /// Filter by specific tag IDs
     @UUIDListNullableJsonConverter() List<UuidValue>? tagIds,
