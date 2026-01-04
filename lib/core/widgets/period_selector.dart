@@ -177,21 +177,22 @@ class _PeriodPickerDialogState extends State<PeriodPickerDialog> {
               Text('Select Period', style: textTheme.headlineSmall),
               const SizedBox(height: 16),
               SegmentedButton<PeriodType>(
+                showSelectedIcon: false,
                 segments: [
                   ButtonSegment(
                     value: PeriodType.week,
                     label: Text(PeriodType.week.title(context)),
-                    icon: const Icon(Icons.view_week),
+                    // icon: const Icon(Icons.view_week),
                   ),
                   ButtonSegment(
                     value: PeriodType.month,
                     label: Text(PeriodType.month.title(context)),
-                    icon: const Icon(Icons.calendar_month),
+                    // icon: const Icon(Icons.calendar_month),
                   ),
                   ButtonSegment(
                     value: PeriodType.year,
                     label: Text(PeriodType.year.title(context)),
-                    icon: const Icon(Icons.calendar_today),
+                    // icon: const Icon(Icons.calendar_today),
                   ),
                 ],
                 selected: {_periodType},
@@ -361,8 +362,9 @@ class _MonthGrid extends StatelessWidget {
           final isSelected = monthNumber == selectedMonth;
 
           return Material(
-            color:
-                isSelected ? colorScheme.primaryContainer : Colors.transparent,
+            color: isSelected
+                ? colorScheme.primaryContainer
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             child: InkWell(
               onTap: () => onMonthSelected(monthNumber),
@@ -374,8 +376,9 @@ class _MonthGrid extends StatelessWidget {
                     color: isSelected
                         ? colorScheme.onPrimaryContainer
                         : colorScheme.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ),
@@ -418,8 +421,9 @@ class _WeekGrid extends StatelessWidget {
           final isSelected = weekNumber == selectedWeek;
 
           return Material(
-            color:
-                isSelected ? colorScheme.primaryContainer : Colors.transparent,
+            color: isSelected
+                ? colorScheme.primaryContainer
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             child: InkWell(
               onTap: () => onWeekSelected(weekNumber),
@@ -431,8 +435,9 @@ class _WeekGrid extends StatelessWidget {
                     color: isSelected
                         ? colorScheme.onPrimaryContainer
                         : colorScheme.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ),
