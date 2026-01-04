@@ -17,6 +17,7 @@ class _SearchDialogState extends State<SearchDialog> {
   final _focusNode = FocusNode();
   late final RecentSearchRepository _repository;
   List<RecentSearch> _recentSearches = [];
+  List<RecentSearch> _filteredSearches = [];
   bool _isLoading = true;
 
   @override
@@ -24,6 +25,9 @@ class _SearchDialogState extends State<SearchDialog> {
     super.initState();
     _repository = context.read<RecentSearchRepository>();
     _loadRecentSearches();
+
+    // Listen to search text changes to filter results
+    _searchController.addListener(_filterSearches);
 
     // Auto-focus the search field when dialog opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -44,11 +48,25 @@ class _SearchDialogState extends State<SearchDialog> {
       final searches = await _repository.getRecentSearches();
       setState(() {
         _recentSearches = searches;
+        _filteredSearches = searches;
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  void _filterSearches() {
+    final query = _searchController.text.trim().toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredSearches = _recentSearches;
+      } else {
+        _filteredSearches = _recentSearches
+            .where((search) => search.query.toLowerCase().contains(query))
+            .toList();
+      }
+    });
   }
 
   void _submitSearch(String query) async {
@@ -140,7 +158,10 @@ class _SearchDialogState extends State<SearchDialog> {
   }
 
   Widget _buildContent(ThemeData theme) {
-    if (_recentSearches.isEmpty) {
+    final hasQuery = _searchController.text.trim().isNotEmpty;
+    final noResults = _filteredSearches.isEmpty;
+
+    if (noResults) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -152,7 +173,7 @@ class _SearchDialogState extends State<SearchDialog> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No recent searches',
+              hasQuery ? 'No matching searches' : 'No recent searches',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -178,23 +199,24 @@ class _SearchDialogState extends State<SearchDialog> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Recent searches',
+                hasQuery ? 'Matching searches' : 'Recent searches',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              TextButton(
-                onPressed: _clearAllRecentSearches,
-                child: const Text('Clear all'),
-              ),
+              if (!hasQuery)
+                TextButton(
+                  onPressed: _clearAllRecentSearches,
+                  child: const Text('Clear all'),
+                ),
             ],
           ),
         ),
         Expanded(
           child: ListView.builder(
-            itemCount: _recentSearches.length,
+            itemCount: _filteredSearches.length,
             itemBuilder: (context, index) {
-              final search = _recentSearches[index];
+              final search = _filteredSearches[index];
               return _RecentSearchItem(
                 search: search,
                 onTap: () => _selectRecentSearch(search),

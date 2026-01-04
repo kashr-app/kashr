@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 
 /// Repository for managing recent search queries
 class RecentSearchRepository {
-  static const int _maxRecentSearches = 10;
+  static const int _maxRecentSearches = 200;
 
   /// Get recent search queries, ordered by most recent first
   Future<List<RecentSearch>> getRecentSearches({
