@@ -345,39 +345,44 @@ class _MonthGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 2,
-      ),
-      itemCount: 12,
-      itemBuilder: (context, index) {
-        final monthNumber = index + 1;
-        final isSelected = monthNumber == selectedMonth;
+    return Scrollbar(
+      thumbVisibility: true,
+      child: GridView.builder(
+        shrinkWrap: true,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 2,
+        ),
+        itemCount: 12,
+        itemBuilder: (context, index) {
+          final monthNumber = index + 1;
+          final isSelected = monthNumber == selectedMonth;
 
-        return Material(
-          color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          child: InkWell(
-            onTap: () => onMonthSelected(monthNumber),
+          return Material(
+            color:
+                isSelected ? colorScheme.primaryContainer : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            child: Center(
-              child: Text(
-                _monthNames[index],
-                style: TextStyle(
-                  color: isSelected
-                      ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurface,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            child: InkWell(
+              onTap: () => onMonthSelected(monthNumber),
+              borderRadius: BorderRadius.circular(8),
+              child: Center(
+                child: Text(
+                  _monthNames[index],
+                  style: TextStyle(
+                    color: isSelected
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurface,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -398,39 +403,43 @@ class _WeekGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 1.5,
-      ),
-      itemCount: weeksInYear,
-      itemBuilder: (context, index) {
-        final weekNumber = index + 1;
-        final isSelected = weekNumber == selectedWeek;
+    return Scrollbar(
+      thumbVisibility: true,
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 1.5,
+        ),
+        itemCount: weeksInYear,
+        itemBuilder: (context, index) {
+          final weekNumber = index + 1;
+          final isSelected = weekNumber == selectedWeek;
 
-        return Material(
-          color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          child: InkWell(
-            onTap: () => onWeekSelected(weekNumber),
+          return Material(
+            color:
+                isSelected ? colorScheme.primaryContainer : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            child: Center(
-              child: Text(
-                'W$weekNumber',
-                style: TextStyle(
-                  color: isSelected
-                      ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurface,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            child: InkWell(
+              onTap: () => onWeekSelected(weekNumber),
+              borderRadius: BorderRadius.circular(8),
+              child: Center(
+                child: Text(
+                  'W$weekNumber',
+                  style: TextStyle(
+                    color: isSelected
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurface,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
