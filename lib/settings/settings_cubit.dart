@@ -1,10 +1,12 @@
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/local_auth/auth_delay.dart';
+import 'package:kashr/settings/model/week_start_day.dart';
 import 'package:kashr/settings/settings_repository.dart';
 import 'package:kashr/settings/settings_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jiffy/jiffy.dart';
 
 class SettingsCubit extends Cubit<SettingsState> {
   final SettingsRepository _repository;
@@ -20,6 +22,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     emit(stored);
 
     _logService.setLogLevel(stored.logLevel);
+    await _configureJiffy(stored.weekStartDay);
   }
 
   Future<void> setTheme(ThemeMode value) async {
@@ -42,6 +45,20 @@ class SettingsCubit extends Cubit<SettingsState> {
   Future<void> setAuthDelay(AuthDelayOption value) async {
     final newState = state.copyWith(authDelay: value);
     await _upsertAndEmit('authDelay', newState);
+  }
+
+  Future<void> setWeekStartDay(WeekStartDay value) async {
+    final newState = state.copyWith(weekStartDay: value);
+    await _upsertAndEmit('weekStartDay', newState);
+
+    await _configureJiffy(value);
+  }
+
+  Future<void> _configureJiffy(WeekStartDay weekStartDay) async {
+    await Jiffy.setLocale(
+      'en',
+      startOfWeek: weekStartDay.jiffyStartOfWeek,
+    );
   }
 
   Future<void> _upsertAndEmit(String key, SettingsState newState) async {

@@ -5,6 +5,7 @@ import 'package:kashr/logging/log_viewer_page.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/local_auth/auth_delay.dart';
 import 'package:kashr/settings/banks_page.dart';
+import 'package:kashr/settings/model/week_start_day.dart';
 import 'package:kashr/settings/settings_cubit.dart';
 import 'package:kashr/settings/settings_state.dart';
 import 'package:kashr/turnover/tag_turnovers_page.dart';
@@ -89,6 +90,22 @@ class _SettingsPageState extends State<SettingsPage> {
                           );
                           if (newValue != null && context.mounted) {
                             await context.read<SettingsCubit>().setTheme(newValue);
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.calendar_today),
+                        title: const Text("Week Start Day"),
+                        subtitle: Text(state.weekStartDay.displayName),
+                        onTap: () async {
+                          final newValue = await showWeekStartDayDialog(
+                            context,
+                            state.weekStartDay,
+                          );
+                          if (newValue != null && context.mounted) {
+                            await context.read<SettingsCubit>().setWeekStartDay(
+                              newValue,
+                            );
                           }
                         },
                       ),

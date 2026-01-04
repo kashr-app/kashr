@@ -22,6 +22,7 @@ import 'package:kashr/turnover/turnover_module.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jiffy/jiffy.dart';
 import 'package:provider/provider.dart';
 
 LogService? _logService;
@@ -32,6 +33,9 @@ void main() async {
       developer.log('main() started', name: 'kashr.main');
       WidgetsFlutterBinding.ensureInitialized();
       developer.log('WidgetsFlutterBinding initialized', name: 'kashr.main');
+
+      await Jiffy.setLocale('en');
+      developer.log('Jiffy initialized with default locale', name: 'kashr.main');
 
       final loggingModule = LoggingModule();
       developer.log('LoggingModule created', name: 'kashr.main');
