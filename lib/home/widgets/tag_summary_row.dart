@@ -1,6 +1,8 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/color_utils.dart';
 import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/model/period.dart';
+import 'package:kashr/home/model/tag_prediction.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +14,8 @@ class TagSummaryRow extends StatelessWidget {
   final Decimal amount;
   final Decimal totalAmount;
   final Currency currency;
+  final Period period;
+  final TagPrediction? prediction;
   final VoidCallback? onTap;
 
   const TagSummaryRow({
@@ -20,6 +24,8 @@ class TagSummaryRow extends StatelessWidget {
     required this.amount,
     required this.totalAmount,
     required this.currency,
+    required this.period,
+    this.prediction,
     this.onTap,
     super.key,
   }) : assert(
@@ -33,6 +39,10 @@ class TagSummaryRow extends StatelessWidget {
     final color = _getColor();
     final label = _getLabel();
     final percentage = _calculatePercentage();
+    final (avg, avgPerUnit) = period.avgPerFullPeriod(amount);
+    final isCurrentPeriod = period.contains(DateTime.now());
+
+    final textColor = Color.lerp(color, theme.colorScheme.onSurface, 0.4)!;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
@@ -51,7 +61,7 @@ class TagSummaryRow extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -71,11 +81,12 @@ class TagSummaryRow extends StatelessWidget {
                           currency.format(amount),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
+                            color: textColor,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     LinearProgressIndicator(
                       value: percentage / 100,
                       backgroundColor:
@@ -84,10 +95,64 @@ class TagSummaryRow extends StatelessWidget {
                       minHeight: 6,
                       borderRadius: BorderRadius.circular(3),
                     ),
+                    const SizedBox(height: 2),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (prediction != null && isCurrentPeriod)
+                          InkWell(
+                            onTap: () => showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: Text('Ok'),
+                                  ),
+                                ],
+                                title: Text('Prediction'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${currency.format(prediction!.averageFromHistory)} is the average of the last'
+                                      ' ${prediction!.periodsAnalyzed} period(s) with data for tag "${tag?.name}".',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 14,
+                                  color: textColor.withValues(alpha: 0.5),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Predicted ${currency.format(prediction!.averageFromHistory)}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: textColor.withValues(alpha: 0.5),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        Text(
+                          'AVG ${isCurrentPeriod ? 'so far ' : ''}${currency.format(avg)} / $avgPerUnit',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: textColor.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 2),
               SizedBox(
                 width: 45,
                 child: Text(

@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/status.dart';
+import 'package:kashr/home/model/tag_prediction.dart';
 import 'package:kashr/home/widgets/tag_summary_row.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
@@ -25,6 +26,7 @@ class TurnoverSummaryCard extends StatelessWidget {
   final Decimal unallocatedAmount;
   final List<TagSummary> tagSummaries;
   final Period period;
+  final Map<UuidValue, TagPrediction> predictionByTagId;
   final String currencyCode;
   final String title;
   final String subtitle;
@@ -37,6 +39,7 @@ class TurnoverSummaryCard extends StatelessWidget {
     required this.unallocatedAmount,
     required this.tagSummaries,
     required this.period,
+    required this.predictionByTagId,
     required this.title,
     required this.subtitle,
     required this.emptyMessage,
@@ -50,6 +53,8 @@ class TurnoverSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency = Currency.currencyFrom(currencyCode);
     final theme = Theme.of(context);
+
+    final (avg, avgPerUnit) = period.avgPerFullPeriod(totalAmount);
 
     return Card(
       elevation: 2,
@@ -80,6 +85,12 @@ class TurnoverSummaryCard extends StatelessWidget {
                         color: theme.decimalColor(totalAmount),
                       ),
                     ),
+                    Text(
+                      'AVG ${currency.format(avg)} per $avgPerUnit',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.decimalColor(avg),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -105,6 +116,7 @@ class TurnoverSummaryCard extends StatelessWidget {
                       return Column(
                         children: _buildSortedRows(
                           context,
+                          period,
                           currency,
                           theme,
                           tagById,
@@ -135,6 +147,7 @@ class TurnoverSummaryCard extends StatelessWidget {
 
   List<Widget> _buildSortedRows(
     BuildContext context,
+    Period period,
     Currency currency,
     ThemeData theme,
     Map<UuidValue, Tag> tagById,
@@ -146,7 +159,14 @@ class TurnoverSummaryCard extends StatelessWidget {
     for (final summary in tagSummaries) {
       items.add((
         amount: summary.totalAmount.abs(),
-        widget: _buildTagRow(context, summary, tagById, currency, theme),
+        widget: _buildTagRow(
+          context,
+          summary,
+          tagById,
+          currency,
+          period,
+          theme,
+        ),
       ));
     }
 
@@ -154,7 +174,7 @@ class TurnoverSummaryCard extends StatelessWidget {
     if (unallocatedAmount != Decimal.zero) {
       items.add((
         amount: unallocatedAmount.abs(),
-        widget: _buildUnallocatedRow(context, currency, theme),
+        widget: _buildUnallocatedRow(context, currency, period, theme),
       ));
     }
 
@@ -170,6 +190,7 @@ class TurnoverSummaryCard extends StatelessWidget {
     TagSummary summary,
     Map<UuidValue, Tag> tagById,
     Currency currency,
+    Period period,
     ThemeData theme,
   ) {
     final tagId = summary.tagId;
@@ -178,6 +199,8 @@ class TurnoverSummaryCard extends StatelessWidget {
       amount: summary.totalAmount,
       totalAmount: totalAmount,
       currency: currency,
+      period: period,
+      prediction: predictionByTagId[tagId],
       onTap: () {
         TurnoversRoute(
           filter: TurnoverFilter(
@@ -193,6 +216,7 @@ class TurnoverSummaryCard extends StatelessWidget {
   Widget _buildUnallocatedRow(
     BuildContext context,
     Currency currency,
+    Period period,
     ThemeData theme,
   ) {
     return TagSummaryRow(
@@ -200,6 +224,8 @@ class TurnoverSummaryCard extends StatelessWidget {
       amount: unallocatedAmount,
       totalAmount: totalAmount,
       currency: currency,
+      period: period,
+      prediction: null,
       onTap: () {
         TurnoversRoute(
           filter: TurnoverFilter(

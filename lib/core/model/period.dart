@@ -1,6 +1,8 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:jiffy/jiffy.dart';
+import 'package:kashr/core/decimal_json_converter.dart';
 
 part '../../_gen/core/model/period.freezed.dart';
 part '../../_gen/core/model/period.g.dart';
@@ -51,6 +53,31 @@ abstract class Period with _$Period {
       PeriodType.year => '${start.year}',
     };
   }
+
+  /// Average distributed evenly across the full period.
+  ///
+  /// Use this for fixed/predictable expenses (rent, subscriptions, insurance)
+  /// where the cost is known upfront regardless of when in the period you are.
+  ///
+  /// Example: €800 rent in a month = €200/week consistently.
+  (Decimal avg, String avgPerUnit) avgPerFullPeriod(Decimal amount) {
+    const int scale = decimalScaleFactor;
+    const int daysPerWeek = 7;
+    const double weeksPerMonth = 4.33;
+    const int monthsPerYear = 12;
+
+    final (scaledUnits, unit) = switch (type) {
+      PeriodType.week => (daysPerWeek * scale, 'day'),
+      PeriodType.month => ((weeksPerMonth * scale).round(), 'week'),
+      PeriodType.year => (monthsPerYear * scale, 'month'),
+    };
+
+    final avg = (amount * Decimal.fromInt(scale) / Decimal.fromInt(scaledUnits))
+        .toDecimal(scaleOnInfinitePrecision: 2);
+
+    return (avg, unit);
+  }
+
 }
 
 enum PeriodType {

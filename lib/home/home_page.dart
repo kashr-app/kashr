@@ -39,6 +39,7 @@ import 'package:kashr/turnover/model/tag_turnover_sort.dart';
 import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
 import 'package:kashr/turnover/model/transfers_filter.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
 import 'package:kashr/turnover/services/turnover_service.dart';
@@ -262,6 +263,8 @@ class HomePage extends StatelessWidget {
                     unallocatedIncome: state.unallocatedIncome,
                     tagSummaries: state.incomeTagSummaries,
                     period: state.period,
+                    predictionByTagId:
+                        state.predictionByTagId[TurnoverSign.income] ?? {},
                   ),
                   const SizedBox(height: 16),
                   SpendingSummaryCard(
@@ -269,6 +272,8 @@ class HomePage extends StatelessWidget {
                     unallocatedExpenses: -state.unallocatedExpenses,
                     tagSummaries: state.expenseTagSummaries,
                     period: state.period,
+                    predictionByTagId:
+                        state.predictionByTagId[TurnoverSign.expense] ?? {},
                   ),
                   const SizedBox(height: 16),
                   TransferSummaryCard(

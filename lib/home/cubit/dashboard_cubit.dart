@@ -5,6 +5,7 @@ import 'package:decimal/decimal.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/home/cubit/dashboard_state.dart';
+import 'package:kashr/home/model/tag_prediction.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/tag.dart';
@@ -58,6 +59,7 @@ class DashboardCubit extends Cubit<DashboardState> {
           incomeTagSummaries: [],
           expenseTagSummaries: [],
           transferTagSummaries: [],
+          predictionByTagId: {},
           unallocatedCountInPeriod: 0,
           unallocatedCountTotal: 0,
           unallocatedSumTotal: Decimal.zero,
@@ -241,6 +243,9 @@ class DashboardCubit extends Cubit<DashboardState> {
         _tagTurnoverRepository.getTagTurnoversPeriodAllocation(period),
       ).wait;
 
+      // Calculate predictions separately (can run in parallel with the above)
+      final predictionByTagId = await _calculatePredictionByTagId(period);
+
       final tagById = tags.associateBy((it) => it.id);
 
       // Get first unallocated turnover with tags (depends on query above)
@@ -320,6 +325,7 @@ class DashboardCubit extends Cubit<DashboardState> {
           incomeTagSummaries: incomeTagSummaries,
           expenseTagSummaries: expenseTagSummaries,
           transferTagSummaries: transferTagSummaries,
+          predictionByTagId: predictionByTagId,
           firstUnallocatedTurnover: firstUnallocatedTurnover,
           unallocatedCountInPeriod: unallocatedCountInPeriod,
           tagTurnoverCount: tagTurnoverCount,
@@ -375,6 +381,83 @@ class DashboardCubit extends Cubit<DashboardState> {
     final totalTransfers = totalTransferExpenses;
 
     return (transferTagSummaries, totalTransfers);
+  }
+
+  /// Calculates predictions for all tags based on historical data.
+  ///
+  /// Looks back [historicalPeriodCount] periods (default 3) and calculates
+  /// the average spending per tag across those periods.
+  Future<Map<TurnoverSign, Map<UuidValue, TagPrediction>>>
+  _calculatePredictionByTagId(
+    Period currentPeriod, {
+    int historicalPeriodCount = 3,
+  }) async {
+    // Generate historical periods (e.g., last 3 months)
+    final historicalPeriods = List.generate(
+      historicalPeriodCount,
+      (i) => currentPeriod.add(delta: -(i + 1)),
+    );
+
+    // Fetch summaries for all historical periods in parallel
+    final summariesByPeriod = await Future.wait(
+      historicalPeriods.map((period) async {
+        final income = await _tagTurnoverRepository.getTagSummariesForPeriod(
+          period,
+          TurnoverSign.income,
+          semantic: null,
+        );
+        final expense = await _tagTurnoverRepository.getTagSummariesForPeriod(
+          period,
+          TurnoverSign.expense,
+          semantic: null,
+        );
+        return (income, expense);
+      }),
+    );
+
+    // Aggregate amounts by tag across all periods
+    final amountsBySign = <TurnoverSign, Map<UuidValue, List<Decimal>>>{};
+
+    for (final (income, expense) in summariesByPeriod) {
+      for (final it in income) {
+        amountsBySign
+            .putIfAbsent(TurnoverSign.income, () => {})
+            .putIfAbsent(it.tagId, () => [])
+            .add(it.totalAmount);
+      }
+      for (final it in expense) {
+        amountsBySign
+            .putIfAbsent(TurnoverSign.expense, () => {})
+            .putIfAbsent(it.tagId, () => [])
+            .add(it.totalAmount);
+      }
+    }
+
+    // Calculate averages and create predictions
+    final predictions = <TurnoverSign, Map<UuidValue, TagPrediction>>{};
+
+    for (final sign in amountsBySign.keys) {
+      final amountsByTag = amountsBySign[sign]!;
+      for (final MapEntry(key: tagId, value: amounts) in amountsByTag.entries) {
+        final periodsWithData = amounts.length;
+
+        // Calculate average across periods where tag appears
+        final total = amounts.fold<Decimal>(
+          Decimal.zero,
+          (sum, amount) => sum + amount,
+        );
+        final average = (total / Decimal.fromInt(periodsWithData)).toDecimal(
+          scaleOnInfinitePrecision: 2,
+        );
+
+        predictions.putIfAbsent(sign, () => {})[tagId] = TagPrediction(
+          averageFromHistory: average,
+          periodsAnalyzed: periodsWithData,
+        );
+      }
+    }
+
+    return predictions;
   }
 
   /// Navigates to the previous period.

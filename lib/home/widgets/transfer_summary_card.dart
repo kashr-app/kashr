@@ -77,7 +77,12 @@ class TransferSummaryCard extends StatelessWidget {
                     Status.success => (() {
                       final tagById = tagState.tagById;
                       return Column(
-                        children: _buildSortedRows(context, currency, tagById),
+                        children: _buildSortedRows(
+                          context,
+                          currency,
+                          period,
+                          tagById,
+                        ),
                       );
                     })(),
                   };
@@ -105,6 +110,7 @@ class TransferSummaryCard extends StatelessWidget {
   List<Widget> _buildSortedRows(
     BuildContext context,
     Currency currency,
+    final Period period,
     Map<UuidValue, Tag> tagById,
   ) {
     // Create a list of items with their amounts for sorting
@@ -120,6 +126,7 @@ class TransferSummaryCard extends StatelessWidget {
           amount: summary.totalAmount,
           totalAmount: totalTransfers,
           currency: currency,
+          period: period,
           onTap: () {
             TurnoversRoute(
               filter: TurnoverFilter(tagIds: [tagId], period: period),
