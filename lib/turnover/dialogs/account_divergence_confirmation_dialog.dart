@@ -146,7 +146,7 @@ class _DivergingAccountItem extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       Text(
-                        tt.format(),
+                        tt.formatAmount(),
                         style: TextStyle(
                           fontSize: 12,
                           color: theme.colorScheme.onSurfaceVariant,

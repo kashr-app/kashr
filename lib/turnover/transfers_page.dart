@@ -1,6 +1,7 @@
 import 'package:kashr/core/status.dart';
 import 'package:kashr/home/home_page.dart';
 import 'package:kashr/logging/services/log_service.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
@@ -26,9 +27,6 @@ import 'package:kashr/turnover/widgets/transfer_issue_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-
-final dateFormat = DateFormat('MMM d, yyyy');
 
 class TransfersRoute extends GoRouteData with $TransfersRoute {
   const TransfersRoute({this.filters, this.lockedFilters});
@@ -547,7 +545,7 @@ class _BookingDate extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Text(
-      dateFormat.format(tagTurnover.bookingDate),
+      tagTurnover.formatDate(context.dateFormat),
       style: theme.textTheme.bodySmall?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
       ),
@@ -564,7 +562,7 @@ class _Amount extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Text(
-      tagTurnover.format(),
+      tagTurnover.formatAmount(),
       style: theme.textTheme.bodyLarge?.copyWith(
         fontWeight: FontWeight.w600,
         color: theme.decimalColor(tagTurnover.amountValue),

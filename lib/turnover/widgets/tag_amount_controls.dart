@@ -54,7 +54,7 @@ class TagAmountControls extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    tagTurnover.format(),
+                    tagTurnover.formatAmount(),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -190,7 +190,7 @@ class _AmountSlider extends StatelessWidget {
       min: 0,
       max: maxAbsolute.toDouble(),
       divisions: _calculateDivisions(maxAbsolute, stepSize),
-      label: tagTurnover.format(),
+      label: tagTurnover.formatAmount(),
       onChanged: (value) {
         // Snap to nearest multiple of step size
         final snappedValue = _snapToStep(value.toInt(), stepSize, maxAbsolute);

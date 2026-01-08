@@ -7,11 +7,11 @@ import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/constants.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
-import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -357,7 +357,7 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
                               border: OutlineInputBorder(),
                               suffixIcon: Icon(Icons.calendar_today),
                             ),
-                            child: Text(dateFormat.format(_bookingDate)),
+                            child: Text(context.dateFormat.format(_bookingDate)),
                           ),
                         ),
                         const SizedBox(height: 16),

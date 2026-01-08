@@ -3,6 +3,7 @@ import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/constants.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
 
@@ -142,7 +143,7 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
                   ),
                   child: Text(
                     _bookingDate != null
-                        ? dateFormat.format(_bookingDate!)
+                        ? context.dateFormat.format(_bookingDate!)
                         : 'No date',
                   ),
                 ),

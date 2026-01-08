@@ -1,9 +1,9 @@
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/turnover/cubit/turnover_tags_cubit.dart';
 import 'package:kashr/turnover/dialogs/tag_turnover_editor_dialog.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/transfer_with_details.dart';
-import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/widgets/note_field.dart';
 import 'package:kashr/turnover/widgets/tag_amount_controls.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
@@ -81,7 +81,7 @@ class TagTurnoverItem extends StatelessWidget {
           leading: TagAvatar(tag: tag),
           title: Text(tag.name, style: theme.textTheme.titleMedium),
           subtitle: Text(
-            dateFormat.format(tagTurnover.bookingDate),
+            tagTurnover.formatDate(context.dateFormat),
             style: theme.textTheme.bodySmall,
           ),
           trailing: _buildTagTurnoverPopUpMenu(

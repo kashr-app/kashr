@@ -1,3 +1,4 @@
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/services/turnover_matching_service.dart';
@@ -226,7 +227,7 @@ class _MatchConfirmationDialogState extends State<MatchConfirmationDialog> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                turnover.formatDate() ?? 'No date',
+                turnover.formatDate(context.dateFormat) ?? 'No date',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -284,7 +285,7 @@ class _MatchConfirmationDialogState extends State<MatchConfirmationDialog> {
                 ),
               ),
               Text(
-                tagTurnover.format(),
+                tagTurnover.formatAmount(),
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: tagTurnover.amountValue.toDouble() < 0
                       ? theme.colorScheme.error

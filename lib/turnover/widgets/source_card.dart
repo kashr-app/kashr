@@ -145,7 +145,7 @@ class SourceCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      tagTurnover.format(),
+                      tagTurnover.formatAmount(),
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),

@@ -1,15 +1,13 @@
+import 'package:intl/intl.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/core/uuid_json_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:decimal/decimal.dart';
 
 part '../../_gen/turnover/model/turnover.freezed.dart';
 part '../../_gen/turnover/model/turnover.g.dart';
-
-final dateFormat = DateFormat("dd.MM.yyyy");
 
 /// Enum representing the sign/type of a turnover amount
 enum TurnoverSign {
@@ -51,7 +49,6 @@ abstract class Turnover with _$Turnover {
     String? apiTurnoverType,
     // the raw unparsed data from the API
     String? apiRaw,
-
   }) = _Turnover;
 
   factory Turnover.fromJson(Map<String, dynamic> json) =>
@@ -59,7 +56,8 @@ abstract class Turnover with _$Turnover {
 
   String formatAmount() =>
       Currency.currencyFrom(amountUnit).format(amountValue);
-  String? formatDate() {
+
+  String? formatDate(DateFormat dateFormat) {
     final bd = bookingDate;
     return bd != null ? dateFormat.format(bd) : null;
   }

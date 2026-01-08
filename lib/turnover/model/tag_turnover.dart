@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/core/uuid_json_converter.dart';
@@ -36,7 +37,10 @@ abstract class TagTurnover with _$TagTurnover {
     @UUIDNullableJsonConverter() UuidValue? recurringRuleId,
   }) = _TagTurnover;
 
-  String format() => Currency.currencyFrom(amountUnit).format(amountValue);
+  String formatAmount() =>
+      Currency.currencyFrom(amountUnit).format(amountValue);
+
+  String formatDate(DateFormat dateFormat) => dateFormat.format(bookingDate);
 
   // Computed properties
   bool get isMatched => turnoverId != null;

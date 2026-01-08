@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:kashr/backup/backup_list_page.dart';
 import 'package:kashr/db/db_helper.dart';
 import 'package:kashr/home/home_page.dart';
@@ -89,7 +90,25 @@ class _SettingsPageState extends State<SettingsPage> {
                             context,
                           );
                           if (newValue != null && context.mounted) {
-                            await context.read<SettingsCubit>().setTheme(newValue);
+                            await context.read<SettingsCubit>().setTheme(
+                              newValue,
+                            );
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.calendar_month),
+                        title: const Text("Date Format"),
+                        subtitle: Text(state.dateFormat.format(DateTime.now())),
+                        onTap: () async {
+                          final newValue = await _showDateFormatDialog(
+                            context,
+                            state.dateFormatStr,
+                          );
+                          if (newValue != null && context.mounted) {
+                            await context
+                                .read<SettingsCubit>()
+                                .setDateFormatStr(newValue);
                           }
                         },
                       ),
@@ -225,7 +244,9 @@ class _SettingsPageState extends State<SettingsPage> {
                         state.logLevel,
                       );
                       if (newValue != null && context.mounted) {
-                        await context.read<SettingsCubit>().setLogLevel(newValue);
+                        await context.read<SettingsCubit>().setLogLevel(
+                          newValue,
+                        );
                       }
                     },
                   ),
@@ -275,6 +296,176 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Future<String?> _showDateFormatDialog(
+    BuildContext context,
+    String currentFormat,
+  ) {
+    final presets = [
+      'MMM d, yyyy',
+      'dd.MM.yyyy',
+      'MM/dd/yyyy',
+      'yyyy-MM-dd',
+      'd MMM yyyy',
+      'EEEE, MMM d, yyyy',
+    ];
+
+    final isCustom = !presets.contains(currentFormat);
+
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        final now = DateTime.now();
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Select date format',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  ...presets.map((preset) {
+                    return ListTile(
+                      title: Text(DateFormat(preset).format(now)),
+                      subtitle: Text(preset),
+                      trailing: preset == currentFormat
+                          ? const Icon(Icons.check)
+                          : null,
+                      onTap: () => Navigator.pop(context, preset),
+                    );
+                  }),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.edit),
+                    title: const Text('Custom format'),
+                    subtitle: isCustom ? Text(currentFormat) : null,
+                    trailing: isCustom ? const Icon(Icons.check) : null,
+                    onTap: () async {
+                      final customFormat = await _showCustomDateFormatDialog(
+                        context,
+                        currentFormat,
+                      );
+                      if (customFormat != null && context.mounted) {
+                        Navigator.pop(context, customFormat);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<String?> _showCustomDateFormatDialog(
+    BuildContext context,
+    String currentFormat,
+  ) {
+    final controller = TextEditingController(text: currentFormat);
+    final cubit = context.read<SettingsCubit>();
+    final now = DateTime.now();
+
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          scrollable: true,
+          title: const Text('Custom Date Format'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Format pattern',
+                  helperText: 'e.g., dd/MM/yyyy or MMMM d, y',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Common patterns',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final url = Uri.parse(
+                        'https://pub.dev/documentation/intl/latest/intl/DateFormat-class.html',
+                      );
+                      if (!await launchUrl(
+                        url,
+                        mode: LaunchMode.externalApplication,
+                      )) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Could not open $url')),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text('All'),
+                  ),
+                ],
+              ),
+              Text(
+                'yyyy = year (${DateFormat('yyyy').format(now)})\n'
+                'MM = month (${DateFormat('MM').format(now)})\n'
+                'dd = day (${DateFormat('dd').format(now)})\n'
+                'MMM = month name (${DateFormat('MMM').format(now)})\n'
+                'EEE = weekday (${DateFormat('EEE').format(now)})',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final format = controller.text.trim();
+                if (format.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Format cannot be empty')),
+                  );
+                  return;
+                }
+                if (!cubit.isValidDateFormat(format)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Invalid date format pattern'),
+                    ),
+                  );
+                  return;
+                }
+                Navigator.pop(context, format);
+              },
+              child: const Text('Apply'),
+            ),
+          ],
         );
       },
     );

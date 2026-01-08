@@ -1,5 +1,6 @@
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/dialogs/turnover_info_dialog.dart';
 import 'package:kashr/turnover/model/turnover.dart';
@@ -99,7 +100,7 @@ class TurnoverInfoCardContent extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(turnover.formatDate() ?? '', style: theme.textTheme.bodySmall),
+            Text(turnover.formatDate(context.dateFormat) ?? '', style: theme.textTheme.bodySmall),
             Flexible(
               child: Text(
                 turnover.formatAmount(),

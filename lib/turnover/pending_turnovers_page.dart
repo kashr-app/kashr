@@ -5,6 +5,7 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/home/home_page.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
@@ -448,7 +449,7 @@ class _PendingTurnoverItem extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        tt.format(),
+                        tt.formatAmount(),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -474,7 +475,7 @@ class _PendingTurnoverItem extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        dateFormat.format(tt.bookingDate),
+                        context.dateFormat.format(tt.bookingDate),
                         style: TextStyle(
                           fontSize: 12,
                           color: theme.colorScheme.onSurfaceVariant,
@@ -789,7 +790,7 @@ class _TurnoverMatchDetails extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  turnover.formatDate() ?? '',
+                  turnover.formatDate(context.dateFormat) ?? '',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,

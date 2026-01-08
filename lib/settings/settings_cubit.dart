@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/local_auth/auth_delay.dart';
@@ -54,11 +55,30 @@ class SettingsCubit extends Cubit<SettingsState> {
     await _configureJiffy(value);
   }
 
+  /// Returns true if the setting was stored, false otherwise
+  /// see [isValidDateFormat] to test if a format will be safed
+  Future<bool> setDateFormatStr(String format) async {
+    if (!isValidDateFormat(format)) {
+      _logService.log.w('Tried to store invalid date format: $format');
+      return false;
+    }
+    final newState = state.copyWith(dateFormatStr: format);
+    await _upsertAndEmit('dateFormatStr', newState);
+    return true;
+  }
+
+  bool isValidDateFormat(String format) {
+    try {
+      // Try to format a known date - if it succeeds, the pattern is valid
+      DateFormat(format).format(DateTime.now());
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> _configureJiffy(WeekStartDay weekStartDay) async {
-    await Jiffy.setLocale(
-      'en',
-      startOfWeek: weekStartDay.jiffyStartOfWeek,
-    );
+    await Jiffy.setLocale('en', startOfWeek: weekStartDay.jiffyStartOfWeek);
   }
 
   Future<void> _upsertAndEmit(String key, SettingsState newState) async {

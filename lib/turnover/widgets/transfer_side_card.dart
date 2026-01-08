@@ -193,7 +193,7 @@ class _LinkedSideCard extends StatelessWidget {
                       ),
                     ),
                   Text(
-                    tagTurnover.format(),
+                    tagTurnover.formatAmount(),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),

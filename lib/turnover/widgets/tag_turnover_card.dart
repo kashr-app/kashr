@@ -1,4 +1,5 @@
 import 'package:kashr/account/model/account.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
@@ -6,7 +7,6 @@ import 'package:kashr/turnover/model/transfer_with_details.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
 import 'package:kashr/turnover/widgets/transfer_issue_badge.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:uuid/uuid_value.dart';
 
 /// Card displaying a single tag turnover with its details.
@@ -44,7 +44,6 @@ class TagTurnoverCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final tag = tagById[tagTurnover.tagId];
     final account = accountByid[tagTurnover.accountId];
-    final dateFormat = DateFormat('MMM d, yyyy');
 
     final isDone = tagTurnover.isMatched;
     final isTransferTag = tag?.isTransfer ?? false;
@@ -94,7 +93,7 @@ class TagTurnoverCard extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              tagTurnover.format(),
+                              tagTurnover.formatAmount(),
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(
@@ -124,14 +123,8 @@ class TagTurnoverCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Icon(
-                              Icons.calendar_today,
-                              size: 14,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
                             Text(
-                              dateFormat.format(tagTurnover.bookingDate),
+                              tagTurnover.formatDate(context.dateFormat),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                               ),
@@ -172,9 +165,7 @@ class TagTurnoverCard extends StatelessWidget {
                       TransferBadge.unlinked(),
                     ] else if (transferNeedsReview != null) ...[
                       const SizedBox(width: 8),
-                      TransferBadge.needsReviewDetailed(
-                        transferNeedsReview,
-                      ),
+                      TransferBadge.needsReviewDetailed(transferNeedsReview),
                     ],
                   ],
                 ),

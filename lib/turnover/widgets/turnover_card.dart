@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/color_utils.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
@@ -114,23 +115,29 @@ class TurnoverCard extends StatelessWidget {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  turnover.formatDate() ?? 'Not booked',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 16),
-                          Text(
-                            turnover.formatAmount(),
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: amountColor,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                turnover.formatAmount(),
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  color: amountColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                turnover.formatDate(context.dateFormat) ??
+                                    'Not booked',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -148,7 +155,7 @@ class TurnoverCard extends StatelessWidget {
                         tagById: tagById,
                       ),
                       ...turnoverWithTags.tagTurnovers.mapIndexed(
-                        (i, tt) => TagNoteDisplay(
+                        (i, tt) => _TagNoteDisplay(
                           tagTurnover: tt,
                           tag: tagById[tt.tagId],
                           bgColor: i % 2 == 0
@@ -179,7 +186,7 @@ class TurnoverCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'No tags assigned',
+                          'Needs tagging',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                             fontStyle: FontStyle.italic,
@@ -214,9 +221,8 @@ class TurnoverCard extends StatelessWidget {
   }
 }
 
-class TagNoteDisplay extends StatelessWidget {
-  const TagNoteDisplay({
-    super.key,
+class _TagNoteDisplay extends StatelessWidget {
+  const _TagNoteDisplay({
     required this.tagTurnover,
     required this.tag,
     required this.bgColor,
@@ -264,13 +270,32 @@ class TagNoteDisplay extends StatelessWidget {
                       child: Text(tagName, style: theme.textTheme.labelSmall),
                     ),
                     Text(
-                      tagTurnover.format(),
+                      tagTurnover.formatAmount(),
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
                 ),
-                if (tagTurnover.note?.isNotEmpty == true)
-                  Text('${tagTurnover.note}', style: theme.textTheme.bodySmall),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (tagTurnover.note?.isNotEmpty == true)
+                      Expanded(
+                        child: Text(
+                          '${tagTurnover.note}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    Text(
+                      tagTurnover.formatDate(context.dateFormat),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

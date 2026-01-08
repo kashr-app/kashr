@@ -9,7 +9,7 @@ import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:kashr/savings/model/savings_virtual_booking.dart';
 import 'package:kashr/savings/model/savings_virtual_booking_repository.dart';
-import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -356,7 +356,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                       border: OutlineInputBorder(),
                       suffixIcon: Icon(Icons.calendar_today),
                     ),
-                    child: Text(dateFormat.format(_bookingDate)),
+                    child: Text(context.dateFormat.format(_bookingDate)),
                   ),
                 ),
                 const SizedBox(height: 16),

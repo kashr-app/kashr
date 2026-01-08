@@ -1,10 +1,10 @@
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
-import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -61,7 +61,7 @@ class TagTurnoverInfoDialog {
                           const SizedBox(height: 16),
                           Center(
                             child: Text(
-                              tagTurnover.format(),
+                              tagTurnover.formatAmount(),
                               style: theme.textTheme.displaySmall?.copyWith(
                                 color: theme.decimalColor(
                                   tagTurnover.amountValue,
@@ -74,7 +74,7 @@ class TagTurnoverInfoDialog {
                           // Booking date
                           Center(
                             child: Text(
-                              dateFormat.format(tagTurnover.bookingDate),
+                              context.dateFormat.format(tagTurnover.bookingDate),
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: colorScheme.onSurface.withValues(
                                   alpha: 0.6,

@@ -349,7 +349,7 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        tt.format(),
+                        tt.formatAmount(),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,

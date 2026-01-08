@@ -36,8 +36,6 @@ class NextcloudSettingsRoute extends GoRouteData with $NextcloudSettingsRoute {
   }
 }
 
-final dateFormat = DateFormat('MMM dd, yyyy HH:mm');
-
 /// Page for viewing and managing backups
 class BackupListPage extends StatefulWidget {
   const BackupListPage({super.key});
@@ -507,8 +505,9 @@ class _BackupListView extends StatelessWidget {
 
 class _BackupCard extends StatelessWidget {
   final BackupMetadata backup;
+  final _dateFormat = DateFormat('MMM dd, yyyy HH:mm');
 
-  const _BackupCard({required this.backup});
+  _BackupCard({required this.backup});
 
   @override
   Widget build(BuildContext context) {
@@ -558,7 +557,7 @@ class _BackupCard extends StatelessWidget {
                   ),
               ],
             ),
-            title: Text(dateFormat.format(backup.createdAt)),
+            title: Text(_dateFormat.format(backup.createdAt)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
