@@ -173,6 +173,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       context,
       currencyUnit: _selectedCurrency,
       initialAmountScaled: _openingBalanceScaled,
+      showSignSwitch: true,
     );
 
     if (result != null) {

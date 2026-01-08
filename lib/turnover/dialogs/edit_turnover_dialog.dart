@@ -72,15 +72,13 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
   }
 
   Future<void> _editAmount() async {
-    final initialAmountScaled = decimalScale(_amountValue.abs()) ?? 0;
-    final initialIsNegative = _amountValue < Decimal.zero;
+    final initialAmountScaled = decimalScale(_amountValue) ?? 0;
 
     final result = await AmountDialog.show(
       context,
       currencyUnit: widget.turnover.amountUnit,
       initialAmountScaled: initialAmountScaled,
       showSignSwitch: true,
-      initialIsNegative: initialIsNegative,
     );
 
     if (result != null) {

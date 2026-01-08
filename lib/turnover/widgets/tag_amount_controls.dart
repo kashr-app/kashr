@@ -139,6 +139,7 @@ class TagAmountControls extends StatelessWidget {
       currencyUnit: currencyUnit,
       maxAmountScaled: maxAbsolute,
       initialAmountScaled: currentAbsolute,
+      showSignSwitch: false,
     );
 
     if (result != null && context.mounted) {

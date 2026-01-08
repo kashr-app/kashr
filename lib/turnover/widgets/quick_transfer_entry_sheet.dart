@@ -87,9 +87,8 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
     final result = await AmountDialog.show(
       context,
       currencyUnit: widget.fromAccount.currency,
-      initialAmountScaled: _amountScaled?.abs() ?? 0,
+      initialAmountScaled: _amountScaled ?? 0,
       showSignSwitch: false,
-      initialIsNegative: false,
     );
 
     if (result != null && mounted) {

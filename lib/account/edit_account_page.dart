@@ -97,7 +97,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
     _originalAccount = widget.account;
     _originalBalance = widget.balance;
     _nameController = TextEditingController(text: widget.account.name);
-    _isHidden = widget.account.isHidden ;
+    _isHidden = widget.account.isHidden;
     _currentBalanceScaled = widget.balance != null
         ? (widget.balance! * Decimal.fromInt(100)).toBigInt().toInt()
         : 0;
@@ -436,6 +436,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
       context,
       currencyUnit: _originalAccount.currency,
       initialAmountScaled: _currentBalanceScaled,
+      showSignSwitch: true,
     );
 
     if (result != null) {

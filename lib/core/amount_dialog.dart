@@ -9,27 +9,23 @@ import 'package:kashr/turnover/model/turnover.dart';
 /// digit shifts the previous value one magnitude up. The amount is stored
 /// internally as a scaled integer (cents).
 class AmountDialog extends StatefulWidget {
-  /// Optional maximum amount in scaled integer (cents).
-  final int? maxAmountScaled;
-
-  /// Initial amount in scaled integer (cents).
-  final int initialAmountScaled;
-
   /// Currency unit for display.
   final String currencyUnit;
 
   /// Whether to show a sign switch (positive/negative).
   final bool showSignSwitch;
 
-  /// Initial state of the sign (true = negative, false = positive).
-  final bool initialIsNegative;
+  /// Initial amount in scaled integer (cents).
+  final int initialAmountScaled;
+
+  /// Optional maximum amount in scaled integer (cents).
+  final int? maxAmountScaled;
 
   const AmountDialog({
     required this.currencyUnit,
-    this.maxAmountScaled,
+    required this.showSignSwitch,
     this.initialAmountScaled = 0,
-    this.showSignSwitch = false,
-    this.initialIsNegative = false,
+    this.maxAmountScaled,
     super.key,
   });
 
@@ -40,10 +36,9 @@ class AmountDialog extends StatefulWidget {
   static Future<int?> show(
     BuildContext context, {
     required String currencyUnit,
-    int? maxAmountScaled,
+    required bool showSignSwitch,
     int initialAmountScaled = 0,
-    bool showSignSwitch = false,
-    bool initialIsNegative = false,
+    int? maxAmountScaled,
   }) async {
     return showModalBottomSheet<int>(
       context: context,
@@ -51,10 +46,9 @@ class AmountDialog extends StatefulWidget {
       builder: (context) => SafeArea(
         child: AmountDialog(
           currencyUnit: currencyUnit,
-          maxAmountScaled: maxAmountScaled,
-          initialAmountScaled: initialAmountScaled,
           showSignSwitch: showSignSwitch,
-          initialIsNegative: initialIsNegative,
+          initialAmountScaled: initialAmountScaled,
+          maxAmountScaled: maxAmountScaled,
         ),
       ),
     );
@@ -66,15 +60,17 @@ const buttonHeight = 56.0;
 
 class _AmountDialogState extends State<AmountDialog> {
   late TextEditingController _controller;
-  late int _amountScaled;
+  late int _amountScaledNoSign;
   late bool _isNegative;
 
   @override
   void initState() {
     super.initState();
-    _amountScaled = widget.initialAmountScaled;
-    _isNegative = widget.initialIsNegative;
-    _controller = TextEditingController(text: _formatAmount(_amountScaled));
+    _amountScaledNoSign = widget.initialAmountScaled.abs();
+    _isNegative = widget.initialAmountScaled < 0;
+    _controller = TextEditingController(
+      text: _formatAmount(_amountScaledNoSign),
+    );
   }
 
   @override
@@ -96,26 +92,27 @@ class _AmountDialogState extends State<AmountDialog> {
     return currency.format(decimal, decimalDigits: 2);
   }
 
-  int get _finalAmount => _isNegative ? -_amountScaled : _amountScaled;
+  int get _amountWithSign =>
+      _isNegative ? -_amountScaledNoSign : _amountScaledNoSign;
 
   void _onDigitPressed(String digit) {
     setState(() {
-      _amountScaled = _amountScaled * 10 + int.parse(digit);
-      _controller.text = _formatAmount(_amountScaled);
+      _amountScaledNoSign = _amountScaledNoSign * 10 + int.parse(digit);
+      _controller.text = _formatAmount(_amountScaledNoSign);
     });
   }
 
   void _onBackspace() {
     setState(() {
-      _amountScaled = _amountScaled ~/ 10;
-      _controller.text = _formatAmount(_amountScaled);
+      _amountScaledNoSign = _amountScaledNoSign ~/ 10;
+      _controller.text = _formatAmount(_amountScaledNoSign);
     });
   }
 
   void _onClear() {
     setState(() {
-      _amountScaled = 0;
-      _controller.text = _formatAmount(_amountScaled);
+      _amountScaledNoSign = 0;
+      _controller.text = _formatAmount(_amountScaledNoSign);
     });
   }
 
@@ -123,15 +120,15 @@ class _AmountDialogState extends State<AmountDialog> {
     final max = widget.maxAmountScaled;
     if (max != null) {
       setState(() {
-        _amountScaled = max;
-        _controller.text = _formatAmount(_amountScaled);
+        _amountScaledNoSign = max;
+        _controller.text = _formatAmount(_amountScaledNoSign);
       });
     }
   }
 
   bool get _isAmountExceeded {
     final max = widget.maxAmountScaled;
-    return max != null && _amountScaled > max;
+    return max != null && _amountScaledNoSign > max;
   }
 
   bool get _canConfirm => !_isAmountExceeded;
@@ -201,7 +198,7 @@ class _AmountDialogState extends State<AmountDialog> {
                     const SizedBox(width: buttonWidth, height: buttonHeight),
                     const SizedBox(width: buttonWidth, height: buttonHeight),
                     _ActionButton(
-                      onPressed: _amountScaled == widget.maxAmountScaled
+                      onPressed: _amountScaledNoSign == widget.maxAmountScaled
                           ? null
                           : _setMaxAmount,
                       style: _isAmountExceeded
@@ -212,7 +209,7 @@ class _AmountDialogState extends State<AmountDialog> {
                             )
                           : null,
                       child: Icon(
-                        _amountScaled == widget.maxAmountScaled
+                        _amountScaledNoSign == widget.maxAmountScaled
                             ? Icons.check
                             : _isAmountExceeded
                             ? Icons.arrow_downward
@@ -256,7 +253,7 @@ class _AmountDialogState extends State<AmountDialog> {
             },
             currencyUnit: widget.currencyUnit,
             canConfirm: _canConfirm,
-            onConfirm: () => Navigator.of(context).pop(_finalAmount),
+            onConfirm: () => Navigator.of(context).pop(_amountWithSign),
           ),
           const SizedBox(height: 16),
         ],

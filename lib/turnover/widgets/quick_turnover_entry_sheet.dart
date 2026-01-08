@@ -106,9 +106,8 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
     final result = await AmountDialog.show(
       context,
       currencyUnit: widget.account.currency,
-      initialAmountScaled: _amountScaled?.abs() ?? 0,
+      initialAmountScaled: _amountScaled ?? 0,
       showSignSwitch: true,
-      initialIsNegative: _amountScaled?.isNegative ?? true,
     );
 
     if (result != null && mounted) {

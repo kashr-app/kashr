@@ -31,14 +31,13 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
     final result = await AmountDialog.show(
       context,
       currencyUnit: _goalCurrency.name,
-      initialAmountScaled: _goalAmountScaled?.abs() ?? 0,
+      initialAmountScaled: _goalAmountScaled ?? 0,
       showSignSwitch: false,
-      initialIsNegative: false,
     );
 
     if (result != null) {
       setState(() {
-        _goalAmountScaled = result.abs();
+        _goalAmountScaled = result;
       });
     }
   }

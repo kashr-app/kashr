@@ -107,14 +107,13 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
     final result = await AmountDialog.show(
       context,
       currencyUnit: account.currency,
-      initialAmountScaled: _amountScaled?.abs() ?? 0,
+      initialAmountScaled: _amountScaled ?? 0,
       showSignSwitch: false,
-      initialIsNegative: false,
     );
 
     if (result != null) {
       setState(() {
-        _amountScaled = result.abs();
+        _amountScaled = result;
         _errorMessage = null;
       });
     }

@@ -107,15 +107,13 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
   }
 
   Future<void> _selectAmount(Account account) async {
-    final initialAmountScaled = decimalScale(_amountValue.abs()) ?? 0;
-    final initialIsNegative = _amountValue < Decimal.zero;
+    final initialAmountScaled = decimalScale(_amountValue) ?? 0;
 
     final result = await AmountDialog.show(
       context,
       currencyUnit: account.currency,
       initialAmountScaled: initialAmountScaled,
       showSignSwitch: true,
-      initialIsNegative: initialIsNegative,
     );
 
     if (result != null) {
