@@ -1,4 +1,4 @@
-import 'package:kashr/account/widgets/opening_balance_card.dart';
+import 'package:kashr/turnover/widgets/opening_balance_card.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/model/transfer_with_details.dart';

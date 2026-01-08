@@ -460,18 +460,6 @@ class DashboardCubit extends Cubit<DashboardState> {
     return predictions;
   }
 
-  /// Navigates to the previous period.
-  Future<void> previousPeriod() async {
-    emit(state.copyWith(period: state.period.add(delta: -1)));
-    await loadPeriodData(invalidateNonPeriodData: true);
-  }
-
-  /// Navigates to the next period.
-  Future<void> nextPeriod() async {
-    emit(state.copyWith(period: state.period.add()));
-    await loadPeriodData(invalidateNonPeriodData: true);
-  }
-
   /// Sets a specific period.
   Future<void> selectPeriod(Period period) async {
     emit(state.copyWith(period: period));

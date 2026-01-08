@@ -1,14 +1,11 @@
-import 'package:kashr/account/model/account_repository.dart';
-import 'package:kashr/core/color_utils.dart';
-import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
-import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover_sort.dart';
 import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kashr/turnover/widgets/filter_chips.dart';
 import 'package:uuid/uuid.dart';
 
 /// Displays active filter and sort chips for the tag turnovers list.
@@ -38,18 +35,12 @@ class TagTurnoversFilterChips extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (filter.period != null) ...[
-            PeriodSelector(
+            PeriodFilterWidget(
               locked: lockedFilters.period != null,
-              selectedPeriod: filter.period!,
-              onPreviousPeriod: () => _navigatePeriod(context, -1),
-              onNextPeriod: () => _navigatePeriod(context, 1),
-              onPeriodSelected: (period) =>
+              period: filter.period!,
+              onChanged: (period) =>
                   onFilterChanged(filter.copyWith(period: period)),
-              onAction: OnAction(
-                tooltip: 'Clear period filter',
-                onAction: () => onFilterChanged(filter.copyWith(period: null)),
-                icon: const Icon(Icons.delete),
-              ),
+              onClear: () => onFilterChanged(filter.copyWith(period: null)),
             ),
             const SizedBox(height: 8),
           ],
@@ -61,95 +52,78 @@ class TagTurnoversFilterChips extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   if (sort != TagTurnoverSort.defaultSort)
-                    InputChip(
-                      avatar: Icon(
-                        size: 18,
-                        sort.direction == TagTurnoverSortDirection.asc
-                            ? Icons.arrow_downward
-                            : Icons.arrow_upward,
-                      ),
-                      label: Text(sort.orderBy.label()),
+                    SortFilterChip(
+                      label: sort.orderBy.label(),
+                      isAscending:
+                          sort.direction == TagTurnoverSortDirection.asc,
                       onDeleted: () =>
                           onSortChanged(TagTurnoverSort.defaultSort),
                       onPressed: () {
                         onSortChanged(sort.toggleDirection());
                       },
                     ),
-                  if (filter.searchQuery != null &&
-                      filter.searchQuery!.isNotEmpty)
-                    Chip(
-                      avatar: const Icon(Icons.search, size: 18),
-                      label: Text(filter.searchQuery!),
-                      onDeleted: lockedFilters.searchQuery == null
-                          ? () => onFilterChanged(
-                              filter.copyWith(searchQuery: null),
-                            )
-                          : null,
+                  if (filter.searchQuery?.isNotEmpty == true)
+                    SearchFilterChip(
+                      query: filter.searchQuery!,
+                      locked: lockedFilters.searchQuery != null,
+                      onDeleted: () =>
+                          onFilterChanged(filter.copyWith(searchQuery: null)),
                     ),
                   if (filter.transferTagOnly == true)
-                    Chip(
-                      label: const Text('Has Transfer Tag'),
-                      onDeleted: lockedFilters.transferTagOnly != true
-                          ? () => onFilterChanged(
-                              filter.copyWith(transferTagOnly: null),
-                            )
-                          : null,
+                    TextFilterChip(
+                      label: 'Has Transfer Tag',
+                      locked: lockedFilters.transferTagOnly == true,
+                      onDeleted: () => onFilterChanged(
+                        filter.copyWith(transferTagOnly: null),
+                      ),
                     ),
                   if (filter.unfinishedTransfersOnly == true)
-                    Chip(
-                      label: const Text('Unfinished Transfers'),
-                      onDeleted: lockedFilters.unfinishedTransfersOnly != true
-                          ? () => onFilterChanged(
-                              filter.copyWith(unfinishedTransfersOnly: null),
-                            )
-                          : null,
+                    TextFilterChip(
+                      label: 'Unfinished Transfers',
+                      locked: lockedFilters.unfinishedTransfersOnly == true,
+                      onDeleted: () => onFilterChanged(
+                        filter.copyWith(unfinishedTransfersOnly: null),
+                      ),
                     ),
                   if (filter.isMatched == true)
-                    Chip(
-                      label: const Text('Done'),
-                      onDeleted: lockedFilters.isMatched == null
-                          ? () => onFilterChanged(
-                              filter.copyWith(isMatched: null),
-                            )
-                          : null,
+                    TextFilterChip(
+                      label: 'Done',
+                      locked: lockedFilters.isMatched != null,
+                      onDeleted: () =>
+                          onFilterChanged(filter.copyWith(isMatched: null)),
                     ),
                   if (filter.isMatched == false)
-                    Chip(
-                      label: const Text('Pending'),
-                      onDeleted: lockedFilters.isMatched == null
-                          ? () => onFilterChanged(
-                              filter.copyWith(isMatched: null),
-                            )
-                          : null,
+                    TextFilterChip(
+                      label: 'Pending',
+                      locked: lockedFilters.isMatched != null,
+                      onDeleted: () =>
+                          onFilterChanged(filter.copyWith(isMatched: null)),
                     ),
                   if (filter.sign != null)
-                    Chip(
-                      label: Text(
-                        filter.sign == TurnoverSign.income
-                            ? 'Income'
-                            : 'Expense',
-                      ),
-                      onDeleted: lockedFilters.sign == null
-                          ? () => onFilterChanged(filter.copyWith(sign: null))
-                          : null,
+                    TextFilterChip(
+                      label: filter.sign == TurnoverSign.income
+                          ? 'Income'
+                          : 'Expense',
+                      locked: lockedFilters.sign != null,
+                      onDeleted: () =>
+                          onFilterChanged(filter.copyWith(sign: null)),
                     ),
                   if (filter.tagIds != null)
                     ...filter.tagIds!.map(
-                      (tagId) => _TagFilterChip(
+                      (tagId) => TagFilterChip(
                         tag: tagById[tagId],
-                        onDeleted: (lockedFilters.tagIds ?? []).contains(tagId)
-                            ? null
-                            : () => _removeTagFilter(tagId),
+                        locked: lockedFilters.tagIds?.contains(tagId) ?? false,
+                        onDeleted: () => _removeTagFilter(tagId),
                       ),
                     ),
                   if (filter.accountIds != null)
                     ...filter.accountIds!.map(
-                      (accountId) => _AccountFilterChip(
+                      (accountId) => AccountFilterChip(
                         accountId: accountId,
-                        onDeleted:
-                            (lockedFilters.accountIds ?? []).contains(accountId)
-                            ? null
-                            : () => _removeAccountFilter(accountId),
+                        locked:
+                            lockedFilters.accountIds?.contains(accountId) ??
+                            false,
+                        onDeleted: () => _removeAccountFilter(accountId),
                       ),
                     ),
                 ],
@@ -161,72 +135,13 @@ class TagTurnoversFilterChips extends StatelessWidget {
     );
   }
 
-  void _navigatePeriod(BuildContext context, int delta) {
-    onFilterChanged(filter.copyWith(period: filter.period!.add(delta: delta)));
-  }
-
   void _removeTagFilter(UuidValue tagId) {
-    final updatedTagIds = List<UuidValue>.from(filter.tagIds ?? [])
-      ..remove(tagId);
-    onFilterChanged(
-      filter.copyWith(tagIds: updatedTagIds.isEmpty ? null : updatedTagIds),
-    );
+    onFilterChanged(filter.copyWith(tagIds: removeItem(filter.tagIds, tagId)));
   }
 
   void _removeAccountFilter(UuidValue accountId) {
-    final updatedAccountIds = List<UuidValue>.from(filter.accountIds ?? [])
-      ..remove(accountId);
     onFilterChanged(
-      filter.copyWith(
-        accountIds: updatedAccountIds.isEmpty ? null : updatedAccountIds,
-      ),
-    );
-  }
-}
-
-class _TagFilterChip extends StatelessWidget {
-  const _TagFilterChip({required this.tag, required this.onDeleted});
-
-  final Tag? tag;
-  final VoidCallback? onDeleted;
-
-  @override
-  Widget build(BuildContext context) {
-    final tagName = tag?.name ?? 'Unknown';
-    final tagColor = ColorUtils.parseColor(tag?.color) ?? Colors.grey;
-
-    return Chip(
-      label: Text(tagName),
-      backgroundColor: tagColor.withValues(alpha: 0.2),
-      side: BorderSide(color: tagColor, width: 1.5),
-      onDeleted: onDeleted,
-    );
-  }
-}
-
-class _AccountFilterChip extends StatelessWidget {
-  const _AccountFilterChip({required this.accountId, required this.onDeleted});
-
-  final UuidValue accountId;
-  final VoidCallback? onDeleted;
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: context.read<AccountRepository>().getAccountById(accountId),
-      builder: (context, snapshot) {
-        final account = snapshot.data;
-        final accountName = account?.name ?? 'Unknown';
-
-        return Chip(
-          avatar: Icon(
-            account?.accountType.icon ?? Icons.account_balance,
-            size: 18,
-          ),
-          label: Text(accountName),
-          onDeleted: onDeleted,
-        );
-      },
+      filter.copyWith(accountIds: removeItem(filter.accountIds, accountId)),
     );
   }
 }

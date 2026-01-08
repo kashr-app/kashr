@@ -93,7 +93,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       final turnoverService = context.read<TurnoverService>();
 
       final recentTurnovers = (await turnoverRepository.getTurnoversPaginated(
-        filter: TurnoverFilter(accountId: widget.accountId),
+        filter: TurnoverFilter(accountIds: [widget.accountId]),
         offset: 0,
         limit: 5,
       )).toList();

@@ -201,9 +201,13 @@ class HomePage extends StatelessWidget {
               onHorizontalDragEnd: (details) {
                 final velocity = details.primaryVelocity ?? 0;
                 if (velocity > 0) {
-                  context.read<DashboardCubit>().previousPeriod();
+                  context.read<DashboardCubit>().selectPeriod(
+                    state.period.add(delta: -1),
+                  );
                 } else if (velocity < 0) {
-                  context.read<DashboardCubit>().nextPeriod();
+                  context.read<DashboardCubit>().selectPeriod(
+                    state.period.add(delta: 1),
+                  );
                 }
               },
               child: ListView(
@@ -233,10 +237,6 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 8),
                   PeriodSelector(
                     selectedPeriod: state.period,
-                    onPreviousPeriod: () =>
-                        context.read<DashboardCubit>().previousPeriod(),
-                    onNextPeriod: () =>
-                        context.read<DashboardCubit>().nextPeriod(),
                     onPeriodSelected: (period) =>
                         context.read<DashboardCubit>().selectPeriod(period),
                   ),

@@ -20,16 +20,12 @@ class PeriodSelector extends StatelessWidget {
   /// Creates a period selector.
   ///
   /// [selectedPeriod] is the currently selected period to display.
-  /// [onPreviousPeriod] is called when the user taps the previous period button.
-  /// [onNextPeriod] is called when the user taps the next period button.
-  /// [onPeriodSelected] is called when the user selects a period from the picker.
-  /// [onAction] is optionally called when the user taps the delete button.
+  /// [onPeriodSelected] is called when the user navigates or selects a period.
+  /// [onAction] is optionally called when the user taps the action button.
   /// [locked] if set true, the user cannot change nor remove the period.
-  /// If [onAction] is null, the delete button will not be shown.
+  /// If [onAction] is null, the action button will not be shown.
   const PeriodSelector({
     required this.selectedPeriod,
-    required this.onPreviousPeriod,
-    required this.onNextPeriod,
     required this.onPeriodSelected,
     this.onAction,
     this.locked = false,
@@ -37,8 +33,6 @@ class PeriodSelector extends StatelessWidget {
   });
 
   final Period selectedPeriod;
-  final VoidCallback onPreviousPeriod;
-  final VoidCallback onNextPeriod;
   final void Function(Period period) onPeriodSelected;
   final OnAction? onAction;
   final bool locked;
@@ -54,7 +48,8 @@ class PeriodSelector extends StatelessWidget {
             if (!locked)
               IconButton(
                 icon: const Icon(Icons.chevron_left),
-                onPressed: onPreviousPeriod,
+                onPressed: () =>
+                    onPeriodSelected(selectedPeriod.add(delta: -1)),
                 tooltip: 'Previous period',
               ),
             Expanded(
@@ -87,7 +82,8 @@ class PeriodSelector extends StatelessWidget {
             if (!locked)
               IconButton(
                 icon: const Icon(Icons.chevron_right),
-                onPressed: onNextPeriod,
+                onPressed: () =>
+                    onPeriodSelected(selectedPeriod.add(delta: 1)),
                 tooltip: 'Next period',
               ),
             if (onAction != null && !locked)

@@ -14,7 +14,7 @@ class AccountAllTurnoversRoute extends GoRouteData
   @override
   Widget build(BuildContext context, GoRouterState state) {
     return TurnoversPage(
-      initialFilter: TurnoverFilter(accountId: UuidValue.fromString(accountId)),
+      initialFilter: TurnoverFilter(accountIds: [UuidValue.fromString(accountId)]),
     );
   }
 }

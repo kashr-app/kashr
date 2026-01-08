@@ -430,9 +430,13 @@ class TurnoverRepository {
       whereArgs.add(sanitizeFts5Query(filter.searchQuery!));
     }
 
-    if (filter.accountId != null) {
-      whereClauses.add('t.account_id = ?');
-      whereArgs.add(filter.accountId!.uuid);
+    if (filter.accountIds?.isNotEmpty == true) {
+      final (placeholders, args) = db.inClause(
+        filter.accountIds!,
+        toArg: (id) => id.uuid,
+      );
+      whereClauses.add('t.account_id IN ($placeholders)');
+      whereArgs.addAll(args);
     }
 
     // Tag filter - turnovers must have ALL specified tags

@@ -1,3 +1,6 @@
+import 'package:kashr/account/account_selector_dialog.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
+import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
@@ -23,6 +26,7 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
   late bool _unallocatedOnly;
   late Period? _period;
   late Set<UuidValue> _selectedTagIds;
+  late Set<UuidValue> _selectedAccountIds;
   late TurnoverSign? _sign;
 
   @override
@@ -33,6 +37,7 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
     _unallocatedOnly = widget.initialFilter.unallocatedOnly ?? false;
     _period = widget.initialFilter.period;
     _selectedTagIds = widget.initialFilter.tagIds?.toSet() ?? {};
+    _selectedAccountIds = widget.initialFilter.accountIds?.toSet() ?? {};
     _sign = widget.initialFilter.sign;
   }
 
@@ -52,11 +57,24 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
     }
   }
 
+  Future<void> _pickAccount() async {
+    final account = await AccountSelectorDialog.show(context);
+
+    if (account != null && !_selectedAccountIds.contains(account.id)) {
+      setState(() {
+        _selectedAccountIds.add(account.id);
+      });
+    }
+  }
+
   void _applyFilters() {
     final filter = widget.initialFilter.copyWith(
       unallocatedOnly: _unallocatedOnly ? true : null,
       period: _period,
       tagIds: _selectedTagIds.isEmpty ? null : _selectedTagIds.toList(),
+      accountIds: _selectedAccountIds.isEmpty
+          ? null
+          : _selectedAccountIds.toList(),
       sign: _sign,
     );
 
@@ -68,6 +86,7 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
       _unallocatedOnly = false;
       _period = null;
       _selectedTagIds = {};
+      _selectedAccountIds = {};
       _sign = null;
     });
   }
@@ -259,6 +278,56 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
                               onPressed: _pickTag,
                               icon: const Icon(Icons.add),
                               label: const Text('Add tag filter'),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Account filters
+                    Row(
+                      children: [
+                        Text('Accounts', style: theme.textTheme.titleMedium),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    BlocBuilder<AccountCubit, AccountState>(
+                      builder: (context, accountState) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_selectedAccountIds.isNotEmpty) ...[
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: _selectedAccountIds.map((id) {
+                                  final account = accountState.accountById[id]!;
+                                  return Chip(
+                                    avatar: Icon(
+                                      account.accountType.icon,
+                                      size: 18,
+                                    ),
+                                    label: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(child: Text(account.name)),
+                                      ],
+                                    ),
+                                    onDeleted: () {
+                                      setState(() {
+                                        _selectedAccountIds.remove(account.id);
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                            OutlinedButton.icon(
+                              onPressed: _pickAccount,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Add account filter'),
                             ),
                           ],
                         );

@@ -1,12 +1,10 @@
-import 'package:kashr/core/color_utils.dart';
-import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
-import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/model/turnover_sort.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kashr/turnover/widgets/filter_chips.dart';
 import 'package:uuid/uuid.dart';
 
 /// Displays active filter and sort chips for the turnovers list.
@@ -32,17 +30,11 @@ class TurnoversFilterChips extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (filter.period != null) ...[
-            PeriodSelector(
-              selectedPeriod: filter.period!,
-              onPreviousPeriod: () => _navigatePeriod(context, -1),
-              onNextPeriod: () => _navigatePeriod(context, 1),
-              onPeriodSelected: (yearMonth) =>
-                  onFilterChanged(filter.copyWith(period: yearMonth)),
-              onAction: OnAction(
-                tooltip: 'Clear period filter',
-                onAction: () => onFilterChanged(filter.copyWith(period: null)),
-                icon: const Icon(Icons.delete),
-              ),
+            PeriodFilterWidget(
+              period: filter.period!,
+              onChanged: (period) =>
+                  onFilterChanged(filter.copyWith(period: period)),
+              onClear: () => onFilterChanged(filter.copyWith(period: null)),
             ),
             const SizedBox(height: 8),
           ],
@@ -54,39 +46,39 @@ class TurnoversFilterChips extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   if (sort != TurnoverSort.defaultSort)
-                    InputChip(
-                      avatar: Icon(
-                        size: 18,
-                        sort.direction == SortDirection.asc
-                            ? Icons.arrow_downward
-                            : Icons.arrow_upward,
-                      ),
-                      label: Text(sort.orderBy.label()),
+                    SortFilterChip(
+                      label: sort.orderBy.label(),
+                      isAscending: sort.direction == SortDirection.asc,
                       onDeleted: () => onSortChanged(TurnoverSort.defaultSort),
                       onPressed: () {
                         onSortChanged(sort.toggleDirection());
                       },
                     ),
-                  if (filter.searchQuery != null &&
-                      filter.searchQuery!.isNotEmpty)
-                    Chip(
-                      avatar: const Icon(Icons.search, size: 18),
-                      label: Text(filter.searchQuery!),
+                  if (filter.searchQuery?.isNotEmpty == true)
+                    SearchFilterChip(
+                      query: filter.searchQuery!,
                       onDeleted: () =>
                           onFilterChanged(filter.copyWith(searchQuery: null)),
                     ),
                   if (filter.unallocatedOnly == true)
-                    Chip(
-                      label: const Text('Unallocated'),
+                    TextFilterChip(
+                      label: 'Unallocated',
                       onDeleted: () => onFilterChanged(
                         filter.copyWith(unallocatedOnly: null),
                       ),
                     ),
                   if (filter.tagIds != null)
                     ...filter.tagIds!.map(
-                      (tagId) => _TagFilterChip(
+                      (tagId) => TagFilterChip(
                         tag: tagById[tagId],
                         onDeleted: () => _removeTagFilter(tagId),
+                      ),
+                    ),
+                  if (filter.accountIds != null)
+                    ...filter.accountIds!.map(
+                      (accountId) => AccountFilterChip(
+                        accountId: accountId,
+                        onDeleted: () => _removeAccountFilter(accountId),
                       ),
                     ),
                 ],
@@ -98,35 +90,13 @@ class TurnoversFilterChips extends StatelessWidget {
     );
   }
 
-  void _navigatePeriod(BuildContext context, int delta) {
-    onFilterChanged(filter.copyWith(period: filter.period!.add(delta: delta)));
-  }
-
   void _removeTagFilter(UuidValue tagId) {
-    final updatedTagIds = List<UuidValue>.from(filter.tagIds ?? [])
-      ..remove(tagId);
-    onFilterChanged(
-      filter.copyWith(tagIds: updatedTagIds.isEmpty ? null : updatedTagIds),
-    );
+    onFilterChanged(filter.copyWith(tagIds: removeItem(filter.tagIds, tagId)));
   }
-}
 
-class _TagFilterChip extends StatelessWidget {
-  const _TagFilterChip({required this.tag, required this.onDeleted});
-
-  final Tag? tag;
-  final VoidCallback onDeleted;
-
-  @override
-  Widget build(BuildContext context) {
-    final tagName = tag?.name ?? 'Unkown';
-    final tagColor = ColorUtils.parseColor(tag?.color) ?? Colors.grey;
-
-    return Chip(
-      label: Text(tagName),
-      backgroundColor: tagColor.withValues(alpha: 0.2),
-      side: BorderSide(color: tagColor, width: 1.5),
-      onDeleted: onDeleted,
+  void _removeAccountFilter(UuidValue accountId) {
+    onFilterChanged(
+      filter.copyWith(accountIds: removeItem(filter.accountIds, accountId)),
     );
   }
 }
