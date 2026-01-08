@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:decimal/decimal.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/core/associate_by.dart';
@@ -11,6 +12,8 @@ import 'package:kashr/turnover/model/tag_turnover_change.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
 import 'package:kashr/turnover/model/transfer_with_details.dart';
+import 'package:kashr/turnover/model/turnover.dart';
+import 'package:kashr/turnover/model/turnover_change.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
 import 'package:kashr/turnover/model/turnover_sort.dart';
@@ -64,6 +67,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
   final _scrollController = ScrollController();
   final Map<UuidValue, TurnoverWithTagTurnovers> _itemsByTurnoverId = {};
   final Map<UuidValue, TransferWithDetails> _transferByTagTurnoverId = {};
+  final Map<UuidValue, DateTime> _openingBalanceDatesByAccountId = {};
 
   static const _pageSize = 10;
   int _currentOffset = 0;
@@ -83,6 +87,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
   late final TurnoverService _turnoverService;
 
   StreamSubscription<TagTurnoverChange>? _tagTurnoverSubscription;
+  StreamSubscription<TurnoverChange>? _turnoverSubscription;
 
   late final Logger _log;
 
@@ -104,13 +109,61 @@ class _TurnoversPageState extends State<TurnoversPage> {
     _sort = widget.initialSort;
     _scrollController.addListener(_onScroll);
 
+    _turnoverSubscription = _repository.watchChanges().listen(
+      _onTurnoverChange,
+    );
+
+    _getOpeningBalanceDates();
+
     _loadMore();
+  }
+
+  void _onTurnoverChange(TurnoverChange change) async {
+    final List<Turnover> upsertedTurnovers = [];
+
+    switch (change) {
+      case TurnoversInserted(:final turnovers):
+        upsertedTurnovers.addAll(turnovers);
+      case TurnoversUpdated(:final turnovers):
+        upsertedTurnovers.addAll(turnovers);
+      case TurnoversDeleted(:final ids):
+        setState(() {
+          for (final id in ids) {
+            _itemsByTurnoverId.remove(id);
+          }
+        });
+    }
+
+    if (upsertedTurnovers.isNotEmpty) {
+      final turnoversWithTT = await _turnoverService.getTurnoversWithTags(
+        upsertedTurnovers,
+      );
+
+      setState(() {
+        for (final it in turnoversWithTT) {
+          _itemsByTurnoverId[it.turnover.id] = it;
+        }
+      });
+
+      // refresh opening balances dates if needed
+      final anyBeforeOpeningBalance = upsertedTurnovers.any((it) {
+        final bookingDate = it.bookingDate;
+        if (bookingDate == null) return false;
+        final openingDate = _openingBalanceDatesByAccountId[it.accountId];
+        if (openingDate == null) return false;
+        return !openingDate.isBefore(bookingDate);
+      });
+      if (anyBeforeOpeningBalance) {
+        await _getOpeningBalanceDates();
+      }
+    }
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _tagTurnoverSubscription?.cancel();
+    _turnoverSubscription?.cancel();
     super.dispose();
   }
 
@@ -242,6 +295,35 @@ class _TurnoversPageState extends State<TurnoversPage> {
     }
   }
 
+  /// Updates opening balance dates for all accounts (or filtered accounts).
+  Future<void> _getOpeningBalanceDates() async {
+    try {
+      final accountCubit = context.read<AccountCubit>();
+      final accountState = accountCubit.state;
+
+      // Determine which accounts to fetch the opening balances for
+      final Iterable<UuidValue> accountIds;
+      if (_filter.accountIds?.isNotEmpty == true) {
+        accountIds = _filter.accountIds!;
+      } else {
+        accountIds = accountState.accountById.keys;
+      }
+
+      if (accountIds.isEmpty) return;
+
+      final dates = await accountCubit.getOpeningBalanceDates(accountIds);
+
+      _openingBalanceDatesByAccountId.addAll(dates);
+    } catch (error, stackTrace) {
+      _log.e(
+        'Error updating opening balance dates',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      // Don't fail the whole operation if this fails
+    }
+  }
+
   /// Loads transfer information for tag turnovers within the given turnovers.
   Future<void> _loadTransfersForItems(
     List<TurnoverWithTagTurnovers> items,
@@ -292,10 +374,12 @@ class _TurnoversPageState extends State<TurnoversPage> {
     setState(() {
       _itemsByTurnoverId.clear();
       _transferByTagTurnoverId.clear();
+      _openingBalanceDatesByAccountId.clear();
       _currentOffset = 0;
       _hasMore = true;
       _error = null;
     });
+    await _getOpeningBalanceDates();
     await _loadMore();
   }
 
@@ -491,28 +575,39 @@ class _TurnoversPageState extends State<TurnoversPage> {
     TurnoverSort sort,
   ) {
     final result = <TurnoversListItem>[];
-    final renderedOpeningBalances = <UuidValue>{};
+    final notRenderedOpeningBalances = accountState.accountById.keys.toSet();
 
     for (final turnover in turnovers) {
-      final turnoverAccountId = turnover.turnover.accountId;
-
-      if (!renderedOpeningBalances.contains(turnoverAccountId)) {
-        final account = accountState.accountById[turnoverAccountId];
+      // check if any of the accounts need to inject their opening balance
+      final rendered = <UuidValue>{};
+      for (final accountId in notRenderedOpeningBalances) {
+        final account = accountState.accountById[accountId];
+        final openingBalanceDate = _openingBalanceDatesByAccountId[accountId];
 
         if (account != null &&
-            _shouldInjectOpeningBalanceBefore(turnover, account, sort)) {
-          result.add(OpeningBalanceListItem(turnoverAccountId));
-          renderedOpeningBalances.add(turnoverAccountId);
+            openingBalanceDate != null &&
+            _shouldInjectOpeningBalanceBefore(
+              turnover,
+              sort,
+              account.openingBalance,
+              openingBalanceDate,
+            )) {
+          result.add(OpeningBalanceListItem(accountId, openingBalanceDate));
+          rendered.add(accountId);
         }
+      }
+      if (rendered.isNotEmpty) {
+        notRenderedOpeningBalances.removeAll(rendered);
       }
 
       result.add(TurnoverListItem(turnover));
     }
 
     // Add remaining opening balances for accounts that weren't injected yet
-    for (final accountId in accountState.accountById.keys) {
-      if (!renderedOpeningBalances.contains(accountId)) {
-        result.add(OpeningBalanceListItem(accountId));
+    for (final accountId in notRenderedOpeningBalances) {
+      final openingBalanceDate = _openingBalanceDatesByAccountId[accountId];
+      if (openingBalanceDate != null) {
+        result.add(OpeningBalanceListItem(accountId, openingBalanceDate));
       }
     }
 
@@ -522,22 +617,26 @@ class _TurnoversPageState extends State<TurnoversPage> {
   /// Determines if the opening balance should be injected before the given turnover.
   bool _shouldInjectOpeningBalanceBefore(
     TurnoverWithTagTurnovers turnover,
-    dynamic account,
     TurnoverSort sort,
+    Decimal openingBalance,
+    DateTime openingBalanceDate,
   ) {
     final bookingDate = turnover.turnover.bookingDate;
 
     return switch (sort.orderBy) {
-      SortField.bookingDate =>
-        bookingDate != null &&
-            (sort.direction == SortDirection.desc
-                ? bookingDate.isBefore(account.openingBalanceDate)
-                : bookingDate.isAfter(account.openingBalanceDate)),
+      SortField.bookingDate => () {
+        if (bookingDate == null) {
+          return false;
+        }
+
+        return sort.direction == SortDirection.desc
+            ? bookingDate.isBefore(openingBalanceDate)
+            : bookingDate.isAfter(openingBalanceDate);
+      }(),
       SortField.amount =>
         sort.direction == SortDirection.desc
-            ? turnover.turnover.amountValue.abs() < account.openingBalance.abs()
-            : turnover.turnover.amountValue.abs() >
-                  account.openingBalance.abs(),
+            ? turnover.turnover.amountValue.abs() < openingBalance.abs()
+            : turnover.turnover.amountValue.abs() > openingBalance.abs(),
       SortField.counterPart =>
         sort.direction == SortDirection.desc
             ? (turnover.turnover.counterPart ?? '').compareTo(

@@ -93,7 +93,7 @@ abstract class Account with _$Account {
     @DecimalJsonConverter()
     required Decimal openingBalance,
 
-    required DateTime openingBalanceDate,
+    required DateTime lastSyncDate,
 
     @BoolJsonConverter()
     required bool isHidden,

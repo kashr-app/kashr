@@ -314,7 +314,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
                   const SizedBox(height: 8),
                   Text(
                     'This adjusts the opening balance to match reality. The underlying logic is: opening balance + all turnovers = current balance. '
-                    'If you later add turnovers for the past, the balance will change and diverge from reality.',
+                    'If you later add turnovers before the date of the last reality check, the balance will change and diverge from reality.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

@@ -9,6 +9,7 @@ import 'package:kashr/home/home_page.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:kashr/savings/savings_detail_page.dart';
 import 'package:kashr/savings/services/savings_balance_service.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:flutter/material.dart';
@@ -82,7 +83,6 @@ class AccountsPage extends StatelessWidget {
             final hiddenAccounts = (state.accountsByIsHidden[true] ?? []);
             final hasHiddenAccounts = hiddenAccounts.isNotEmpty;
 
-
             final itemCount =
                 displayedAccounts.length + (hasHiddenAccounts ? 1 : 0);
 
@@ -111,8 +111,9 @@ class AccountsPage extends StatelessWidget {
                 itemBuilder: (context, index) {
                   if (index < displayedAccounts.length) {
                     final account = displayedAccounts[index];
-                    final balance =  state.balances[account.id];
-                    final projectedBalance =state.projectedBalances[account.id];
+                    final balance = state.balances[account.id];
+                    final projectedBalance =
+                        state.projectedBalances[account.id];
 
                     return _AccountListItem(
                       account: account,
@@ -313,7 +314,7 @@ class _AccountListItemState extends State<_AccountListItem> {
                       if (widget.account.syncSource != null &&
                           widget.account.syncSource != SyncSource.manual)
                         Text(
-                          'Last sync: Not yet available',
+                          'Last sync: ${context.dateFormat.format(widget.account.lastSyncDate)}',
                           style: TextStyle(
                             fontSize: 11,
                             color: Theme.of(

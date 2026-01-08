@@ -201,7 +201,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         syncSource: SyncSource.manual,
         currency: _selectedCurrency,
         openingBalance: openingBalance,
-        openingBalanceDate: DateTime.now(),
+        lastSyncDate: DateTime.now(),
         isHidden: _isHidden,
       );
 

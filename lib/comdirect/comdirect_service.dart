@@ -75,7 +75,7 @@ class ComdirectService implements DataIngestor {
             syncSource: SyncSource.comdirect,
             currency: a.balance.unit,
             openingBalance: a.balance.value,
-            openingBalanceDate: DateTime.now(),
+            lastSyncDate: DateTime.now(),
             isHidden: false,
           );
           await accountCubit.addAccount(account);

@@ -13,8 +13,10 @@ import 'package:kashr/home/home_page.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:kashr/savings/savings_detail_page.dart';
 import 'package:kashr/savings/services/savings_balance_service.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
+import 'package:kashr/turnover/model/turnover_change.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
 import 'package:kashr/turnover/model/turnover_with_tag_turnovers.dart';
@@ -33,14 +35,22 @@ class AccountDetailsRoute extends GoRouteData with $AccountDetailsRoute {
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return AccountDetailsPage(accountId: UuidValue.fromString(accountId));
+    return AccountDetailsPage(
+      accountId: UuidValue.fromString(accountId),
+      turnoverRepository: context.read<TurnoverRepository>(),
+    );
   }
 }
 
 class AccountDetailsPage extends StatefulWidget {
   final UuidValue accountId;
+  final TurnoverRepository _turnoverRepository;
 
-  const AccountDetailsPage({super.key, required this.accountId});
+  const AccountDetailsPage({
+    super.key,
+    required this.accountId,
+    required TurnoverRepository turnoverRepository,
+  }) : _turnoverRepository = turnoverRepository;
 
   @override
   State<AccountDetailsPage> createState() => _AccountDetailsPageState();
@@ -52,10 +62,37 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   bool _isLoadingSavings = false;
   bool _isLoadingTurnovers = false;
 
+  StreamSubscription<TurnoverChange>? _turnoverSubscription;
+
   @override
   void initState() {
     super.initState();
+    _turnoverSubscription = widget._turnoverRepository.watchChanges().listen(
+      _onTurnoverChanged,
+    );
     unawaited(_loadData());
+  }
+
+  @override
+  void dispose() {
+    unawaited(_turnoverSubscription?.cancel());
+    super.dispose();
+  }
+
+  void _onTurnoverChanged(TurnoverChange change) async {
+    final shouldRefresh = switch (change) {
+      TurnoversInserted(:final turnovers) => turnovers.any(
+        (it) => it.accountId == widget.accountId,
+      ),
+      TurnoversUpdated(:final turnovers) => turnovers.any(
+        (it) => it.accountId == widget.accountId,
+      ),
+      TurnoversDeleted() => true, // Conservative: always refresh on deletes
+    };
+
+    if (shouldRefresh) {
+      unawaited(_loadData());
+    }
   }
 
   Future<void> _loadData() async {
@@ -213,34 +250,42 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ),
               ],
             ),
-            if (account.syncSource != null &&
-                account.syncSource != SyncSource.manual) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.sync,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Synced with ${account.syncSource!.label()}',
-                    style: TextStyle(
+            if (account.syncSource != null)
+              if (account.syncSource != SyncSource.manual) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.sync,
+                      size: 16,
                       color: Theme.of(context).colorScheme.primary,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Last sync: Not yet available',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    const SizedBox(width: 8),
+                    Text(
+                      'Synced with ${account.syncSource!.label()}',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  'Last sync: ${context.dateFormatValue.format(account.lastSyncDate)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  'Last balance check: ${context.dateFormatValue.format(account.lastSyncDate)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
@@ -256,8 +301,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 color: Theme.of(context).decimalColor(balance),
               ),
             ),
-            if (_savingsBreakdown != null && _savingsBreakdown!.isNotEmpty)
-              _spendableTile(currency, balance),
+            _spendableTile(currency, balance),
           ],
         ),
       ),
@@ -265,7 +309,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   }
 
   Widget _spendableTile(Currency currency, Decimal? balance) {
-    final totalSavings = _savingsBreakdown!.values.fold(
+    final totalSavings = (_savingsBreakdown ?? {}).values.fold(
       Decimal.zero,
       (sum, value) => sum + value.savingsOnAccount,
     );

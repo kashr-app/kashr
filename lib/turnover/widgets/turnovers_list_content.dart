@@ -21,8 +21,9 @@ final class TurnoverListItem extends TurnoversListItem {
 /// An opening balance card for a specific account.
 final class OpeningBalanceListItem extends TurnoversListItem {
   final UuidValue accountId;
+  final DateTime openingBalanceDate;
 
-  OpeningBalanceListItem(this.accountId);
+  OpeningBalanceListItem(this.accountId, this.openingBalanceDate);
 }
 
 /// Displays the turnovers list content including error, empty, and list states.
@@ -105,9 +106,14 @@ class TurnoversListContent extends StatelessWidget {
                 data,
                 tagById,
               ),
-              OpeningBalanceListItem(:final accountId) => OpeningBalanceCard(
-                accountId: accountId,
-              ),
+              OpeningBalanceListItem(
+                :final accountId,
+                :final openingBalanceDate,
+              ) =>
+                OpeningBalanceCard(
+                  accountId: accountId,
+                  openingBalanceDate: openingBalanceDate,
+                ),
             };
           },
         );

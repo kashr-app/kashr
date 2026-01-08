@@ -299,6 +299,47 @@ class TurnoverRepository {
     return decimalUnscale(maps.first['total'] as int? ?? 0)!;
   }
 
+  /// Gets the earliest booking dates for turnovers in multiple accounts.
+  ///
+  /// Returns a map of accountId to earliest non-null booking date.
+  /// Accounts with no turnovers or no booking dates are not included in result.
+  Future<Map<UuidValue, DateTime>> getEarliestBookingDatesForAccounts({
+    required Iterable<UuidValue> accountIds,
+  }) async {
+    if (accountIds.isEmpty) {
+      return {};
+    }
+
+    final db = DatabaseHelper();
+    final database = await db.database;
+
+    final (placeholders, args) = database.inClause(
+      accountIds,
+      toArg: (id) => id.uuid,
+    );
+
+    final maps = await database.rawQuery(
+      '''
+      SELECT account_id, MIN(booking_date) as earliest_date
+      FROM turnover
+      WHERE account_id IN ($placeholders) AND booking_date IS NOT NULL
+      GROUP BY account_id
+    ''',
+      [...args],
+    );
+
+    final result = <UuidValue, DateTime>{};
+    for (final map in maps) {
+      final accountId = UuidValue.fromString(map['account_id'] as String);
+      final dateStr = map['earliest_date'] as String?;
+      if (dateStr != null) {
+        result[accountId] = DateTime.parse(dateStr);
+      }
+    }
+
+    return result;
+  }
+
   /// Returns the ids of turnovers that are unmatched.
   /// An unmatched turnover is one that has NO associated tag_turnover entries.
   /// This ensures 1:1 matching semantics which are expected and easy to understand by the user.

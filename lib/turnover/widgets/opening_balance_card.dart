@@ -9,8 +9,13 @@ import 'package:uuid/uuid.dart';
 
 class OpeningBalanceCard extends StatelessWidget {
   final UuidValue accountId;
+  final DateTime openingBalanceDate;
 
-  const OpeningBalanceCard({required this.accountId, super.key});
+  const OpeningBalanceCard({
+    required this.accountId,
+    required this.openingBalanceDate,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +28,6 @@ class OpeningBalanceCard extends StatelessWidget {
         }
 
         final currency = Currency.currencyFrom(account.currency);
-        final balanceDate = account.openingBalanceDate;
         final balance = account.openingBalance;
 
         return Card(
@@ -46,13 +50,11 @@ class OpeningBalanceCard extends StatelessWidget {
                       children: [
                         Text(
                           'Opening Balance',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w500),
                         ),
                         Text(
-                          '${account.name} • ${context.dateFormat.format(balanceDate)}',
+                          '${account.name} • ${context.dateFormat.format(openingBalanceDate)}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -61,9 +63,9 @@ class OpeningBalanceCard extends StatelessWidget {
                   Text(
                     currency.format(balance),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).decimalColor(balance),
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).decimalColor(balance),
+                    ),
                   ),
                 ],
               ),
@@ -81,9 +83,12 @@ class OpeningBalanceCard extends StatelessWidget {
         title: const Text('Opening Balance'),
         content: const Text(
           'The opening balance is calculated as your current account balance '
-          'minus the sum of all transactions on the account. The date states '
-          'when it was last re-calculated, typically when the current balance '
-          'is updated (e.g. during sync).',
+          'minus the sum of all transactions. The date shown represents when '
+          'this balance was chronologically valid, automatically positioned '
+          'before your first transaction.\n\n'
+          'Note that the opening balance can change in case you adjust the '
+          'current balance. The opening balance will be adjusted so that '
+          'opening balance + sum of all turnovers = current balance.',
         ),
         actions: [
           TextButton(

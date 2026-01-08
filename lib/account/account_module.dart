@@ -28,9 +28,12 @@ class AccountModule implements Module {
       Provider.value(value: balanceCalculationService),
       BlocProvider(
         lazy: false,
-        create: (_) =>
-            AccountCubit(accountRepository, balanceCalculationService, log)
-              ..loadAccounts(),
+        create: (_) => AccountCubit(
+          accountRepository,
+          balanceCalculationService,
+          turnoverModule.turnoverRepository,
+          log,
+        )..loadAccounts(),
       ),
     ];
   }
