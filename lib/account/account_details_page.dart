@@ -53,7 +53,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   bool _isLoadingTurnovers = false;
 
   @override
-  void initState() async {
+  void initState() {
     super.initState();
     unawaited(_loadData());
   }
