@@ -7,6 +7,7 @@ import 'package:kashr/turnover/cubit/turnover_tags_state.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 
 /// Controls for adjusting the amount allocated to a tag turnover.
 ///
@@ -140,6 +141,7 @@ class TagAmountControls extends StatelessWidget {
       maxAmountScaled: maxAbsolute,
       initialAmountScaled: currentAbsolute,
       showSignSwitch: false,
+      preferredSign: TurnoverSign.income,
     );
 
     if (result != null && context.mounted) {

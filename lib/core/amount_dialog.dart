@@ -15,6 +15,9 @@ class AmountDialog extends StatefulWidget {
   /// Whether to show a sign switch (positive/negative).
   final bool showSignSwitch;
 
+  /// Defines which sign is used when the [initialAmountScaled] is zero.
+  final TurnoverSign preferredSign;
+
   /// Initial amount in scaled integer (cents).
   final int initialAmountScaled;
 
@@ -24,6 +27,7 @@ class AmountDialog extends StatefulWidget {
   const AmountDialog({
     required this.currencyUnit,
     required this.showSignSwitch,
+    required this.preferredSign,
     this.initialAmountScaled = 0,
     this.maxAmountScaled,
     super.key,
@@ -37,6 +41,7 @@ class AmountDialog extends StatefulWidget {
     BuildContext context, {
     required String currencyUnit,
     required bool showSignSwitch,
+    required TurnoverSign preferredSign,
     int initialAmountScaled = 0,
     int? maxAmountScaled,
   }) async {
@@ -47,6 +52,7 @@ class AmountDialog extends StatefulWidget {
         child: AmountDialog(
           currencyUnit: currencyUnit,
           showSignSwitch: showSignSwitch,
+          preferredSign: preferredSign,
           initialAmountScaled: initialAmountScaled,
           maxAmountScaled: maxAmountScaled,
         ),
@@ -67,7 +73,10 @@ class _AmountDialogState extends State<AmountDialog> {
   void initState() {
     super.initState();
     _amountScaledNoSign = widget.initialAmountScaled.abs();
-    _isNegative = widget.initialAmountScaled < 0;
+    _isNegative =
+        widget.initialAmountScaled < 0 ||
+        widget.initialAmountScaled == 0 &&
+            widget.preferredSign == TurnoverSign.expense;
     _controller = TextEditingController(
       text: _formatAmount(_amountScaledNoSign),
     );

@@ -6,6 +6,7 @@ import 'package:kashr/savings/cubit/savings_cubit.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 
 /// Dialog for editing the savings goal.
 class EditSavingsGoalDialog extends StatefulWidget {
@@ -51,6 +52,7 @@ class _EditSavingsGoalDialogState extends State<EditSavingsGoalDialog> {
       currencyUnit: _goalCurrency.name,
       initialAmountScaled: _goalAmountScaled ?? 0,
       showSignSwitch: false,
+      preferredSign: TurnoverSign.income,
     );
 
     if (result != null) {

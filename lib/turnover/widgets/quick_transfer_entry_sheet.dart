@@ -15,6 +15,7 @@ import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/transfer.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
 import 'package:kashr/turnover/model/transfer_with_details.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
 import 'package:kashr/turnover/services/turnover_matching_service.dart';
 import 'package:kashr/turnover/widgets/quick_turnover_entry_sheet.dart';
@@ -89,6 +90,7 @@ class _QuickTransferEntrySheetState extends State<QuickTransferEntrySheet> {
       currencyUnit: widget.fromAccount.currency,
       initialAmountScaled: _amountScaled ?? 0,
       showSignSwitch: false,
+      preferredSign: TurnoverSign.income,
     );
 
     if (result != null && mounted) {

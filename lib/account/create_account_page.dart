@@ -8,6 +8,7 @@ import 'package:kashr/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:uuid/uuid.dart';
 
 const uuid = Uuid();
@@ -174,6 +175,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       currencyUnit: _selectedCurrency,
       initialAmountScaled: _openingBalanceScaled,
       showSignSwitch: true,
+      preferredSign: TurnoverSign.income,
     );
 
     if (result != null) {

@@ -10,6 +10,7 @@ import 'package:kashr/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:uuid/uuid.dart';
 
 class EditAccountRoute extends GoRouteData with $EditAccountRoute {
@@ -437,6 +438,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
       currencyUnit: _originalAccount.currency,
       initialAmountScaled: _currentBalanceScaled,
       showSignSwitch: true,
+      preferredSign: TurnoverSign.income,
     );
 
     if (result != null) {

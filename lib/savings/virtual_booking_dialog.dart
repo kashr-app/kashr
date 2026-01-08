@@ -12,6 +12,7 @@ import 'package:kashr/savings/model/savings_virtual_booking_repository.dart';
 import 'package:kashr/settings/extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:uuid/uuid.dart';
 
 /// A dialog for creating or editing virtual savings bookings.
@@ -109,6 +110,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
       currencyUnit: account.currency,
       initialAmountScaled: _amountScaled ?? 0,
       showSignSwitch: false,
+      preferredSign: TurnoverSign.income,
     );
 
     if (result != null) {

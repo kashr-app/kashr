@@ -5,6 +5,7 @@ import 'package:kashr/savings/cubit/savings_cubit.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/model/tag.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -33,6 +34,7 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
       currencyUnit: _goalCurrency.name,
       initialAmountScaled: _goalAmountScaled ?? 0,
       showSignSwitch: false,
+      preferredSign: TurnoverSign.income,
     );
 
     if (result != null) {

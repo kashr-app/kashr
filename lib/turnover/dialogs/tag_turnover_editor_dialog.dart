@@ -12,6 +12,7 @@ import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/widgets/tag_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -114,6 +115,7 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
       currencyUnit: account.currency,
       initialAmountScaled: initialAmountScaled,
       showSignSwitch: true,
+      preferredSign: TurnoverSign.expense,
     );
 
     if (result != null) {
@@ -319,7 +321,12 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
                               children: [
                                 TagAvatar(tag: tag, radius: 12),
                                 const SizedBox(width: 8),
-                                Expanded(child: Text(tag.name, overflow: TextOverflow.ellipsis,)),
+                                Expanded(
+                                  child: Text(
+                                    tag.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -339,7 +346,12 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
                                   children: [
                                     Icon(account.accountType.icon, size: 20),
                                     const SizedBox(width: 8),
-                                    Expanded(child: Text(account.name, overflow: TextOverflow.ellipsis,)),
+                                    Expanded(
+                                      child: Text(
+                                        account.name,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -355,7 +367,9 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
                               border: OutlineInputBorder(),
                               suffixIcon: Icon(Icons.calendar_today),
                             ),
-                            child: Text(context.dateFormat.format(_bookingDate)),
+                            child: Text(
+                              context.dateFormat.format(_bookingDate),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),

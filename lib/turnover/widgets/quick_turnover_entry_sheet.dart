@@ -108,6 +108,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
       currencyUnit: widget.account.currency,
       initialAmountScaled: _amountScaled ?? 0,
       showSignSwitch: true,
+      preferredSign: TurnoverSign.expense,
     );
 
     if (result != null && mounted) {

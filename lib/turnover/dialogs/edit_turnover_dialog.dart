@@ -10,10 +10,7 @@ import 'package:flutter/material.dart';
 class EditTurnoverDialog extends StatefulWidget {
   final Turnover turnover;
 
-  const EditTurnoverDialog({
-    required this.turnover,
-    super.key,
-  });
+  const EditTurnoverDialog({required this.turnover, super.key});
 
   static Future<Turnover?> show(
     BuildContext context, {
@@ -43,9 +40,7 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
     _counterPartController = TextEditingController(
       text: widget.turnover.counterPart ?? '',
     );
-    _purposeController = TextEditingController(
-      text: widget.turnover.purpose,
-    );
+    _purposeController = TextEditingController(text: widget.turnover.purpose);
     _bookingDate = widget.turnover.bookingDate;
   }
 
@@ -79,6 +74,7 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
       currencyUnit: widget.turnover.amountUnit,
       initialAmountScaled: initialAmountScaled,
       showSignSwitch: true,
+      preferredSign: TurnoverSign.expense,
     );
 
     if (result != null) {
@@ -124,8 +120,9 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
                     suffixIcon: Icon(Icons.edit),
                   ),
                   child: Text(
-                    Currency.currencyFrom(widget.turnover.amountUnit)
-                        .format(_amountValue),
+                    Currency.currencyFrom(
+                      widget.turnover.amountUnit,
+                    ).format(_amountValue),
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                 ),
@@ -180,10 +177,7 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        FilledButton(
-          onPressed: _save,
-          child: const Text('Continue'),
-        ),
+        FilledButton(onPressed: _save, child: const Text('Continue')),
       ],
     );
   }
