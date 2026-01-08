@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/core/uuid_json_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:kashr/turnover/widgets/turnover_sign_icon.dart';
 import 'package:uuid/uuid.dart';
 import 'package:decimal/decimal.dart';
 
@@ -16,6 +18,13 @@ enum TurnoverSign {
 
   /// Expense (negative amount)
   expense;
+
+  String title() => switch (this) {
+    TurnoverSign.income => 'Income',
+    TurnoverSign.expense => 'Expense',
+  };
+
+  Widget icon({double? size}) => IconSign(sign: this, size: size);
 
   static TurnoverSign fromDecimal(Decimal amount) {
     return amount < Decimal.zero ? expense : income;

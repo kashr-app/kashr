@@ -1,6 +1,7 @@
 import 'package:kashr/core/currency.dart';
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
+import 'package:kashr/turnover/model/turnover.dart';
 
 /// A dialog for entering currency amounts using scaled integer logic.
 ///
@@ -166,16 +167,16 @@ class _AmountDialogState extends State<AmountDialog> {
           if (widget.showSignSwitch) ...[
             const SizedBox(height: 16),
             SegmentedButton<bool>(
-              segments: const [
+              segments: [
                 ButtonSegment<bool>(
                   value: true,
-                  label: Text('Expense'),
-                  icon: Icon(Icons.remove_circle_outline),
+                  label: Text(TurnoverSign.expense.title()),
+                  icon: TurnoverSign.expense.icon(),
                 ),
                 ButtonSegment<bool>(
                   value: false,
-                  label: Text('Income'),
-                  icon: Icon(Icons.add_circle_outline),
+                  label: Text(TurnoverSign.income.title()),
+                  icon: TurnoverSign.income.icon(),
                 ),
               ],
               selected: {_isNegative},

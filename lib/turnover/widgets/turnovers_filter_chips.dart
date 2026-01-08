@@ -67,6 +67,13 @@ class TurnoversFilterChips extends StatelessWidget {
                         filter.copyWith(unallocatedOnly: null),
                       ),
                     ),
+                  if (filter.sign != null)
+                    TextFilterChip(
+                      avatar: filter.sign!.icon(),
+                      label: filter.sign!.title(),
+                      onDeleted: () =>
+                          onFilterChanged(filter.copyWith(sign: null)),
+                    ),
                   if (filter.tagIds != null)
                     ...filter.tagIds!.map(
                       (tagId) => TagFilterChip(

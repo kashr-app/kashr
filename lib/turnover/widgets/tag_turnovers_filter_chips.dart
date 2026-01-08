@@ -2,7 +2,6 @@ import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/model/tag_turnover_sort.dart';
 import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
-import 'package:kashr/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kashr/turnover/widgets/filter_chips.dart';
@@ -101,9 +100,8 @@ class TagTurnoversFilterChips extends StatelessWidget {
                     ),
                   if (filter.sign != null)
                     TextFilterChip(
-                      label: filter.sign == TurnoverSign.income
-                          ? 'Income'
-                          : 'Expense',
+                      avatar: filter.sign!.icon(),
+                      label: filter.sign!.title(),
                       locked: lockedFilters.sign != null,
                       onDeleted: () =>
                           onFilterChanged(filter.copyWith(sign: null)),

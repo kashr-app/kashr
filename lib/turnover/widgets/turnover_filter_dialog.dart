@@ -1,15 +1,9 @@
 import 'package:kashr/account/account_selector_dialog.dart';
-import 'package:kashr/account/cubit/account_cubit.dart';
-import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/core/model/period.dart';
-import 'package:kashr/core/widgets/period_selector.dart';
-import 'package:kashr/turnover/cubit/tag_cubit.dart';
-import 'package:kashr/turnover/cubit/tag_state.dart';
-import 'package:kashr/turnover/dialogs/tag_picker_dialog.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
+import 'package:kashr/turnover/widgets/filter_dialog_sections.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 
 /// Dialog for editing turnover filters.
@@ -32,8 +26,6 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
   @override
   void initState() {
     super.initState();
-
-    // Initialize from widget parameters
     _unallocatedOnly = widget.initialFilter.unallocatedOnly ?? false;
     _period = widget.initialFilter.period;
     _selectedTagIds = widget.initialFilter.tagIds?.toSet() ?? {};
@@ -42,27 +34,20 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
   }
 
   Future<void> _pickTag() async {
-    final tag = await TagPickerDialog.showWithExclusions(
-      context,
-      excludeTagIds: _selectedTagIds,
-      allowCreate: false,
-      title: 'Select Tag',
-      subtitle: 'Choose a tag to filter by:',
-    );
-
-    if (tag != null) {
+    final tagId = await pickTag(context, _selectedTagIds);
+    if (tagId != null) {
       setState(() {
-        _selectedTagIds.add(tag.id);
+        _selectedTagIds.add(tagId);
       });
     }
   }
 
   Future<void> _pickAccount() async {
     final account = await AccountSelectorDialog.show(context);
-
-    if (account != null && !_selectedAccountIds.contains(account.id)) {
+    final accountId = account?.id;
+    if (accountId != null && !_selectedAccountIds.contains(accountId)) {
       setState(() {
-        _selectedAccountIds.add(account.id);
+        _selectedAccountIds.add(accountId);
       });
     }
   }
@@ -93,280 +78,61 @@ class _TurnoverFilterDialogState extends State<TurnoverFilterDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Dialog(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 16, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Filter', style: theme.textTheme.titleLarge),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(),
-
-            // Content
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Sign filter
-                    Row(
-                      children: [
-                        Text('Type', style: theme.textTheme.titleMedium),
-                        Spacer(),
-                        DropdownButton<TurnoverSign?>(
-                          value: _sign,
-                          items: [
-                            DropdownMenuItem(value: null, child: Text("All")),
-                            DropdownMenuItem(
-                              value: TurnoverSign.income,
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.arrow_upward,
-                                    color: Colors.green,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text('Income'),
-                                ],
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: TurnoverSign.expense,
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.arrow_downward,
-                                    color: Colors.red,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text('Expense'),
-                                ],
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _sign = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Period filter
-                    CheckboxListTile(
-                      title: Text(
-                        'Filter by period',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      value: _period != null,
-                      onChanged: (value) {
-                        setState(() {
-                          if (value == true) {
-                            _period = Period.now(PeriodType.month);
-                          } else {
-                            _period = null;
-                          }
-                        });
-                      },
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    if (_period != null) ...[
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: () => PeriodPickerDialog.show(context, _period!)
-                            .then((v) {
-                              if (v != null) {
-                                setState(() {
-                                  _period = v;
-                                });
-                              }
-                            }),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Period',
-                            border: OutlineInputBorder(),
-                            suffixIcon: Icon(Icons.calendar_month),
-                          ),
-                          child: Text(_period!.format()),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-
-                    // Tag filters
-                    Text('Tags', style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
-
-                    // Unallocated only filter
-                    CheckboxListTile(
-                      title: const Text('Show unallocated only'),
-                      value: _unallocatedOnly,
-                      onChanged: (value) {
-                        setState(() {
-                          _unallocatedOnly = value ?? false;
-                        });
-                      },
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: 16),
-                    // Selected tags
-                    BlocBuilder<TagCubit, TagState>(
-                      builder: (context, tagState) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (_selectedTagIds.isNotEmpty) ...[
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                children: _selectedTagIds.map((id) {
-                                  final tag = tagState.tagById[id]!;
-                                  final tagColor = tag.color != null
-                                      ? Color(
-                                          int.parse(
-                                            tag.color!.replaceFirst(
-                                              '#',
-                                              '0xff',
-                                            ),
-                                          ),
-                                        )
-                                      : null;
-
-                                  return Chip(
-                                    label: Text(tag.name),
-                                    backgroundColor: tagColor?.withValues(
-                                      alpha: 0.2,
-                                    ),
-                                    side: tagColor != null
-                                        ? BorderSide(
-                                            color: tagColor,
-                                            width: 1.5,
-                                          )
-                                        : null,
-                                    onDeleted: () {
-                                      setState(() {
-                                        _selectedTagIds.remove(tag.id);
-                                      });
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                              const SizedBox(height: 8),
-                            ],
-                            OutlinedButton.icon(
-                              onPressed: _pickTag,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add tag filter'),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Account filters
-                    Row(
-                      children: [
-                        Text('Accounts', style: theme.textTheme.titleMedium),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    BlocBuilder<AccountCubit, AccountState>(
-                      builder: (context, accountState) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (_selectedAccountIds.isNotEmpty) ...[
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                children: _selectedAccountIds.map((id) {
-                                  final account = accountState.accountById[id]!;
-                                  return Chip(
-                                    avatar: Icon(
-                                      account.accountType.icon,
-                                      size: 18,
-                                    ),
-                                    label: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Flexible(child: Text(account.name)),
-                                      ],
-                                    ),
-                                    onDeleted: () {
-                                      setState(() {
-                                        _selectedAccountIds.remove(account.id);
-                                      });
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                              const SizedBox(height: 8),
-                            ],
-                            OutlinedButton.icon(
-                              onPressed: _pickAccount,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add account filter'),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Action buttons
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: _clearFilters,
-                    child: const Text('Clear'),
-                  ),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: _applyFilters,
-                        child: const Text('Apply'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+    return FilterDialogShell(
+      title: 'Filter',
+      onClear: _clearFilters,
+      onApply: _applyFilters,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SignFilterSection(
+            value: _sign,
+            onChanged: (value) {
+              setState(() {
+                _sign = value;
+              });
+            },
+          ),
+          PeriodFilterSection(
+            period: _period,
+            onPeriodChanged: (value) {
+              setState(() {
+                _period = value;
+              });
+            },
+          ),
+          SectionHeader(title: 'Tags'),
+          const SizedBox(height: 8),
+          CheckboxFilterOption(
+            label: 'Show unallocated only',
+            value: _unallocatedOnly,
+            onChanged: (value) {
+              setState(() {
+                _unallocatedOnly = value;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          TagFilterSection(
+            selectedTagIds: _selectedTagIds,
+            onAddTag: _pickTag,
+            onRemoveTag: (tagId) {
+              setState(() {
+                _selectedTagIds.remove(tagId);
+              });
+            },
+          ),
+          AccountFilterSection(
+            selectedAccountIds: _selectedAccountIds,
+            onAddAccount: _pickAccount,
+            onRemoveAccount: (accountId) {
+              setState(() {
+                _selectedAccountIds.remove(accountId);
+              });
+            },
+          ),
+        ],
       ),
     );
   }

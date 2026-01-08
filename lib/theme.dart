@@ -1,6 +1,9 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 
+const iconIncome = Icons.add_circle_outline;
+const iconExpense = Icons.remove_circle_outline;
+
 class ThemeBuilder {
   ThemeData lightMode() {
     final primary = const Color(0xFF28CA97);
