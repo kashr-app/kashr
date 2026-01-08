@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
+import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/map_values.dart';
 import 'package:kashr/home/home_page.dart';
@@ -477,45 +479,127 @@ class _TurnoversPageState extends State<TurnoversPage> {
     _toggleTurnoverSelection(id);
   }
 
+  /// Builds the combined list of turnovers and opening balance cards.
+  ///
+  /// Opening balance cards are injected based on the current sort field:
+  /// - bookingDate: injected chronologically by opening balance date
+  /// - amount: injected by comparing opening balance amount
+  /// - counterPart: injected alphabetically treating "Opening Balance" as counterpart
+  List<TurnoversListItem> _buildCombinedList(
+    Iterable<TurnoverWithTagTurnovers> turnovers,
+    AccountState accountState,
+    TurnoverSort sort,
+  ) {
+    final result = <TurnoversListItem>[];
+    final renderedOpeningBalances = <UuidValue>{};
+
+    for (final turnover in turnovers) {
+      final turnoverAccountId = turnover.turnover.accountId;
+
+      if (!renderedOpeningBalances.contains(turnoverAccountId)) {
+        final account = accountState.accountById[turnoverAccountId];
+
+        if (account != null &&
+            _shouldInjectOpeningBalanceBefore(turnover, account, sort)) {
+          result.add(OpeningBalanceListItem(turnoverAccountId));
+          renderedOpeningBalances.add(turnoverAccountId);
+        }
+      }
+
+      result.add(TurnoverListItem(turnover));
+    }
+
+    // Add remaining opening balances for accounts that weren't injected yet
+    for (final accountId in accountState.accountById.keys) {
+      if (!renderedOpeningBalances.contains(accountId)) {
+        result.add(OpeningBalanceListItem(accountId));
+      }
+    }
+
+    return result;
+  }
+
+  /// Determines if the opening balance should be injected before the given turnover.
+  bool _shouldInjectOpeningBalanceBefore(
+    TurnoverWithTagTurnovers turnover,
+    dynamic account,
+    TurnoverSort sort,
+  ) {
+    final bookingDate = turnover.turnover.bookingDate;
+
+    return switch (sort.orderBy) {
+      SortField.bookingDate =>
+        bookingDate != null &&
+            (sort.direction == SortDirection.desc
+                ? bookingDate.isBefore(account.openingBalanceDate)
+                : bookingDate.isAfter(account.openingBalanceDate)),
+      SortField.amount =>
+        sort.direction == SortDirection.desc
+            ? turnover.turnover.amountValue.abs() < account.openingBalance.abs()
+            : turnover.turnover.amountValue.abs() >
+                  account.openingBalance.abs(),
+      SortField.counterPart =>
+        sort.direction == SortDirection.desc
+            ? (turnover.turnover.counterPart ?? '').compareTo(
+                    'Opening Balance',
+                  ) <
+                  0
+            : (turnover.turnover.counterPart ?? '').compareTo(
+                    'Opening Balance',
+                  ) >
+                  0,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final showFilterChips =
         _filter.hasFilters || _sort != TurnoverSort.defaultSort;
 
-    return Scaffold(
-      appBar: _isBatchMode ? _buildBatchAppBar() : _buildNormalAppBar(),
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (showFilterChips)
-              TurnoversFilterChips(
-                filter: _filter,
-                sort: _sort,
-                onFilterChanged: _updateFilter,
-                onSortChanged: _updateSort,
-              ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refresh,
-                child: TurnoversListContent(
-                  items: _itemsByTurnoverId.values.toList(),
-                  isLoading: _isLoading,
-                  hasMore: _hasMore,
-                  error: _error,
-                  scrollController: _scrollController,
-                  selectedIds: _selectedTurnoverIds,
-                  isBatchMode: _isBatchMode,
-                  onItemTap: _handleItemTap,
-                  onItemLongPress: _handleItemLongPress,
-                  onRetry: _refresh,
-                  onLoadMore: _loadMore,
-                  transferByTagTurnoverId: _transferByTagTurnoverId,
+    return BlocBuilder<AccountCubit, AccountState>(
+      builder: (context, accountState) {
+        final combinedItems = _buildCombinedList(
+          _itemsByTurnoverId.values,
+          accountState,
+          _sort,
+        );
+
+        return Scaffold(
+          appBar: _isBatchMode ? _buildBatchAppBar() : _buildNormalAppBar(),
+          body: SafeArea(
+            child: Column(
+              children: [
+                if (showFilterChips)
+                  TurnoversFilterChips(
+                    filter: _filter,
+                    sort: _sort,
+                    onFilterChanged: _updateFilter,
+                    onSortChanged: _updateSort,
+                  ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: TurnoversListContent(
+                      items: combinedItems,
+                      isLoading: _isLoading,
+                      hasMore: _hasMore,
+                      error: _error,
+                      scrollController: _scrollController,
+                      selectedIds: _selectedTurnoverIds,
+                      isBatchMode: _isBatchMode,
+                      onItemTap: _handleItemTap,
+                      onItemLongPress: _handleItemLongPress,
+                      onRetry: _refresh,
+                      onLoadMore: _loadMore,
+                      transferByTagTurnoverId: _transferByTagTurnoverId,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

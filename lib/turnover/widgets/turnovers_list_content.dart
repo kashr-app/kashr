@@ -1,3 +1,4 @@
+import 'package:kashr/account/widgets/opening_balance_card.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/model/transfer_with_details.dart';
@@ -6,6 +7,23 @@ import 'package:kashr/turnover/widgets/turnover_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid_value.dart';
+
+/// Base class for items in the turnovers list.
+sealed class TurnoversListItem {}
+
+/// A regular turnover item to display.
+final class TurnoverListItem extends TurnoversListItem {
+  final TurnoverWithTagTurnovers data;
+
+  TurnoverListItem(this.data);
+}
+
+/// An opening balance card for a specific account.
+final class OpeningBalanceListItem extends TurnoversListItem {
+  final UuidValue accountId;
+
+  OpeningBalanceListItem(this.accountId);
+}
 
 /// Displays the turnovers list content including error, empty, and list states.
 class TurnoversListContent extends StatelessWidget {
@@ -25,7 +43,7 @@ class TurnoversListContent extends StatelessWidget {
     super.key,
   });
 
-  final List<TurnoverWithTagTurnovers> items;
+  final List<TurnoversListItem> items;
   final bool isLoading;
   final bool hasMore;
   final String? error;
@@ -51,10 +69,15 @@ class TurnoversListContent extends StatelessWidget {
     return BlocBuilder<TagCubit, TagState>(
       builder: (context, tagState) {
         final tagById = tagState.tagById;
+        // Add 1 for loading/error indicator if needed
+        final itemCount =
+            items.length + (hasMore || isLoading || error != null ? 1 : 0);
+
         return ListView.builder(
           controller: scrollController,
-          itemCount: items.length + (hasMore || isLoading ? 1 : 0),
+          itemCount: itemCount,
           itemBuilder: (context, index) {
+            // Loading/error indicator at the end
             if (index >= items.length) {
               if (error != null) {
                 return Padding(
@@ -74,52 +97,65 @@ class TurnoversListContent extends StatelessWidget {
               );
             }
 
-            final turnoverWithTags = items[index];
-            final isSelected = selectedIds.contains(
-              turnoverWithTags.turnover.id,
-            );
+            final item = items[index];
 
-            // Calculate transfer flags for this turnover
-            bool hasTransfer = false;
-            bool transferNeedsReview = false;
-
-            for (final tagTurnover in turnoverWithTags.tagTurnovers) {
-              final tagTurnoverId = tagTurnover.id;
-              final isTransferTag =
-                  tagById[tagTurnover.tagId]?.isTransfer ?? false;
-              final transferDetails = transferByTagTurnoverId?[tagTurnoverId];
-
-              // Show transfer badge if tag has transfer semantic OR is linked to a transfer
-              if (isTransferTag || transferDetails != null) {
-                hasTransfer = true;
-
-                // Unlinked transfer tags need review
-                final isUnlinkedTransfer =
-                    isTransferTag && transferDetails == null;
-                if (isUnlinkedTransfer ||
-                    transferDetails?.needsReview != null) {
-                  transferNeedsReview = true;
-                  break; // No need to check further
-                }
-              }
-            }
-
-            return TurnoverCard(
-              key: Key(turnoverWithTags.turnover.id.uuid),
-              turnoverWithTags: turnoverWithTags,
-              isSelected: isSelected,
-              isBatchMode: isBatchMode,
-              hasTransfer: hasTransfer,
-              transferNeedsReview: transferNeedsReview,
-              onTap: () {
-                onItemTap(turnoverWithTags);
-              },
-              onLongPress: () {
-                onItemLongPress(turnoverWithTags);
-              },
-            );
+            return switch (item) {
+              TurnoverListItem(:final data) => _buildTurnoverCard(
+                context,
+                data,
+                tagById,
+              ),
+              OpeningBalanceListItem(:final accountId) => OpeningBalanceCard(
+                accountId: accountId,
+              ),
+            };
           },
         );
+      },
+    );
+  }
+
+  Widget _buildTurnoverCard(
+    BuildContext context,
+    TurnoverWithTagTurnovers turnoverWithTags,
+    Map<UuidValue, dynamic> tagById,
+  ) {
+    final isSelected = selectedIds.contains(turnoverWithTags.turnover.id);
+
+    // Calculate transfer flags for this turnover
+    bool hasTransfer = false;
+    bool transferNeedsReview = false;
+
+    for (final tagTurnover in turnoverWithTags.tagTurnovers) {
+      final tagTurnoverId = tagTurnover.id;
+      final isTransferTag = tagById[tagTurnover.tagId]?.isTransfer ?? false;
+      final transferDetails = transferByTagTurnoverId?[tagTurnoverId];
+
+      // Show transfer badge if tag has transfer semantic OR is linked to a transfer
+      if (isTransferTag || transferDetails != null) {
+        hasTransfer = true;
+
+        // Unlinked transfer tags need review
+        final isUnlinkedTransfer = isTransferTag && transferDetails == null;
+        if (isUnlinkedTransfer || transferDetails?.needsReview != null) {
+          transferNeedsReview = true;
+          break; // No need to check further
+        }
+      }
+    }
+
+    return TurnoverCard(
+      key: Key(turnoverWithTags.turnover.id.uuid),
+      turnoverWithTags: turnoverWithTags,
+      isSelected: isSelected,
+      isBatchMode: isBatchMode,
+      hasTransfer: hasTransfer,
+      transferNeedsReview: transferNeedsReview,
+      onTap: () {
+        onItemTap(turnoverWithTags);
+      },
+      onLongPress: () {
+        onItemLongPress(turnoverWithTags);
       },
     );
   }
