@@ -345,10 +345,15 @@ class _TransferEditorContent extends StatelessWidget {
               ),
             )
           : null,
-      filter: TagTurnoversFilter(sign: requiredSign),
-      lockedFilters: TagTurnoversFilter(
+      filter: TagTurnoversFilter(
+        sign: requiredSign,
+        // non-locked becaues the user might have not yet tagged the
+        // opposing side as transfer
         transferTagOnly: true,
         unfinishedTransfersOnly: true,
+      ),
+      lockedFilters: TagTurnoversFilter(
+        // do not allow selecting the same TagTurnover for both sides
         excludeTagTurnoverIds: otherSide != null ? [otherSide.id] : null,
       ),
       allowMultiple: false,
