@@ -40,10 +40,21 @@ abstract class TurnoverFilter with _$TurnoverFilter {
   bool get hasFilters =>
       unallocatedOnly == true ||
       period != null ||
-      (tagIds != null && tagIds!.isNotEmpty) ||
+      tagIds?.isNotEmpty == true ||
       accountIds?.isNotEmpty == true ||
       sign != null ||
-      (searchQuery != null && searchQuery!.isNotEmpty);
+      searchQuery?.isNotEmpty == true;
+
+  /// Returns true if it would be awkward for the user see account
+  /// opening balances rendered when the current filter is applied
+  bool get hideAccountOpeningBalances =>
+      unallocatedOnly ==
+          true || // opening balance does not take part in allocation
+      tagIds?.isNotEmpty == true || // opening balance is never tagged
+      sign !=
+          null || // because sign of the opening balance is not easily taken into account and would need special treatment.
+      searchQuery?.isNotEmpty ==
+          true; // because opening balance does not take part in fullt-text search and would show no matter the query, so the better default is to not show it as it is very unlikely that the user searches for the opening balance.
 
   /// Returns a filter with all values set to null (no filtering)
   static const empty = TurnoverFilter();
