@@ -5,6 +5,7 @@ import 'package:kashr/home/home_page.dart';
 import 'package:kashr/logging/log_viewer_page.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/local_auth/auth_delay.dart';
+import 'package:kashr/settings/amazon_order_detection_page.dart';
 import 'package:kashr/settings/banks_page.dart';
 import 'package:kashr/settings/model/week_start_day.dart';
 import 'package:kashr/settings/settings_cubit.dart';
@@ -157,6 +158,15 @@ class _SettingsPageState extends State<SettingsPage> {
                             );
                           }
                         },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.shopping_cart),
+                        title: const Text("Amazon Order Detection"),
+                        subtitle: const Text(
+                          'Detect order IDs and link to Amazon',
+                        ),
+                        onTap: () =>
+                            const AmazonOrderDetectionRoute().go(context),
                       ),
                     ],
                   ),

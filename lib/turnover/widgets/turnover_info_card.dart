@@ -1,11 +1,14 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
+import 'package:kashr/settings/amazon_order_renderer.dart';
 import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/dialogs/turnover_info_dialog.dart';
 import 'package:kashr/turnover/model/turnover.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kashr/turnover/widgets/plain_text_renderer.dart';
+import 'package:kashr/turnover/widgets/purpose_renderer.dart';
 
 /// Displays information about a turnover in a card format.
 ///
@@ -48,6 +51,38 @@ class TurnoverInfoCardContent extends StatelessWidget {
   final Turnover turnover;
   final bool showDetails;
 
+  /// Chain of purpose renderers to try in order.
+  /// First renderer that can handle the text will be used.
+  static const _renderers = <PurposeRenderer>[
+    AmazonOrderRenderer(),
+    PlainTextRenderer(),
+  ];
+
+  /// Renders the purpose text using the first applicable renderer.
+  Widget _buildPurposeText(
+    BuildContext context,
+    String text,
+    TextStyle? style, {
+    int? maxLines,
+    TextOverflow? overflow,
+  }) {
+    for (final renderer in _renderers) {
+      final widget = renderer.tryRender(
+        context,
+        text,
+        style: style,
+        maxLines: maxLines,
+        overflow: overflow,
+      );
+      if (widget != null) {
+        return widget;
+      }
+    }
+
+    // Fallback (should never reach here due to PlainTextRenderer)
+    return Text(text, style: style, maxLines: maxLines, overflow: overflow);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -80,9 +115,10 @@ class TurnoverInfoCardContent extends StatelessWidget {
           style: theme.textTheme.titleLarge,
         ),
         const SizedBox(height: 4),
-        Text(
+        _buildPurposeText(
+          context,
           turnover.purpose,
-          style: theme.textTheme.bodyMedium,
+          theme.textTheme.bodyMedium,
           maxLines: showDetails ? null : 3,
           overflow: showDetails ? null : TextOverflow.ellipsis,
         ),
@@ -100,7 +136,10 @@ class TurnoverInfoCardContent extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(turnover.formatDate(context.dateFormat) ?? '', style: theme.textTheme.bodySmall),
+            Text(
+              turnover.formatDate(context.dateFormat) ?? '',
+              style: theme.textTheme.bodySmall,
+            ),
             Flexible(
               child: Text(
                 turnover.formatAmount(),

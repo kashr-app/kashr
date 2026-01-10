@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/local_auth/auth_delay.dart';
+import 'package:kashr/settings/model/amazon_order_behavior.dart';
 import 'package:kashr/settings/model/week_start_day.dart';
 import 'package:kashr/settings/settings_repository.dart';
 import 'package:kashr/settings/settings_state.dart';
@@ -75,6 +76,16 @@ class SettingsCubit extends Cubit<SettingsState> {
     } catch (e) {
       return false;
     }
+  }
+
+  Future<void> setAmazonOrderBehavior(AmazonOrderBehavior value) async {
+    final newState = state.copyWith(amazonOrderBehavior: value);
+    await _upsertAndEmit('amazonOrderBehavior', newState);
+  }
+
+  Future<void> setAmazonTld(AmazonTld value) async {
+    final newState = state.copyWith(amazonTld: value);
+    await _upsertAndEmit('amazonTld', newState);
   }
 
   Future<void> _configureJiffy(WeekStartDay weekStartDay) async {

@@ -47,5 +47,10 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Authenticate locally to protect app data.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+	</array>
 </dict>
 </plist>

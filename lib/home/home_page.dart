@@ -30,6 +30,7 @@ import 'package:kashr/home/widgets/spending_summary_card.dart';
 import 'package:kashr/home/widgets/transfer_summary_card.dart';
 import 'package:kashr/home/widgets/unallocated_turnovers_section.dart';
 import 'package:kashr/logging/log_viewer_page.dart';
+import 'package:kashr/settings/amazon_order_detection_page.dart';
 import 'package:kashr/settings/banks_page.dart';
 import 'package:kashr/settings/settings_page.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
@@ -78,6 +79,9 @@ part '../_gen/home/home_page.g.dart';
         TypedGoRoute<TagsRoute>(path: 'tags'),
         TypedGoRoute<TagTurnoversRoute>(path: 'tagturnovers'),
         TypedGoRoute<LogViewerRoute>(path: 'logs'),
+        TypedGoRoute<AmazonOrderDetectionRoute>(
+          path: 'amazon-order-detection',
+        ),
       ],
     ),
     TypedGoRoute<TurnoversRoute>(

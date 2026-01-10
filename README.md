@@ -101,6 +101,7 @@ For detailed verification instructions and our signing certificate fingerprints,
 - Tag-based categorization with custom colors
 - Smart tag suggestions based on counterpart and purpose (learns over time)
 - Transaction matching with imported bank data
+- Auto detection of Amazon order IDs enabling you to lookup the order easily
 
 ### Transfers
 
