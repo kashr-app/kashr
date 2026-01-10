@@ -130,11 +130,11 @@ class AccountCubit extends Cubit<AccountState> {
     }
   }
 
-  /// Update the opening balance for an account based on current real balance.
+  /// Update the opening balance for an account based on [currentRealBalance].
   /// This recalculates the opening balance so that:
   /// currentRealBalance = openingBalance + sum(turnovers)
   /// Therefore: openingBalance = currentRealBalance - sum(turnovers)
-  Future<void> updateBalanceFromReal(
+  Future<void> syncBalanceFromReal(
     Account account,
     Decimal currentRealBalance,
   ) async {

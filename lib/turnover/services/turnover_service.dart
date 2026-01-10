@@ -44,9 +44,8 @@ class TurnoverService {
   /// Uses apiId to determine if a turnover already exists for the account.
   ///
   /// Returns the ids of (new, updated) turnovers.
-  Future<(Iterable<UuidValue>, Iterable<UuidValue>)> upsertTurnovers(
-    Iterable<Turnover> turnovers,
-  ) async {
+  Future<(Iterable<UuidValue> newIds, Iterable<UuidValue> existingIds)>
+  upsertTurnovers(Iterable<Turnover> turnovers) async {
     // Group turnovers by accountId for efficient querying
     final turnoversByAccount = <UuidValue, List<Turnover>>{};
     for (final turnover in turnovers) {

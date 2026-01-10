@@ -9,15 +9,21 @@ abstract class ComdirectAPI {
   factory ComdirectAPI(Dio dio, {String baseUrl}) = _ComdirectAPI;
 
   @GET("/banking/clients/user/v2/accounts/balances")
-  Future<AccountsPage> getBalances();
+  Future<AccountsPage> getBalances({
+    /// first index to fetch
+    @Query("paging-first") int index = 0,
+    @Query("paging-count") int pageSize = 20,
+  });
 
   @GET("/banking/v1/accounts/{accountId}/transactions")
   Future<TransactionsPage> getTransactions({
-      @Path("accountId") required String accountId,
-      @Query("min-bookingDate") required String minBookingDate,
-      @Query("max-bookingDate") required String maxBookingDate,
-      @Query("paging-count") int pageSize = 20,
-      @Query("paging-first") int pageElementIndex = 0,
-      @Query("transactionState") String transactionState = "BOOKED",
+    @Path("accountId") required String accountId,
+    @Query("min-bookingDate") required String minBookingDate,
+    @Query("max-bookingDate") required String maxBookingDate,
+    @Query("transactionState") String transactionState = "BOOKED",
+
+    /// first index to fetch
+    @Query("paging-first") int index = 0,
+    @Query("paging-count") int pageSize = 20,
   });
 }

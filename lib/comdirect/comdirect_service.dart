@@ -4,6 +4,7 @@ import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:kashr/account/model/account.dart';
+import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/turnover/model/turnover.dart';
@@ -42,161 +43,23 @@ class ComdirectService implements DataIngestor {
   /// Also automatically updates the balance for existing accounts.
   Future<DataIngestResult> _fetchAccountsAndTurnovers(Period period) async {
     try {
-      // Fetch account balances
-      final accountsPage = await comdirectAPI.getBalances();
-      log.i('Accounts fetched successfully');
-      await accountCubit.loadAccounts();
-      final allAccounts = accountCubit.state.accountById.values;
+      final (accounts, realBalanceByAccountId) =
+          await _fetchAccountsAndStoreNew(period);
 
-      final existingAccountsByApiId = {
-        for (final a in allAccounts)
-          if (a.apiId != null) a.apiId: a,
-      };
+      // For each api account, fetch turnovers (transactions)
 
-      // Store API balances for later use
-      final apiBalancesByApiId = <String, Decimal>{};
-      for (final a in accountsPage.values) {
-        apiBalancesByApiId[a.accountId] = a.balance.value;
-      }
+      final (newIds, existingIds, turnoversById) =
+          await _fetchAndUpsertTurnovers(accounts, period);
 
-      final uuid = Uuid();
+      // Assuming the real balance did not change between fetching accounts
+      // and fetching the turnovers, we now can reconcile the balance based
+      // on the sum of all stored turnovers to match the real balance.
+      await _reconcileBalances(accounts, realBalanceByAccountId);
 
-      for (final a in accountsPage.values) {
-        final apiId = a.accountId;
-        if (!existingAccountsByApiId.containsKey(apiId)) {
-          log.d("Sotring new account");
-          final account = Account(
-            id: uuid.v4obj(),
-            createdAt: DateTime.now(),
-            name: a.account.accountType.text,
-            identifier: a.account.iban,
-            apiId: apiId,
-            accountType: AccountType.checking,
-            syncSource: SyncSource.comdirect,
-            currency: a.balance.unit,
-            openingBalance: a.balance.value,
-            lastSyncDate: DateTime.now(),
-            isHidden: false,
-          );
-          await accountCubit.addAccount(account);
-          log.i("New account stored");
-        }
-      }
-
-      // Update balances for existing comdirect accounts
-      if (existingAccountsByApiId.isNotEmpty) {
-        var count = 0;
-        for (final account in existingAccountsByApiId.values) {
-          final apiId = account.apiId;
-          if (apiId != null && apiBalancesByApiId.containsKey(apiId)) {
-            final apiBalance = apiBalancesByApiId[apiId]!;
-            log.i(
-              'Updating balance for account ${account.name} to $apiBalance',
-            );
-            await accountCubit.updateBalanceFromReal(account, apiBalance);
-            count++;
-          }
-        }
-        log.i('$count account balance(s) updated successfully');
-      }
-      // For each account, fetch turnovers (transactions)
-      final turnoversById = <UuidValue, Turnover>{};
-      final accounts = accountCubit.state.accountById.values;
-
-      for (final account in accounts) {
-        final apiId = account.apiId;
-        if (apiId == null) {
-          continue;
-        }
-        var pageIndex = 0;
-        var pageCount = 1;
-        const pageSize = 50;
-
-        while (pageIndex < pageCount) {
-          // Fetch transactions for each account
-          final transactionsResponse = await comdirectAPI.getTransactions(
-            accountId: apiId,
-            minBookingDate: _apiDateFormat.format(period.startInclusive),
-            maxBookingDate: _apiDateFormat.format(
-              Jiffy.parseFromDateTime(
-                period.endExclusive,
-              ).subtract(days: 1).dateTime,
-            ),
-            pageElementIndex: pageIndex * pageSize,
-            pageSize: pageSize,
-          );
-
-          // Collect turnovers for this account
-          for (final transaction in transactionsResponse.values) {
-            final counterPartInfo = _extractCounterPart(transaction);
-            final turnover = Turnover(
-              id: uuid.v4obj(),
-              createdAt: DateTime.now(),
-              accountId: account.id,
-              bookingDate: transaction.bookingDate,
-              amountValue: transaction.amount.value,
-              amountUnit: transaction.amount.unit,
-              counterPart: counterPartInfo.name,
-              counterIban: counterPartInfo.iban,
-              purpose: cleanPurpose(transaction.remittanceInfo),
-              apiId: transaction.reference,
-              apiRaw: jsonEncode(
-                // we mark all transactions as non-new here to prevent
-                // future syncs from telling the user that turnovers
-                // would have been updated just because the user visited
-                // their bank account and saw the transaction there.
-                transaction.copyWith(newTransaction: false).toJson(),
-              ),
-              apiTurnoverType: transaction.transactionType.key,
-            );
-            turnoversById[turnover.id] = turnover;
-          }
-
-          pageCount = (transactionsResponse.paging.matches / pageSize).ceil();
-          pageIndex++;
-        }
-      }
-
-      // we upsert in case the data changed or that our data extraction changed
-      final (newIds, existingIds) = await turnoverService.upsertTurnovers(
-        turnoversById.values,
-      );
-      log.i(
-        '${turnoversById.length} turnover(s) fetched and upserted successfully.',
-      );
-
-      // Auto-match turnovers with pending expenses
-      var autoMatchedCount = 0;
-      var unmatchedCount = 0;
-
-      // newIds are always unmatched, for existingIds we need to check if they are unmatched
-      final unmatchedTurnoverIds = [
-        ...await turnoverService.filterUnmatched(turnoverIds: existingIds),
-        ...newIds,
-      ];
-
-      for (final id in unmatchedTurnoverIds) {
-        final turnover = turnoversById[id];
-        if (turnover == null) {
-          log.e(
-            'Unexpected to not find a turnover that has been selected for matching.',
-          );
-          continue;
-        }
-        final match = await matchingService.autoMatchPerfectTagTurnover(
-          turnover,
-          isGuaranteedToBeUnmatched:
-              true, // because we filtered in batch which are unmatched
-        );
-        final matched = null != match;
-        if (matched) {
-          autoMatchedCount++;
-        } else {
-          unmatchedCount++;
-        }
-      }
-      log.i(
-        'Auto-matched $autoMatchedCount turnovers, $unmatchedCount remain unmatched',
+      final (autoMatchedCount, unmatchedCount) = await _autoMatch(
+        newIds: newIds,
+        existingIds: existingIds,
+        turnoversById: turnoversById,
       );
 
       return DataIngestResult.success(
@@ -217,6 +80,146 @@ class ComdirectService implements DataIngestor {
         errorMessage: 'unknown error: $e',
       );
     }
+  }
+
+  Future<
+    (List<Account> accounts, Map<UuidValue, Decimal?> realBalanceByAccountId)
+  >
+  _fetchAccountsAndStoreNew(Period period) async {
+    final uuid = Uuid();
+
+    final accounts = <Account>[];
+    final realBalanceByAccountId = <UuidValue, Decimal?>{};
+
+    var countNew = 0;
+
+    await accountCubit.loadAccounts();
+    final existingAccountsByApiId = accountCubit.state.accountById.values
+        .where((it) => it.apiId != null)
+        .associateBy((it) => it.apiId);
+
+    var index = 0;
+    var total = 1;
+    while (index < total) {
+      // Fetch account balances
+      final accountsPage = await comdirectAPI.getBalances(index: index);
+      total = accountsPage.paging.matches;
+      index += accountsPage.values.length;
+
+      // Store API balances for later use
+      final apiBalancesByApiId = <String, Decimal>{};
+      for (final a in accountsPage.values) {
+        apiBalancesByApiId[a.accountId] = a.balance.value;
+      }
+
+      for (final a in accountsPage.values) {
+        final apiId = a.accountId;
+        if (!existingAccountsByApiId.containsKey(apiId)) {
+          final account = Account(
+            id: uuid.v4obj(),
+            createdAt: DateTime.now(),
+            name: a.account.accountType.text,
+            identifier: a.account.iban,
+            apiId: apiId,
+            accountType: AccountType.checking,
+            syncSource: SyncSource.comdirect,
+            currency: a.balance.unit,
+            openingBalance: a.balance.value,
+            lastSyncDate: DateTime.now(),
+            isHidden: false,
+          );
+          await accountCubit.addAccount(account);
+          accounts.add(account);
+          countNew++;
+          realBalanceByAccountId[account.id] = a.balance.value;
+          log.i("New account stored");
+        }
+      }
+
+      // Update balances for existing comdirect accounts
+      if (existingAccountsByApiId.isNotEmpty) {
+        for (final account in existingAccountsByApiId.values) {
+          final apiId = account.apiId;
+          realBalanceByAccountId[account.id] = apiBalancesByApiId[apiId];
+          accounts.add(account);
+        }
+      }
+    }
+    log.i('$countNew new accounts stored successfully');
+    return (accounts, realBalanceByAccountId);
+  }
+
+  Future<
+    (
+      Iterable<UuidValue> newIds,
+      Iterable<UuidValue> existingIds,
+      Map<UuidValue, Turnover> turnoversById,
+    )
+  >
+  _fetchAndUpsertTurnovers(Iterable<Account> accounts, Period period) async {
+    final uuid = Uuid();
+    final turnoversById = <UuidValue, Turnover>{};
+    for (final account in accounts) {
+      final apiId = account.apiId;
+      if (apiId == null) {
+        continue;
+      }
+
+      var index = 0;
+      var total = 1;
+      while (index < total) {
+        // Fetch transactions for each account
+        final transactionsResponse = await comdirectAPI.getTransactions(
+          accountId: apiId,
+          minBookingDate: _apiDateFormat.format(period.startInclusive),
+          maxBookingDate: _apiDateFormat.format(
+            Jiffy.parseFromDateTime(
+              period.endExclusive,
+            ).subtract(days: 1).dateTime,
+          ),
+          index: index,
+          pageSize: 50,
+        );
+
+        total = transactionsResponse.paging.matches;
+        index += transactionsResponse.values.length;
+
+        // Collect turnovers for this account
+        for (final transaction in transactionsResponse.values) {
+          final counterPartInfo = _extractCounterPart(transaction);
+          final turnover = Turnover(
+            id: uuid.v4obj(),
+            createdAt: DateTime.now(),
+            accountId: account.id,
+            bookingDate: transaction.bookingDate,
+            amountValue: transaction.amount.value,
+            amountUnit: transaction.amount.unit,
+            counterPart: counterPartInfo.name,
+            counterIban: counterPartInfo.iban,
+            purpose: cleanPurpose(transaction.remittanceInfo),
+            apiId: transaction.reference,
+            apiRaw: jsonEncode(
+              // we mark all transactions as non-new here to prevent
+              // future syncs from telling the user that turnovers
+              // would have been updated just because the user visited
+              // their bank account and saw the transaction there.
+              transaction.copyWith(newTransaction: false).toJson(),
+            ),
+            apiTurnoverType: transaction.transactionType.key,
+          );
+          turnoversById[turnover.id] = turnover;
+        }
+      }
+    }
+
+    // we upsert in case the data changed or that our data extraction changed
+    final (newIds, existingIds) = await turnoverService.upsertTurnovers(
+      turnoversById.values,
+    );
+    log.i(
+      '${turnoversById.length} turnover(s) fetched and upserted successfully.',
+    );
+    return (newIds, existingIds, turnoversById);
   }
 
   /// Extracts the counterpart name and IBAN from a transaction.
@@ -276,5 +279,59 @@ class ComdirectService implements DataIngestor {
 
     // Combine lines and final trim
     return buffer.toString().trim();
+  }
+
+  Future<void> _reconcileBalances(
+    List<Account> accounts,
+    Map<UuidValue, Decimal?> realBalanceByAccountId,
+  ) async {
+    for (final account in accounts) {
+      final apiBalance = realBalanceByAccountId[account.id];
+      if (apiBalance != null) {
+        log.i('Reconciling balance for account ${account.name} to $apiBalance');
+        await accountCubit.syncBalanceFromReal(account, apiBalance);
+      }
+    }
+  }
+
+  Future<(int autoMatchedCount, int unmatchedCount)> _autoMatch({
+    required final Iterable<UuidValue> newIds,
+    required final Iterable<UuidValue> existingIds,
+    required final Map<UuidValue, Turnover> turnoversById,
+  }) async {
+    // Auto-match turnovers with pending expenses
+    var autoMatchedCount = 0;
+    var unmatchedCount = 0;
+
+    // newIds are always unmatched, for existingIds we need to check if they are unmatched
+    final unmatchedTurnoverIds = [
+      ...await turnoverService.filterUnmatched(turnoverIds: existingIds),
+      ...newIds,
+    ];
+
+    for (final id in unmatchedTurnoverIds) {
+      final turnover = turnoversById[id];
+      if (turnover == null) {
+        log.e(
+          'Unexpected to not find a turnover that has been selected for matching.',
+        );
+        continue;
+      }
+      final match = await matchingService.autoMatchPerfectTagTurnover(
+        turnover,
+        isGuaranteedToBeUnmatched:
+            true, // because we filtered in batch which are unmatched
+      );
+      final matched = null != match;
+      if (matched) {
+        autoMatchedCount++;
+      } else {
+        unmatchedCount++;
+      }
+    }
+    log.i(
+      'Auto-matched $autoMatchedCount turnovers, $unmatchedCount remain unmatched',
+    );
+    return (autoMatchedCount, unmatchedCount);
   }
 }

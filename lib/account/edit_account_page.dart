@@ -377,7 +377,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
             final newBalance =
                 (Decimal.fromInt(_currentBalanceScaled) / Decimal.fromInt(100))
                     .toDecimal(scaleOnInfinitePrecision: 2);
-            await accountCubit.updateBalanceFromReal(
+            await accountCubit.syncBalanceFromReal(
               _originalAccount,
               newBalance,
             );

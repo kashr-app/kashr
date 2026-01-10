@@ -349,7 +349,10 @@ class EnumText {
 
 @JsonSerializable()
 class PageIndex {
+  // index of first item
   final int index;
+
+  // count of total items
   final int matches;
 
   PageIndex({required this.index, required this.matches});
