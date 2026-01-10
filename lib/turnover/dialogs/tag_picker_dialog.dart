@@ -19,6 +19,9 @@ class TagPickerDialog extends StatefulWidget {
   final bool allowCreate;
   final TagSemantic? defaultSemantic;
 
+  /// [enforcedSemantic] overrides [defaultSemantic]
+  final TagSemantic? Function()? enforcedSemantic;
+
   const TagPickerDialog({
     super.key,
     this.filter,
@@ -26,13 +29,17 @@ class TagPickerDialog extends StatefulWidget {
     this.subtitle,
     this.allowCreate = true,
     this.defaultSemantic,
+    this.enforcedSemantic,
   });
 
   /// Shows the dialog and returns the selected/created tag or null if cancelled.
   ///
   /// If [filter] is provided, only tags matching the filter will be shown.
   /// If [allowCreate] is true, users can create new tags.
-  /// If [defaultSemantic] is provided, new tags will be created with that semantic.
+  /// If [defaultSemantic] is provided, new tags will be created with that
+  ///    semantic unless [enforcedSemantic] is set.
+  /// If [enforcedSemantic] is provided this semantic will be enforced no
+  ///     matter what [defaultSemantic] was provided.
   static Future<Tag?> show(
     BuildContext context, {
     bool Function(Tag tag)? filter,
@@ -40,6 +47,7 @@ class TagPickerDialog extends StatefulWidget {
     String? subtitle,
     bool allowCreate = true,
     TagSemantic? defaultSemantic,
+    TagSemantic? Function()? enforcedSemantic,
   }) {
     return showDialog<Tag>(
       context: context,
@@ -49,6 +57,7 @@ class TagPickerDialog extends StatefulWidget {
         subtitle: subtitle,
         allowCreate: allowCreate,
         defaultSemantic: defaultSemantic,
+        enforcedSemantic: enforcedSemantic,
       ),
     );
   }
@@ -173,6 +182,7 @@ class _TagPickerDialogState extends State<TagPickerDialog> {
                         context,
                         initialName: searchQuery,
                         initialSemantic: widget.defaultSemantic,
+                        enforcedSemantic: widget.enforcedSemantic,
                       );
                       if (context.mounted && newTag != null) {
                         Navigator.of(context).pop(newTag);

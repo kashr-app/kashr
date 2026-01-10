@@ -12,13 +12,19 @@ import 'package:uuid/uuid.dart';
 class TagEditBottomSheet extends StatefulWidget {
   final Tag? tag;
   final String? initialName;
+
+  /// [initialSemantic] might be overwritten by [enforcedSemantic]
   final TagSemantic? initialSemantic;
+
+  /// [enforcedSemantic] precedes [initialSemantic] and [tag.semantic]
+  final TagSemantic? Function()? enforcedSemantic;
 
   const TagEditBottomSheet({
     super.key,
     this.tag,
     this.initialName,
     this.initialSemantic,
+    this.enforcedSemantic,
   });
 
   /// Shows the bottom sheet and returns the created/edited tag or null if
@@ -28,6 +34,7 @@ class TagEditBottomSheet extends StatefulWidget {
     Tag? tag,
     String? initialName,
     TagSemantic? initialSemantic,
+    TagSemantic? Function()? enforcedSemantic,
   }) {
     return showModalBottomSheet<Tag>(
       context: context,
@@ -36,6 +43,7 @@ class TagEditBottomSheet extends StatefulWidget {
         tag: tag,
         initialName: initialName,
         initialSemantic: initialSemantic,
+        enforcedSemantic: enforcedSemantic,
       ),
     );
   }
@@ -75,13 +83,70 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
       text: widget.tag?.name ?? widget.initialName ?? '',
     );
     _selectedColor = ColorUtils.parseColor(widget.tag?.color);
-    _selectedSemantic = widget.tag?.semantic ?? widget.initialSemantic;
+    _selectedSemantic =
+        widget.enforcedSemantic?.call() ??
+        widget.tag?.semantic ??
+        widget.initialSemantic;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  void _showTransferExplanationDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: const Text('About Transfer Tags & Savings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _DialogSection(
+              icon: Icons.swap_horiz,
+              title: 'What are Transfer tags?',
+              description:
+                  'Transfer tags are for moving money between your accounts. '
+                  'These transactions don\'t affect your income or expenses.',
+            ),
+            const SizedBox(height: 16),
+            _DialogSection(
+              icon: Icons.savings_outlined,
+              title: 'Why not for Savings?',
+              description:
+                  'In Kashr, savings aren\'t separate accounts. You allocate '
+                  'savings across your existing accounts (one or multiple).',
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Have a dedicated savings account?',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            _AlternativeOption(
+              number: '1',
+              description: 'Simply check your account balance or',
+            ),
+            const SizedBox(height: 8),
+            _AlternativeOption(
+              number: '2',
+              description:
+                  'Create a savings tag and use savings adjustments to '
+                  'allocate part of your account balance as savings.',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -191,9 +256,6 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
                           decoration: const InputDecoration(
                             labelText: 'Tag Type',
                             border: OutlineInputBorder(),
-                            helperText:
-                                'Transfer tags exclude transactions from cashflow calculations',
-                            helperMaxLines: 2,
                           ),
                           items: const [
                             DropdownMenuItem(
@@ -205,8 +267,15 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
                               child: Text('Transfer'),
                             ),
                           ],
-                          onChanged: (value) =>
-                              setState(() => _selectedSemantic = value),
+                          onChanged: widget.enforcedSemantic != null
+                              ? null
+                              : (value) =>
+                                    setState(() => _selectedSemantic = value),
+                        ),
+                        const SizedBox(height: 8),
+                        _HelperTextWithMoreHelp(
+                          onHelpPressed: () =>
+                              _showTransferExplanationDialog(context),
                         ),
                         const SizedBox(height: 24),
                       ],
@@ -242,7 +311,9 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
                                   id: widget.tag?.id ?? const Uuid().v4obj(),
                                   name: name,
                                   color: colorString,
-                                  semantic: _selectedSemantic,
+                                  semantic:
+                                      widget.enforcedSemantic?.call() ??
+                                      _selectedSemantic,
                                 );
 
                                 if (isEditing) {
@@ -265,6 +336,143 @@ class _TagEditBottomSheetState extends State<TagEditBottomSheet> {
           );
         },
       ),
+    );
+  }
+}
+
+class _HelperTextWithMoreHelp extends StatelessWidget {
+  final VoidCallback onHelpPressed;
+
+  const _HelperTextWithMoreHelp({required this.onHelpPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final helperStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            'Transfer tags exclude transactions from cashflow calculations '
+            'and cannot be used for savings.',
+            style: helperStyle,
+          ),
+        ),
+        InkWell(
+          onTap: onHelpPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(
+              Icons.help_outline,
+              size: 20,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DialogSection extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+
+  const _DialogSection({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AlternativeOption extends StatelessWidget {
+  final String number;
+  final String description;
+
+  const _AlternativeOption({required this.number, required this.description});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.secondaryContainer,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(description, style: theme.textTheme.bodyMedium),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -129,7 +129,12 @@ class _CreateSavingsDialogState extends State<CreateSavingsDialog> {
                 // Tag selection
                 InkWell(
                   onTap: () async {
-                    final selectedTag = await TagPickerDialog.show(context);
+                    final selectedTag = await TagPickerDialog.show(
+                      context,
+                      allowCreate: true,
+                      enforcedSemantic: () => null,
+                      filter: (tag) => tag.isNormal,
+                    );
                     if (selectedTag != null) {
                       setState(() {
                         _selectedTag = selectedTag;
