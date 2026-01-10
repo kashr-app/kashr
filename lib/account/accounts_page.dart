@@ -62,12 +62,29 @@ class AccountsPage extends StatelessWidget {
             }
 
             if (state.accountById.isEmpty) {
+              final colorScheme = Theme.of(context).colorScheme;
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('No accounts yet'),
+                    Icon(
+                      Icons.account_balance_outlined,
+                      size: 64,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(height: 16),
+                    Text(
+                      'No accounts yet',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Create an account to get started',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 24),
                     FilledButton.icon(
                       onPressed: () => _navigateToCreateAccount(context),
                       icon: const Icon(Icons.add),
