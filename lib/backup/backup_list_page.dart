@@ -775,8 +775,6 @@ class _BackupCard extends StatelessWidget {
     );
 
     if (confirmed == true) {
-      // give the user some time to read the success message
-      await Future.delayed(const Duration(seconds: 3));
       if (context.mounted) {
         await context.read<BackupCubit>().deleteBackup(backup);
       }
