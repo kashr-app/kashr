@@ -217,9 +217,11 @@ class _BackupListView extends StatelessWidget {
     return Column(
       children: [
         _buildNextcloudStatus(context, localBackups, refresh),
-        if (localBackups.isEmpty)
-          _buildNoBackups(context)
-        else ...[
+        if (localBackups.isEmpty) ...[
+          Spacer(),
+          _buildNoBackups(context),
+          Spacer(),
+        ] else ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Align(
