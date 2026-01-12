@@ -1,8 +1,17 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 
-const iconIncome = Icons.add_circle_outline;
+const iconAccounts = Icons.account_balance_outlined;
+const iconAnalytics = Icons.analytics_outlined;
 const iconExpense = Icons.remove_circle_outline;
+const iconIncome = Icons.add_circle_outline;
+const iconSavings = Icons.savings_outlined;
+const iconSettings = Icons.settings_outlined;
+const iconTurnover = Icons.list_alt_outlined;
+
+const iconThemeMode = Icons.brightness_6;
+const iconDarkMode = Icons.dark_mode;
+const iconLightMode = Icons.light_mode;
 
 class ThemeBuilder {
   ThemeData lightMode() {

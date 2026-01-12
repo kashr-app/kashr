@@ -9,6 +9,7 @@ import 'package:kashr/account/edit_account_page.dart';
 import 'package:kashr/analytics/analytics_page.dart';
 import 'package:kashr/backup/backup_list_page.dart';
 import 'package:kashr/comdirect/comdirect_login_page.dart';
+import 'package:kashr/onboarding/onboarding_page.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/account/account_selector_dialog.dart';
@@ -32,7 +33,9 @@ import 'package:kashr/home/widgets/unallocated_turnovers_section.dart';
 import 'package:kashr/logging/log_viewer_page.dart';
 import 'package:kashr/settings/amazon_order_detection_page.dart';
 import 'package:kashr/settings/banks_page.dart';
+import 'package:kashr/settings/help_page.dart';
 import 'package:kashr/settings/settings_page.dart';
+import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
@@ -82,6 +85,7 @@ part '../_gen/home/home_page.g.dart';
         TypedGoRoute<AmazonOrderDetectionRoute>(
           path: 'amazon-order-detection',
         ),
+        TypedGoRoute<HelpRoute>(path: 'help'),
       ],
     ),
     TypedGoRoute<TurnoversRoute>(
@@ -111,6 +115,7 @@ part '../_gen/home/home_page.g.dart';
       routes: [TypedGoRoute<SavingsDetailRoute>(path: ':savingsId')],
     ),
     TypedGoRoute<AnalyticsRoute>(path: 'analytics'),
+    TypedGoRoute<OnboardingRoute>(path: 'onboarding'),
   ],
 )
 class HomeRoute extends GoRouteData with $HomeRoute {
@@ -142,27 +147,27 @@ class HomePage extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () => const AccountsRoute().go(context),
-            icon: const Icon(Icons.account_balance_outlined),
+            icon: const Icon(iconAccounts),
             tooltip: 'Accounts',
           ),
           IconButton(
             onPressed: () => const TurnoversRoute().go(context),
-            icon: const Icon(Icons.list_alt_outlined),
+            icon: const Icon(iconTurnover),
             tooltip: 'Turnovers',
           ),
           IconButton(
             onPressed: () => const SavingsRoute().go(context),
-            icon: const Icon(Icons.savings_outlined),
+            icon: const Icon(iconSavings),
             tooltip: 'Savings',
           ),
           IconButton(
             onPressed: () => const AnalyticsRoute().go(context),
-            icon: const Icon(Icons.analytics_outlined),
+            icon: const Icon(iconAnalytics),
             tooltip: 'Analytics',
           ),
           IconButton(
             onPressed: () => const SettingsRoute().go(context),
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(iconSettings),
             tooltip: 'Settings',
           ),
         ],

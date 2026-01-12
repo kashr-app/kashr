@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kashr/backup/backup_list_page.dart';
 import 'package:kashr/db/db_helper.dart';
@@ -7,15 +10,14 @@ import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/local_auth/auth_delay.dart';
 import 'package:kashr/settings/amazon_order_detection_page.dart';
 import 'package:kashr/settings/banks_page.dart';
+import 'package:kashr/settings/help_page.dart';
 import 'package:kashr/settings/model/week_start_day.dart';
 import 'package:kashr/settings/settings_cubit.dart';
 import 'package:kashr/settings/settings_state.dart';
+import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/tag_turnovers_page.dart';
 import 'package:kashr/turnover/tags_page.dart';
 import 'package:kashr/turnover/transfers_page.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -78,6 +80,12 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                ListTile(
+                  title: const Text('Help'),
+                  subtitle: const Text('App guide, support, and tips'),
+                  leading: const Icon(Icons.help_outline),
+                  onTap: () => const HelpRoute().go(context),
+                ),
                 _SettingsHeadline(label: 'Experience'),
                 BlocBuilder<SettingsCubit, SettingsState>(
                   builder: (context, state) => Column(
@@ -284,21 +292,21 @@ class _SettingsPageState extends State<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.brightness_6),
+                leading: const Icon(iconThemeMode),
                 title: Text(ThemeMode.system.title()),
                 onTap: () {
                   Navigator.pop(context, ThemeMode.system);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.light_mode),
+                leading: const Icon(iconLightMode),
                 title: Text(ThemeMode.light.title()),
                 onTap: () {
                   Navigator.pop(context, ThemeMode.light);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.dark_mode),
+                leading: const Icon(iconDarkMode),
                 title: Text(ThemeMode.dark.title()),
                 onTap: () {
                   Navigator.pop(context, ThemeMode.dark);
@@ -533,6 +541,7 @@ class _SettingsPageState extends State<SettingsPage> {
       },
     );
   }
+
 }
 
 class _SettingsHeadline extends StatelessWidget {

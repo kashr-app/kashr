@@ -1,7 +1,7 @@
 ## v2
 
 - Recurring transactions
-- Date of balance sync on synced accounts
+- ✅ ~~Date of balance sync on synced accounts~~
 - UI Cleanup & Nicer Design
 - 85% Test coverage of repositories and cubits
 

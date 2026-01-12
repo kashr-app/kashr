@@ -3,6 +3,7 @@ import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/local_auth/auth_delay.dart';
 import 'package:kashr/settings/model/amazon_order_behavior.dart';
+import 'package:kashr/settings/model/feature_tip.dart';
 import 'package:kashr/settings/model/week_start_day.dart';
 import 'package:kashr/settings/settings_repository.dart';
 import 'package:kashr/settings/settings_state.dart';
@@ -86,6 +87,35 @@ class SettingsCubit extends Cubit<SettingsState> {
   Future<void> setAmazonTld(AmazonTld value) async {
     final newState = state.copyWith(amazonTld: value);
     await _upsertAndEmit('amazonTld', newState);
+  }
+
+  Future<void> completeOnboarding() async {
+    final newState = state.copyWith(onboardingCompletedOn: DateTime.now());
+    await _upsertAndEmit('onboardingCompletedOn', newState);
+  }
+
+  Future<void> resetOnboarding() async {
+    final newState = state.copyWith(onboardingCompletedOn: null);
+    await _upsertAndEmit('onboardingCompletedOn', newState);
+  }
+
+  Future<void> setFeatureTipShown(FeatureTip tip, bool shown) async {
+    final updated = Map<FeatureTip, bool>.from(state.featureTipsShown);
+    updated[tip] = shown;
+    final newState = state.copyWith(featureTipsShown: updated);
+    await _upsertAndEmit('featureTipsShown', newState);
+  }
+
+  Future<void> resetFeatureTip(FeatureTip tip) async {
+    final updated = Map<FeatureTip, bool>.from(state.featureTipsShown);
+    updated.remove(tip);
+    final newState = state.copyWith(featureTipsShown: updated);
+    await _upsertAndEmit('featureTipsShown', newState);
+  }
+
+  Future<void> resetAllFeatureTips() async {
+    final newState = state.copyWith(featureTipsShown: {});
+    await _upsertAndEmit('featureTipsShown', newState);
   }
 
   Future<void> _configureJiffy(WeekStartDay weekStartDay) async {

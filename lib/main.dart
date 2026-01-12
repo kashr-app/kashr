@@ -35,7 +35,10 @@ void main() async {
       developer.log('WidgetsFlutterBinding initialized', name: 'kashr.main');
 
       await Jiffy.setLocale('en');
-      developer.log('Jiffy initialized with default locale', name: 'kashr.main');
+      developer.log(
+        'Jiffy initialized with default locale',
+        name: 'kashr.main',
+      );
 
       final loggingModule = LoggingModule();
       developer.log('LoggingModule created', name: 'kashr.main');
@@ -168,7 +171,12 @@ class _MyAppState extends State<MyApp> {
       child: BlocListener<LocalAuthCubit, LocalAuthState>(
         // ensure to re-evaluate router redirects when auth state changes.
         listener: (context, state) => widget.router.router.refresh(),
-        child: BlocBuilder<SettingsCubit, SettingsState>(
+        child: BlocConsumer<SettingsCubit, SettingsState>(
+          // refresh router when onboarding state changes
+          listenWhen: (previous, current) =>
+              previous.onboardingCompletedOn == null &&
+              current.onboardingCompletedOn != null,
+          listener: (context, state) => widget.router.router.refresh(),
           builder: (context, state) {
             return MaterialApp.router(
               title: 'Kashr',
