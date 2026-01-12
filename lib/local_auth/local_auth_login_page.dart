@@ -28,7 +28,6 @@ class _LocalAuthLoginPageState extends State<LocalAuthLoginPage> {
   void initState() {
     super.initState();
     final currentState = context.read<LocalAuthCubit>().state;
-    // Auto-start authentication unless the previous attempt was cancelled by user
     final shouldAutoStart = switch (currentState) {
       LocalAuthError() => false,
       LocalAuthLoading() => false,
