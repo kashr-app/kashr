@@ -224,11 +224,18 @@ class _BackupListView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Align(
               alignment: AlignmentGeometry.centerLeft,
-              child: Text(
-                '${localBackups.length} local backups',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${localBackups.length} local backups',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  _buildImportFile(context),
+                ],
               ),
             ),
           ),
@@ -244,6 +251,16 @@ class _BackupListView extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildImportFile(BuildContext context) {
+    return TextButton.icon(
+      icon: Icon(Icons.file_open_outlined),
+      onPressed: () async {
+        await context.read<BackupCubit>().importBackup();
+      },
+      label: Text('Import File'),
     );
   }
 
@@ -438,6 +455,9 @@ class _BackupListView extends StatelessWidget {
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
+          const SizedBox(height: 16),
+          Text('OR'),
+          _buildImportFile(context),
         ],
       ),
     );

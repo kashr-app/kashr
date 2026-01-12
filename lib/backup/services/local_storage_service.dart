@@ -108,14 +108,17 @@ class LocalStorageService {
         final sourceFile = File(sourcePath);
 
         // Copy to temp directory
-        final tempDir = await getTemporaryDirectory();
-        final tempFile = File(
-          '${tempDir.path}/${sourceFile.path.split('/').last}',
+        final backupsDir = await getBackupsDirectory();
+        final targetFile = File(
+          '${backupsDir.path}/${sourceFile.path.split('/').last}',
         );
-        await sourceFile.copy(tempFile.path);
+        if (targetFile.existsSync()) {
+          throw Exception('Target file already exists');
+        }
+        await sourceFile.copy(targetFile.path);
 
         log.i('Imported backup from: $sourcePath');
-        return tempFile;
+        return targetFile;
       }
 
       log.i('Import cancelled by user');

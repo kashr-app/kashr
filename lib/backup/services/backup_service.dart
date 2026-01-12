@@ -456,6 +456,18 @@ class BackupService {
     }
   }
 
+  /// Import backup from user-chosen location
+  Future<bool> importBackup() async {
+    try {
+      final file = await _localStorageService.importBackup();
+      log.d('Imported backup: ${file?.path}');
+      return file != null;
+    } catch (e, stack) {
+      log.e('Failed to export backup', error: e, stackTrace: stack);
+      rethrow;
+    }
+  }
+
   Future<Directory> getLocalBackupsDirectory() {
     return _localStorageService.getBackupsDirectory();
   }

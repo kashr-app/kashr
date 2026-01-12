@@ -10,7 +10,8 @@ class BackupCubit extends Cubit<BackupState> {
   final BackupService _backupService;
   final Logger log;
 
-  BackupCubit(this._backupService, this.log) : super(const BackupState.initial());
+  BackupCubit(this._backupService, this.log)
+    : super(const BackupState.initial());
 
   /// Load all backups and configuration
   Future<void> loadBackups() async {
@@ -164,6 +165,33 @@ class BackupCubit extends Cubit<BackupState> {
       emit(
         BackupState.error(
           message: 'Failed to export backup: ${e.toString()}',
+          exception: e as Exception?,
+        ),
+      );
+      // Reload backups even on error to show current state
+      await loadBackups();
+    }
+  }
+
+  Future<void> importBackup() async {
+    emit(const BackupState.loading(operation: 'Importing backup...'));
+
+    try {
+      final success = await _backupService.importBackup();
+      if (success) {
+        emit(
+          const BackupState.success(
+            message: 'File imported successfully. You can now restore it.',
+          ),
+        );
+      }
+      // Reload backups to return to normal state
+      await loadBackups();
+    } catch (e, stack) {
+      log.e('Failed to import backup', error: e, stackTrace: stack);
+      emit(
+        BackupState.error(
+          message: 'Failed to import backup: ${e.toString()}',
           exception: e as Exception?,
         ),
       );
