@@ -27,9 +27,23 @@ class _LocalAuthLoginPageState extends State<LocalAuthLoginPage> {
   @override
   void initState() {
     super.initState();
-    // Trigger authentication as soon as the page is opened unless the user closed the app (logged out).
-    if (context.read<LocalAuthCubit>().state is! LocalAuthLoggedOut) {
-      _startAuthentication();
+    final currentState = context.read<LocalAuthCubit>().state;
+    // Auto-start authentication unless the previous attempt was cancelled by user
+    final shouldAutoStart = switch (currentState) {
+      LocalAuthError() => false,
+      LocalAuthLoading() => false,
+      LocalAuthSuccess() => false,
+      LocalAuthInitial() => true,
+      LocalAuthLoggedOut() => true,
+    };
+
+    if (shouldAutoStart) {
+      // Delay slightly to ensure the widget is fully mounted
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _startAuthentication();
+        }
+      });
     }
   }
 
