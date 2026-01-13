@@ -1,4 +1,4 @@
-import 'package:kashr/home/widgets/dashboard_hint.dart';
+import 'package:kashr/dashboard/widgets/dashboard_hint.dart';
 import 'package:kashr/turnover/model/transfers_filter.dart';
 import 'package:kashr/turnover/transfers_page.dart';
 import 'package:flutter/material.dart';

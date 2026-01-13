@@ -1,6 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/currency.dart';
-import 'package:kashr/home/widgets/dashboard_hint.dart';
+import 'package:kashr/dashboard/widgets/dashboard_hint.dart';
 import 'package:kashr/turnover/pending_turnovers_page.dart';
 import 'package:flutter/material.dart';
 

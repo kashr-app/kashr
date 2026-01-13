@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/logging/cubit/log_viewer_cubit.dart';
 import 'package:kashr/logging/log_viewer_state.dart';
 import 'package:kashr/logging/model/log_entry.dart';

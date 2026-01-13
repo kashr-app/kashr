@@ -1,128 +1,56 @@
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:kashr/account/account_all_turnovers_page.dart';
-import 'package:kashr/account/account_details_page.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kashr/account/accounts_page.dart';
-import 'package:kashr/account/create_account_page.dart';
-import 'package:kashr/account/edit_account_page.dart';
 import 'package:kashr/analytics/analytics_page.dart';
-import 'package:kashr/backup/backup_list_page.dart';
-import 'package:kashr/comdirect/comdirect_login_page.dart';
-import 'package:kashr/onboarding/onboarding_page.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/account/account_selector_dialog.dart';
 import 'package:kashr/account/dual_account_selector.dart';
-import 'package:kashr/home/widgets/unallocated_hint.dart';
+import 'package:kashr/app_gate.dart';
+import 'package:kashr/dashboard/widgets/unallocated_hint.dart';
 import 'package:kashr/logging/services/log_service.dart';
-import 'package:kashr/savings/savings_detail_page.dart';
 import 'package:kashr/savings/savings_overview_page.dart';
-import 'package:kashr/home/cubit/dashboard_cubit.dart';
-import 'package:kashr/home/cubit/dashboard_state.dart';
+import 'package:kashr/dashboard/cubit/dashboard_cubit.dart';
+import 'package:kashr/dashboard/cubit/dashboard_state.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/model/account.dart';
-import 'package:kashr/home/widgets/cashflow_card.dart';
-import 'package:kashr/home/widgets/income_summary_card.dart';
-import 'package:kashr/home/widgets/load_bank_data_section.dart';
-import 'package:kashr/home/widgets/pending_turnovers_hint.dart';
-import 'package:kashr/home/widgets/transfers_need_review_hint.dart';
-import 'package:kashr/home/widgets/spending_summary_card.dart';
-import 'package:kashr/home/widgets/transfer_summary_card.dart';
-import 'package:kashr/home/widgets/unallocated_turnovers_section.dart';
-import 'package:kashr/logging/log_viewer_page.dart';
-import 'package:kashr/settings/amazon_order_detection_page.dart';
-import 'package:kashr/settings/banks_page.dart';
-import 'package:kashr/settings/help_page.dart';
+import 'package:kashr/dashboard/widgets/cashflow_card.dart';
+import 'package:kashr/dashboard/widgets/income_summary_card.dart';
+import 'package:kashr/dashboard/widgets/load_bank_data_section.dart';
+import 'package:kashr/dashboard/widgets/pending_turnovers_hint.dart';
+import 'package:kashr/dashboard/widgets/transfers_need_review_hint.dart';
+import 'package:kashr/dashboard/widgets/spending_summary_card.dart';
+import 'package:kashr/dashboard/widgets/transfer_summary_card.dart';
+import 'package:kashr/dashboard/widgets/unallocated_turnovers_section.dart';
 import 'package:kashr/settings/settings_page.dart';
 import 'package:kashr/theme.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
-import 'package:kashr/turnover/model/tag_turnover_sort.dart';
-import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
-import 'package:kashr/turnover/model/transfers_filter.dart';
 import 'package:kashr/turnover/model/turnover.dart';
-import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
 import 'package:kashr/turnover/services/turnover_service.dart';
-import 'package:kashr/turnover/tag_turnovers_page.dart';
 import 'package:kashr/turnover/widgets/quick_transfer_entry_sheet.dart';
 import 'package:kashr/turnover/widgets/quick_turnover_entry_sheet.dart';
-import 'package:kashr/turnover/model/turnover_sort.dart';
-import 'package:kashr/turnover/tags_page.dart';
-import 'package:kashr/turnover/turnover_tags_page.dart';
-import 'package:kashr/turnover/pending_turnovers_page.dart';
-import 'package:kashr/turnover/transfer_editor_page.dart';
-import 'package:kashr/turnover/transfers_page.dart';
 import 'package:kashr/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
-part '../_gen/home/home_page.g.dart';
-
-@TypedGoRoute<HomeRoute>(
-  path: '/',
-  routes: <TypedGoRoute<GoRouteData>>[
-    TypedGoRoute<SettingsRoute>(
-      path: 'settings',
-      routes: [
-        TypedGoRoute<BanksRoute>(
-          path: 'banks',
-          routes: [TypedGoRoute<ComdirectLoginRoute>(path: 'comdirect')],
-        ),
-        TypedGoRoute<BackupListRoute>(
-          path: 'backups',
-          routes: [
-            TypedGoRoute<NextcloudSettingsRoute>(path: 'nextcloud-settings'),
-          ],
-        ),
-        TypedGoRoute<TagsRoute>(path: 'tags'),
-        TypedGoRoute<TagTurnoversRoute>(path: 'tagturnovers'),
-        TypedGoRoute<LogViewerRoute>(path: 'logs'),
-        TypedGoRoute<AmazonOrderDetectionRoute>(
-          path: 'amazon-order-detection',
-        ),
-        TypedGoRoute<HelpRoute>(path: 'help'),
-      ],
-    ),
-    TypedGoRoute<TurnoversRoute>(
-      path: 'turnovers',
-      routes: [TypedGoRoute<TurnoverTagsRoute>(path: ':turnoverId/tags')],
-    ),
-    TypedGoRoute<PendingTurnoversRoute>(path: 'pending-turnovers'),
-    TypedGoRoute<TransfersRoute>(
-      path: 'transfers',
-      routes: [TypedGoRoute<TransferEditorRoute>(path: ':transferId/edit')],
-    ),
-    TypedGoRoute<AccountsRoute>(
-      path: 'accounts',
-      routes: [
-        TypedGoRoute<CreateAccountRoute>(path: 'create'),
-        TypedGoRoute<AccountDetailsRoute>(
-          path: ':accountId',
-          routes: [
-            TypedGoRoute<EditAccountRoute>(path: 'edit'),
-            TypedGoRoute<AccountAllTurnoversRoute>(path: 'turnovers'),
-          ],
-        ),
-      ],
-    ),
-    TypedGoRoute<SavingsRoute>(
-      path: 'savings',
-      routes: [TypedGoRoute<SavingsDetailRoute>(path: ':savingsId')],
-    ),
-    TypedGoRoute<AnalyticsRoute>(path: 'analytics'),
-    TypedGoRoute<OnboardingRoute>(path: 'onboarding'),
-  ],
-)
-class HomeRoute extends GoRouteData with $HomeRoute {
-  const HomeRoute();
-
+class DashboardRoute extends GoRouteData with $DashboardRoute {
+  const DashboardRoute();
   @override
   Widget build(BuildContext context, GoRouterState state) {
+    return const DashboardPage();
+  }
+}
+
+class DashboardPage extends StatelessWidget {
+  const DashboardPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => DashboardCubit(
         context.read<TurnoverRepository>(),
@@ -132,13 +60,13 @@ class HomeRoute extends GoRouteData with $HomeRoute {
         context.read<TransferRepository>(),
         context.read<LogService>().log,
       )..loadPeriodData(),
-      child: const HomePage(),
+      child: const _DashboardPage(),
     );
   }
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class _DashboardPage extends StatelessWidget {
+  const _DashboardPage();
 
   @override
   Widget build(BuildContext context) {

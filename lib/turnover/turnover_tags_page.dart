@@ -1,7 +1,7 @@
 import 'package:kashr/account/model/account_repository.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/core/dialogs/discard_changes_dialog.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';

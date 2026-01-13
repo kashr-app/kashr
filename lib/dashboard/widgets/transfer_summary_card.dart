@@ -2,7 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/status.dart';
-import 'package:kashr/home/widgets/tag_summary_row.dart';
+import 'package:kashr/dashboard/widgets/tag_summary_row.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/model/tag.dart';

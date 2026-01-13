@@ -5,7 +5,7 @@ import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/core/currency.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:kashr/savings/savings_detail_page.dart';
 import 'package:kashr/savings/services/savings_balance_service.dart';

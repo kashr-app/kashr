@@ -1,13 +1,11 @@
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/dashboard/dashboard_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/local_auth/cubit/local_auth_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 
-part '../_gen/local_auth/local_auth_login_page.g.dart';
-
-@TypedGoRoute<LocalAuthLoginRoute>(path: '/auth')
 class LocalAuthLoginRoute extends GoRouteData with $LocalAuthLoginRoute {
   const LocalAuthLoginRoute();
   @override
@@ -80,17 +78,17 @@ class _LocalAuthLoginPageState extends State<LocalAuthLoginPage> {
               case LocalAuthSuccess():
 
                 /// Typically the user should not see this screen
-                /// (or only for a single frame) because the app router
-                /// will redirect on auth changes automatically.
-                /// This here rather acts as a fallback.
+                /// (or only for a single frame) because the AppGateShell
+                /// would detect auth changes and redirect to saved location
+                /// or dashboard automatically. This here acts as a fallback.
                 return Column(
                   children: [
                     const Text("Login Successfull"),
                     ElevatedButton(
                       onPressed: () {
-                        const HomeRoute().go(context);
+                        const DashboardRoute().go(context);
                       },
-                      child: const Text("To home page"),
+                      child: const Text("Enter app"),
                     ),
                   ],
                 );

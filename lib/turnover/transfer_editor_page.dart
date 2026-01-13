@@ -3,7 +3,7 @@ import 'package:kashr/account/account_selector_dialog.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/account/model/account.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';

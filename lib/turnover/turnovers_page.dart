@@ -5,7 +5,7 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/map_values.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/turnover/model/tag_turnover_change.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';

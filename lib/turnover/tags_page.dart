@@ -1,5 +1,5 @@
 import 'package:kashr/core/color_utils.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/savings/model/savings_repository.dart';
 import 'package:kashr/savings/services/savings_balance_service.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';

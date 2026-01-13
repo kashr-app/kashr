@@ -90,4 +90,12 @@ class LocalAuthCubit extends Cubit<LocalAuthState> {
     log.d("Popping saved location: $location");
     return location;
   }
+
+  /// Saves a location to return to after authentication.
+  ///
+  /// Used when a user deep links to a protected route while unauthenticated.
+  void saveLocationForLater(String location) {
+    log.d("Saving location for later: $location");
+    _savedLocation = location;
+  }
 }

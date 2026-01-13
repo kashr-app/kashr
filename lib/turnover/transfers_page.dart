@@ -1,5 +1,5 @@
 import 'package:kashr/core/status.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';

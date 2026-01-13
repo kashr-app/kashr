@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part '../../_gen/home/model/tag_prediction.freezed.dart';
+part '../../_gen/dashboard/model/tag_prediction.freezed.dart';
 
 /// Prediction for a tag's spending based on historical data.
 @freezed

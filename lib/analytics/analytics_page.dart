@@ -2,7 +2,7 @@ import 'package:kashr/analytics/cubit/analytics_cubit.dart';
 import 'package:kashr/analytics/cubit/analytics_state.dart';
 import 'package:kashr/analytics/widgets/analytics_chart.dart';
 import 'package:kashr/analytics/widgets/tag_filter_section.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:flutter/material.dart';

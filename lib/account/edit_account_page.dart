@@ -6,7 +6,7 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/model/account_repository.dart';
 import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/currency.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';

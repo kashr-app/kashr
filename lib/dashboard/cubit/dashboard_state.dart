@@ -1,14 +1,14 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/core/model/period.dart';
-import 'package:kashr/home/model/tag_prediction.dart';
+import 'package:kashr/dashboard/model/tag_prediction.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_with_tag_turnovers.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../_gen/home/cubit/dashboard_state.freezed.dart';
+part '../../_gen/dashboard/cubit/dashboard_state.freezed.dart';
 
 @freezed
 abstract class DashboardState with _$DashboardState {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/settings/model/amazon_order_behavior.dart';
 import 'package:kashr/settings/settings_cubit.dart';
 import 'package:kashr/settings/settings_state.dart';

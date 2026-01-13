@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:kashr/widgets/floating_bubbles.dart';
 
-class OnboardingWelcome extends StatefulWidget {
-  const OnboardingWelcome({super.key});
+class SplashPage extends StatefulWidget {
+  const SplashPage({super.key});
 
   @override
-  State<OnboardingWelcome> createState() => _OnboardingWelcomeState();
+  State<SplashPage> createState() => _SplashPageState();
 }
 
-class _OnboardingWelcomeState extends State<OnboardingWelcome>
+class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _logoIconScaleAnimation;
@@ -74,11 +74,15 @@ class _OnboardingWelcomeState extends State<OnboardingWelcome>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Stack(
-      children: [
-        const FloatingBubbles(),
-        _buildContent(context, colorScheme),
-      ],
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            const FloatingBubbles(),
+            _buildContent(context, colorScheme),
+          ],
+        ),
+      ),
     );
   }
 
@@ -163,38 +167,10 @@ class _OnboardingWelcomeState extends State<OnboardingWelcome>
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 48),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.privacy_tip_outlined,
-                      size: 16,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Privacy-first',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(
-                      Icons.offline_bolt_outlined,
-                      size: 16,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Simple to use',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                  children: [CircularProgressIndicator()],
                 ),
               ],
             ),

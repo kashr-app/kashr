@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/turnover/dialogs/tag_turnover_editor_dialog.dart';
 import 'package:kashr/turnover/dialogs/tag_turnover_info_dialog.dart';

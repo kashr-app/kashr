@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/dashboard/dashboard_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/onboarding/widgets/onboarding_core_concepts.dart';
 import 'package:kashr/onboarding/widgets/onboarding_privacy.dart';
 import 'package:kashr/onboarding/widgets/onboarding_ready.dart';
 import 'package:kashr/onboarding/widgets/onboarding_welcome.dart';
 import 'package:kashr/settings/settings_cubit.dart';
 
+enum OnComplete { popContext, redirectToDashboard }
+
 class OnboardingRoute extends GoRouteData with $OnboardingRoute {
   const OnboardingRoute();
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return const OnboardingPage();
+    return const OnboardingPage(onComplete: OnComplete.redirectToDashboard);
   }
 }
 
 class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({super.key});
+  final OnComplete onComplete;
+  const OnboardingPage({super.key, this.onComplete = OnComplete.popContext});
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -82,8 +86,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (cubit.state.onboardingCompletedOn == null) {
       await context.read<SettingsCubit>().completeOnboarding();
     }
-    if (mounted) {
-      context.pop();
+    if (!mounted) {
+      return;
+    }
+    switch (widget.onComplete) {
+      case OnComplete.popContext:
+        context.pop();
+      case OnComplete.redirectToDashboard:
+        DashboardRoute().go(context);
     }
   }
 

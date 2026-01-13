@@ -64,7 +64,11 @@ void main() async {
       developer.log('Starting runApp()', name: 'kashr.main');
       runApp(
         RestartWidget(
-          child: MyApp(loggingModule, AppRouter(loggingModule.logService.log)),
+          child: MyApp(
+            //
+            loggingModule,
+            AppRouter(),
+          ),
         ),
       );
       developer.log('runApp() completed', name: 'kashr.main');

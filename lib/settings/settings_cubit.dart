@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:intl/intl.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/logging/services/log_service.dart';
@@ -20,12 +22,25 @@ class SettingsCubit extends Cubit<SettingsState> {
     load();
   }
 
-  Future<void> load() async {
+  Completer<SettingsState>? _loadFuture;
+
+  bool _initialized = false;
+  bool get initialized => _initialized;
+
+  Future<SettingsState> load() async {
+    if (_loadFuture != null) {
+      return _loadFuture!.future;
+    }
+    _loadFuture = Completer();
     final stored = await _repository.loadAll();
     emit(stored);
 
     _logService.setLogLevel(stored.logLevel);
     await _configureJiffy(stored.weekStartDay);
+    _loadFuture!.complete(stored);
+    _loadFuture = null;
+    _initialized = true;
+    return stored;
   }
 
   Future<void> setTheme(ThemeMode value) async {

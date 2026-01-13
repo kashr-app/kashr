@@ -1,4 +1,4 @@
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';

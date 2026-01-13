@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kashr/backup/backup_list_page.dart';
 import 'package:kashr/db/db_helper.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/logging/log_viewer_page.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/local_auth/auth_delay.dart';

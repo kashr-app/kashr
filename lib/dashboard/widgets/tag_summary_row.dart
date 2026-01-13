@@ -2,7 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:kashr/core/color_utils.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/model/period.dart';
-import 'package:kashr/home/model/tag_prediction.dart';
+import 'package:kashr/dashboard/model/tag_prediction.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:flutter/material.dart';
 

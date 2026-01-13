@@ -12,7 +12,8 @@ import 'package:kashr/backup/widgets/restore_confirmation_dialog.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/restart_widget.dart';
 import 'package:kashr/core/status.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/dashboard/dashboard_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -749,7 +750,7 @@ class _BackupCard extends StatelessWidget {
         await Future.delayed(const Duration(seconds: 2));
         // not really a restart but we re-new widget state etc
         //but still would like the user to restart the app
-        goRouter.go(HomeRoute().location);
+        goRouter.go(DashboardRoute().location);
         restarter?.restart();
       }
     }

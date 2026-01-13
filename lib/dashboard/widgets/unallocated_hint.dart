@@ -1,7 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:kashr/core/currency.dart';
-import 'package:kashr/home/widgets/dashboard_hint.dart';
+import 'package:kashr/dashboard/widgets/dashboard_hint.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/model/turnover_sort.dart';
 import 'package:kashr/turnover/turnovers_page.dart';

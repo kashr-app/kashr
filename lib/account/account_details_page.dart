@@ -9,7 +9,7 @@ import 'package:kashr/account/edit_account_page.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/color_utils.dart';
 import 'package:kashr/core/currency.dart';
-import 'package:kashr/home/home_page.dart';
+import 'package:kashr/app_gate.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:kashr/savings/savings_detail_page.dart';
 import 'package:kashr/savings/services/savings_balance_service.dart';
