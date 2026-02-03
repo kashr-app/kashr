@@ -484,6 +484,7 @@ class _BackupListView extends StatelessWidget {
                 width: double.maxFinite,
                 child: ListView.builder(
                   shrinkWrap: true,
+                  reverse: true,
                   itemCount: filenames.length,
                   itemBuilder: (context, index) {
                     final file = filenames[index];
