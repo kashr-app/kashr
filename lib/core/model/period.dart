@@ -37,9 +37,11 @@ abstract class Period with _$Period {
   }
 
   Period add({int delta = 1}) {
-    return copyWith(
-      startInclusive: startInclusive.addPeriod(type, delta: delta),
-      endExclusive: endExclusive.addPeriod(type, delta: delta),
+    final newStart = startInclusive.addPeriod(type, delta: delta);
+    return Period(
+      type,
+      startInclusive: newStart,
+      endExclusive: type.startOf(newStart.addPeriod(type)),
     );
   }
 
@@ -77,7 +79,6 @@ abstract class Period with _$Period {
 
     return (avg, unit);
   }
-
 }
 
 enum PeriodType {
