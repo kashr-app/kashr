@@ -50,7 +50,6 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
       final loginAuthHeader = "Bearer ${authTokenResponse.accessToken}";
       final clientRequestInfoHeader = jsonEncode(clientRequestInfo);
-      log.i(clientRequestInfoHeader);
       dio.options.headers.clear();
       dio.options.headers["Content-Type"] = "application/json";
       dio.options.headers["Accept"] = "application/json";
@@ -111,9 +110,13 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
       log.i("2FA successfull");
       emit(AuthLoading("2FA successfull. Getting api token..."));
-      dio.options.headers.clear();
       final tokenCreatedAt = DateTime.now().millisecondsSinceEpoch;
-      final apiToken = await comdirectAuthAPI.createApiToken(
+      /* Sometimes this request would fail with
+         "Software  caused connection abort" and the guess is that it
+         is caused by a stale pooled HTTP connection reused after the long
+         TAN waiting period and then reusing the old Dio instance.
+         So we use a fresh Dio instance. */
+      final apiToken = await ComdirectAuthAPI(Dio()).createApiToken(
         ApiAccessTokenReqDTO(
           clientId: credentials.clientId,
           clientSecret: credentials.clientSecret,
@@ -138,6 +141,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       emit(AuthSuccess(apiToken, api, dioApi));
     } on DioException catch (e, s) {
       log.e('Failed to authenticate', error: e, stackTrace: s);
+      log.e('Dio error: ${e.type.name}', error: e.error, stackTrace: e.stackTrace);
       final errorMessage = _handleDioException(e);
       emit(AuthError(errorMessage));
     } catch (e, s) {
