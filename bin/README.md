@@ -26,8 +26,9 @@ Add `source /path/to/kashr/bin/.bashrc` to your `~/.bashrc` for aliases (`kashr-
 
 ```bash
 # Create feature branch and make commits
-git checkout -b refactor/tag_pickers
-git commit -m 'refactor: merge AddTagDialog into TagPickerDialog'
+git checkout -b feature/some_feature
+# do work... git add ... etc.
+git commit -m 'feat: some feature'
 
 # Create PR
 kashr-git-pr changelog:refactor
@@ -37,6 +38,14 @@ kashr-git-ship
 # After GitHub merges (you'll get a notification), sync local
 # switch to main, fetch --prune, merge --ff-only origin/main
 kashr-git-sync
+
+# Release
+kashr-git-bump-version patch # major|minor|patch
+kashr-git-ship
+kashr-git-sync
+git tag vx.y.z
+git push origin vx.y.z
+
 ```
 
 ## Other Utils
