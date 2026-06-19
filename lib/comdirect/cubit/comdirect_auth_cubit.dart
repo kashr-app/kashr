@@ -5,6 +5,7 @@ import 'package:kashr/comdirect/comdirect_api.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
+import 'package:kashr/core/retry.dart';
 import 'package:logger/logger.dart';
 import 'package:meta/meta.dart';
 import 'package:kashr/comdirect/comdirect_auth_api.dart';
@@ -22,18 +23,16 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
   Future<void> login(Credentials credentials) async {
     try {
-      final dio = Dio();
-
-      final comdirectAuthAPI = ComdirectAuthAPI(dio);
-      final authTokenResponse = await comdirectAuthAPI.createLoginAuthToken(
-        CreateLoginAuthTokenReqDTO(
-          clientId: credentials.clientId,
-          clientSecret: credentials.clientSecret,
-          grantType: 'password',
-          username: credentials.username,
-          password: credentials.password,
-        ),
-      );
+      final authTokenResponse = await ComdirectAuthAPI(Dio())
+          .createLoginAuthToken(
+            CreateLoginAuthTokenReqDTO(
+              clientId: credentials.clientId,
+              clientSecret: credentials.clientSecret,
+              grantType: 'password',
+              username: credentials.username,
+              password: credentials.password,
+            ),
+          );
       emit(AuthLoading("Creating session..."));
 
       final requestId = requestIdFormat.format(DateTime.now());
@@ -48,14 +47,9 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
         ),
       );
 
-      final loginAuthHeader = "Bearer ${authTokenResponse.accessToken}";
-      final clientRequestInfoHeader = jsonEncode(clientRequestInfo);
-      dio.options.headers.clear();
-      dio.options.headers["Content-Type"] = "application/json";
-      dio.options.headers["Accept"] = "application/json";
-      dio.options.headers["Authorization"] = loginAuthHeader;
-      dio.options.headers["x-http-request-info"] = clientRequestInfoHeader;
-
+      final comdirectAuthAPI = ComdirectAuthAPI(
+        _createDioWithHeaders(authTokenResponse, clientRequestInfo),
+      );
       final session = (await comdirectAuthAPI.getSessionStatus()).firstOrNull;
       if (session == null) {
         log.e("No session found");
@@ -110,44 +104,80 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
       log.i("2FA successfull");
       emit(AuthLoading("2FA successfull. Getting api token..."));
-      final tokenCreatedAt = DateTime.now().millisecondsSinceEpoch;
-      /* Sometimes this request would fail with
-         "Software  caused connection abort" and the guess is that it
-         is caused by a stale pooled HTTP connection reused after the long
-         TAN waiting period and then reusing the old Dio instance.
-         So we use a fresh Dio instance. */
-      final apiToken = await ComdirectAuthAPI(Dio()).createApiToken(
-        ApiAccessTokenReqDTO(
-          clientId: credentials.clientId,
-          clientSecret: credentials.clientSecret,
-          grantType: 'cd_secondary',
-          token: authTokenResponse.accessToken,
-        ),
-      );
-      await apiToken.store(tokenCreatedAt);
 
-      final dioApi = Dio();
-      dioApi.options.headers.clear();
-      dioApi.options.headers["Content-Type"] = "application/json";
-      dioApi.options.headers["Accept"] = "application/json";
-      dioApi.options.headers["Authorization"] =
-          "Bearer ${apiToken.accessToken}";
-      dioApi.options.headers["x-http-request-info"] = clientRequestInfoHeader;
-
+      final apiToken = await _createApiToken(credentials, authTokenResponse);
+      final dioApi = _createDioWithHeaders(apiToken, clientRequestInfo);
       dioApi.interceptors.add(AuthInterceptor(this, log));
-
       final api = ComdirectAPI(dioApi);
 
       emit(AuthSuccess(apiToken, api, dioApi));
     } on DioException catch (e, s) {
       log.e('Failed to authenticate', error: e, stackTrace: s);
-      log.e('Dio error: ${e.type.name}', error: e.error, stackTrace: e.stackTrace);
+      log.e(
+        'Dio error: ${e.type.name}',
+        error: e.error,
+        stackTrace: e.stackTrace,
+      );
       final errorMessage = _handleDioException(e);
       emit(AuthError(errorMessage));
     } catch (e, s) {
       log.e('Failed to authenticate', error: e, stackTrace: s);
       emit(AuthError('An unexpected error occurred. Please try again. $e'));
     }
+  }
+
+  Dio _createDioWithHeaders(
+    TokenDTO apiToken,
+    ClientRequestInfoDTO clientRequestInfo,
+  ) {
+    final dioApi = Dio();
+
+    dioApi.options.headers.clear();
+    dioApi.options.headers["Content-Type"] = "application/json";
+    dioApi.options.headers["Accept"] = "application/json";
+    dioApi.options.headers["Authorization"] = "Bearer ${apiToken.accessToken}";
+    dioApi.options.headers["x-http-request-info"] = jsonEncode(
+      clientRequestInfo,
+    );
+
+    return dioApi;
+  }
+
+  Future<TokenDTO> _createApiToken(
+    Credentials credentials,
+    TokenDTO authTokenResponse,
+  ) async {
+    return await retry(
+      maxAttempts: 3,
+      action: () => ComdirectAuthAPI(Dio()).createApiToken(
+        ApiAccessTokenReqDTO(
+          clientId: credentials.clientId,
+          clientSecret: credentials.clientSecret,
+          grantType: 'cd_secondary',
+          token: authTokenResponse.accessToken,
+        ),
+      ),
+      shouldRetry: (error) {
+        if (error is! DioException) {
+          return false;
+        }
+
+        final statusCode = error.response?.statusCode;
+
+        return statusCode == null || // network error
+            statusCode == 429 || // rate limited
+            statusCode >= 500; // server error
+      },
+      onRetry: (attempt, maxAttempts, error, stackTrace, delay) {
+        log.w(
+          'Could not create API token '
+          '($attempt/$maxAttempts). '
+          'Retrying in ${delay.inMilliseconds}ms.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      },
+    );
   }
 
   Future<void> refreshToken() async {
