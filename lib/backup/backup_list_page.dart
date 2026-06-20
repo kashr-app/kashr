@@ -5,6 +5,7 @@ import 'package:kashr/backup/cubit/backup_state.dart';
 import 'package:kashr/backup/cubit/cloud_backup_cubit.dart';
 import 'package:kashr/backup/cubit/cloud_backup_state.dart';
 import 'package:kashr/backup/model/backup_metadata.dart';
+import 'package:kashr/backup/widgets/backup_reminder_widget.dart';
 import 'package:kashr/backup/widgets/backup_settings_dialog.dart';
 import 'package:kashr/backup/widgets/encryption_password_dialog.dart';
 import 'package:kashr/backup/widgets/nextcloud_settings_page.dart';
@@ -18,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:kashr/theme.dart';
 
 class BackupListRoute extends GoRouteData with $BackupListRoute {
   const BackupListRoute();
@@ -217,6 +219,10 @@ class _BackupListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        BackupReminderWidget(
+          margin: EdgeInsets.symmetric(horizontal: 16),
+          action: SizedBox.shrink(),
+        ),
         _buildNextcloudStatus(context, localBackups, refresh),
         if (localBackups.isEmpty) ...[
           Spacer(),

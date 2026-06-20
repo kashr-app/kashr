@@ -50,6 +50,9 @@ class BackupCubit extends Cubit<BackupState> {
         },
       );
 
+      final config = await _backupService.getConfig();
+      await updateConfig(config.copyWith(lastBackupAt: metadata.createdAt));
+
       emit(
         BackupState.success(
           message: 'Backup created successfully',

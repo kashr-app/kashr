@@ -24,10 +24,19 @@ class BackupSettingsDialog extends StatefulWidget {
 class _BackupSettingsDialogState extends State<BackupSettingsDialog> {
   late BackupConfig _config;
 
+  late final TextEditingController _intervalDaysController;
+  late final TextEditingController _maxLocalBackupsController;
+
   @override
   void initState() {
     super.initState();
     _config = widget.initialConfig;
+    _intervalDaysController = TextEditingController(
+      text: _config.intervalDays.toString(),
+    );
+    _maxLocalBackupsController = TextEditingController(
+      text: _config.maxLocalBackups.toString(),
+    );
   }
 
   @override
@@ -67,32 +76,69 @@ class _BackupSettingsDialogState extends State<BackupSettingsDialog> {
               ),
             const Divider(),
             ListTile(
-              title: const Text('Max Local Backups'),
-              subtitle: Text('Keep up to ${_config.maxLocalBackups} backups'),
-              trailing: SizedBox(
-                width: 100,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
+              title: const Text('Backup Reminder'),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Shows a reminder when the latest backup is older\n'
+                    'than the configured number of days.',
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
                     ),
+                    controller: _intervalDaysController,
+                    onChanged: (value) {
+                      final parsed = int.tryParse(value);
+                      if (parsed != null && parsed > 0) {
+                        setState(() {
+                          _config = _config.copyWith(intervalDays: parsed);
+                        });
+                      }
+                    },
                   ),
-                  controller: TextEditingController(
-                    text: _config.maxLocalBackups.toString(),
+                ],
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              title: const Text('Local Backups Count'),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Count of local backups to keep when cleaning up.'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                    ),
+                    controller: _maxLocalBackupsController,
+                    onChanged: (value) {
+                      final parsed = int.tryParse(value);
+                      if (parsed != null && parsed > 0) {
+                        setState(() {
+                          _config = _config.copyWith(maxLocalBackups: parsed);
+                        });
+                      }
+                    },
                   ),
-                  onChanged: (value) {
-                    final parsed = int.tryParse(value);
-                    if (parsed != null && parsed > 0) {
-                      setState(() {
-                        _config = _config.copyWith(maxLocalBackups: parsed);
-                      });
-                    }
-                  },
-                ),
+                ],
               ),
             ),
             const Divider(),
@@ -100,7 +146,7 @@ class _BackupSettingsDialogState extends State<BackupSettingsDialog> {
               title: const Text('Auto Backup'),
               subtitle: Text(
                 _config.autoBackupEnabled
-                    ? 'Automatically backup ${_config.frequency.name}'
+                    ? 'Automatically backup every ${_config.intervalDays} days'
                     : 'Create backups manually',
               ),
               value: _config.autoBackupEnabled,
@@ -113,32 +159,6 @@ class _BackupSettingsDialogState extends State<BackupSettingsDialog> {
                       });
                     },
             ),
-            if (_config.autoBackupEnabled)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: DropdownButtonFormField<BackupFrequency>(
-                  decoration: const InputDecoration(
-                    labelText: 'Frequency',
-                    border: OutlineInputBorder(),
-                  ),
-                  initialValue: _config.frequency,
-                  items: BackupFrequency.values.map((freq) {
-                    return DropdownMenuItem(
-                      value: freq,
-                      child: Text(
-                        freq.name[0].toUpperCase() + freq.name.substring(1),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _config = _config.copyWith(frequency: value);
-                      });
-                    }
-                  },
-                ),
-              ),
           ],
         ),
       ),

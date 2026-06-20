@@ -4,16 +4,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part '../../_gen/backup/model/backup_config.freezed.dart';
 part '../../_gen/backup/model/backup_config.g.dart';
 
-/// Frequency for automatic backups
-enum BackupFrequency {
-  @JsonValue('daily')
-  daily,
-  @JsonValue('weekly')
-  weekly,
-  @JsonValue('monthly')
-  monthly,
-}
-
 /// Configuration for backup feature
 @freezed
 abstract class BackupConfig with _$BackupConfig {
@@ -22,9 +12,10 @@ abstract class BackupConfig with _$BackupConfig {
   const factory BackupConfig({
     @BoolJsonConverter() required bool autoBackupEnabled,
 
-    required BackupFrequency frequency,
+    // days
+    required int intervalDays,
 
-    DateTime? lastAutoBackup,
+    DateTime? lastBackupAt,
 
     @BoolJsonConverter() required bool encryptionEnabled,
 
@@ -38,7 +29,7 @@ abstract class BackupConfig with _$BackupConfig {
 
   static BackupConfig defaultConfig() => const BackupConfig(
     autoBackupEnabled: false,
-    frequency: BackupFrequency.weekly,
+    intervalDays: 7,
     encryptionEnabled: false,
     maxLocalBackups: 5,
     autoBackupToCloud: false,

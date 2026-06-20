@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -74,6 +75,14 @@ class BackupRepository {
     );
   }
 
+  final _configController = StreamController<BackupConfig>.broadcast();
+  Stream<BackupConfig> watchConfig() async* {
+    // emit initial value
+    yield await getConfig();
+
+    yield* _configController.stream;
+  }
+
   /// Get backup configuration
   Future<BackupConfig> getConfig() async {
     final db = await DatabaseHelper().database;
@@ -90,5 +99,6 @@ class BackupRepository {
   Future<void> saveConfig(BackupConfig config) async {
     final db = await DatabaseHelper().database;
     await db.update('backup_config', config.toJson(), where: 'id = 1');
+    _configController.add(config);
   }
 }

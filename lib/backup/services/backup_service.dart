@@ -427,15 +427,21 @@ class BackupService {
     return await _backupRepository.readMetadataFromArchive(backupFile);
   }
 
-  /// Get backup configuration
+  // ---------------- config start ----------------
+
+  Stream<BackupConfig> watchConfig() {
+    return _backupRepository.watchConfig();
+  }
+
   Future<BackupConfig> getConfig() async {
     return await _backupRepository.getConfig();
   }
 
-  /// Save backup configuration
   Future<void> saveConfig(BackupConfig config) async {
     await _backupRepository.saveConfig(config);
   }
+
+  // ---------------- config end ----------------
 
   /// Export backup to user-chosen location
   Future<void> exportBackup(BackupMetadata backup) async {

@@ -67,14 +67,18 @@ class CustomColors extends ThemeExtension<CustomColors> {
   final Color amountNeutral;
 
   final Color warning;
+  final Color onWarning;
   final Color info;
+  final Color onInfo;
 
   const CustomColors({
     required this.amountNegative,
     required this.amountPositive,
     required this.amountNeutral,
     required this.warning,
+    required this.onWarning,
     required this.info,
+    required this.onInfo,
   });
 
   // Create CustomColors from the current ColorScheme
@@ -87,7 +91,9 @@ class CustomColors extends ThemeExtension<CustomColors> {
           amountPositive: colorScheme.primary,
           amountNeutral: colorScheme.onSurface,
           warning: Colors.orange[200]!,
+          onWarning: colorScheme.onInverseSurface,
           info: Colors.blue[300]!,
+          onInfo: colorScheme.onInverseSurface,
         );
       case Brightness.light:
         return CustomColors(
@@ -95,7 +101,9 @@ class CustomColors extends ThemeExtension<CustomColors> {
           amountPositive: colorScheme.primary,
           amountNeutral: colorScheme.onSurface,
           warning: Colors.orange,
+          onWarning: colorScheme.onInverseSurface,
           info: Colors.blue[500]!,
+          onInfo:  colorScheme.onInverseSurface,
         );
     }
   }
@@ -106,14 +114,18 @@ class CustomColors extends ThemeExtension<CustomColors> {
     Color? amountPositive,
     Color? amountNeutral,
     Color? warning,
+    Color? onWarning,
     Color? info,
+    Color? onInfo,
   }) {
     return CustomColors(
       amountNegative: amountNegative ?? this.amountNegative,
       amountPositive: amountPositive ?? this.amountPositive,
       amountNeutral: amountNeutral ?? this.amountNeutral,
       warning: warning ?? this.warning,
+      onWarning: onWarning ?? this.onWarning,
       info: info ?? this.info,
+      onInfo: onInfo ?? this.onInfo,
     );
   }
 
@@ -127,7 +139,9 @@ class CustomColors extends ThemeExtension<CustomColors> {
       amountPositive: Color.lerp(amountPositive, other.amountPositive, t)!,
       amountNeutral: Color.lerp(amountNeutral, other.amountNeutral, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
+      onWarning: Color.lerp(onWarning, other.onWarning, t)!,
       info: Color.lerp(info, other.info, t)!,
+      onInfo: Color.lerp(onInfo, other.onInfo, t)!,
     );
   }
 }

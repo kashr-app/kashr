@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'package:kashr/account/accounts_page.dart';
 import 'package:kashr/analytics/analytics_page.dart';
+import 'package:kashr/backup/backup_list_page.dart';
+import 'package:kashr/backup/widgets/backup_reminder_widget.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/account/account_selector_dialog.dart';
@@ -152,6 +154,19 @@ class _DashboardPage extends StatelessWidget {
                   16,
                 ).copyWith(bottom: 80), // let fab not hide the bottom
                 children: [
+                  BackupReminderWidget(
+                    action: TextButton(
+                      onPressed: () => const BackupListRoute().go(context),
+                      child: Text(
+                        'View Backups',
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).extension<CustomColors>()!.onWarning,
+                        ),
+                      ),
+                    ),
+                  ),
                   if (state.pendingCount > 0) ...[
                     PendingTurnoversHint(
                       count: state.pendingCount,
