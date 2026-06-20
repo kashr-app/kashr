@@ -28,7 +28,7 @@ jobs:
       apk_sha256: ${{ steps.hash.outputs.sha256 }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -107,7 +107,7 @@ jobs:
           cd ..
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.filename.outputs.artifact_name }}
           path: |
@@ -125,12 +125,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Download APK artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: release
@@ -200,7 +200,7 @@ jobs:
           cat auto_notes.md release_footer.md > final_body.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.build.outputs.release_tag }}
           name: Kashr ${{ needs.build.outputs.release_tag }}
@@ -210,5 +210,4 @@ jobs:
             release/${{ needs.build.outputs.apk_filename }}.sha256
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
