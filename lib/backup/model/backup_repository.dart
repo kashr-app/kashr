@@ -83,8 +83,18 @@ class BackupRepository {
     yield* _configController.stream;
   }
 
-  /// Get backup configuration
+  BackupConfig? _currentConfig;
+
   Future<BackupConfig> getConfig() async {
+    if (_currentConfig != null) {
+      return _currentConfig!;
+    }
+
+    _currentConfig = await _loadConfigFromDB();
+    return _currentConfig!;
+  }
+
+  Future<BackupConfig> _loadConfigFromDB() async {
     final db = await DatabaseHelper().database;
     final results = await db.query('backup_config', where: 'id = 1');
 
@@ -99,6 +109,7 @@ class BackupRepository {
   Future<void> saveConfig(BackupConfig config) async {
     final db = await DatabaseHelper().database;
     await db.update('backup_config', config.toJson(), where: 'id = 1');
+    _currentConfig = config;
     _configController.add(config);
   }
 }
