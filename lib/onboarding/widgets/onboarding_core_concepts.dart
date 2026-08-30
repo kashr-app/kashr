@@ -25,7 +25,7 @@ class OnboardingCoreConcepts extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Organize your transactions by tagging them. '
+            'Organize transactions by tagging them. '
             'One transaction can have multiple tags.',
             style: Theme.of(context).textTheme.bodyLarge,
             textAlign: TextAlign.center,
