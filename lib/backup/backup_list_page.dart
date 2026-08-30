@@ -218,10 +218,13 @@ class _BackupListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        BackupReminderWidget(
-          margin: EdgeInsets.symmetric(horizontal: 16),
-          action: SizedBox.shrink(),
-        ),
+        // with no backups at all the reminder only repeats what
+        // _buildNoBackups already says
+        if (localBackups.isNotEmpty)
+          BackupReminderWidget(
+            margin: EdgeInsets.symmetric(horizontal: 16),
+            action: SizedBox.shrink(),
+          ),
         _buildNextcloudStatus(context, localBackups, refresh),
         if (localBackups.isEmpty) ...[
           Spacer(),
