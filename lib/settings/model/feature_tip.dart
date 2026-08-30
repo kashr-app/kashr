@@ -28,7 +28,7 @@ enum FeatureTip {
       case FeatureTip.turnoverMatching:
         return 'Transaction Matching';
       case FeatureTip.syncedAccount:
-        return 'Synced Accounts';
+        return 'Downloaded Accounts';
     }
   }
 }

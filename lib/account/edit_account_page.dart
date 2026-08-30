@@ -287,13 +287,13 @@ class _EditAccountFormState extends State<_EditAccountForm> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Balance Syncing',
+                    'Balance from downloads',
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'This account\'s balance is automatically synced from '
-                    'Comdirect when you download bank data.',
+                    'This account\'s balance is taken from Comdirect '
+                    'every time you download bank data.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -380,6 +380,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
             await accountCubit.syncBalanceFromReal(
               _originalAccount,
               newBalance,
+              recordManualCheck: true,
             );
             needsReload = false; // updateBalanceFromReal already reloads
           }
@@ -497,7 +498,7 @@ class _EditAccountFormState extends State<_EditAccountForm> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Synced with Comdirect',
+              'Downloads from Comdirect',
               style: TextStyle(color: Theme.of(context).colorScheme.primary),
             ),
           ],

@@ -184,7 +184,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   onTap: () => const BanksRoute().go(context),
                   title: Text('Banks'),
                   leading: const Icon(Icons.account_balance),
-                  subtitle: const Text('Manage bank synchronization'),
+                  subtitle: const Text('Manage bank downloads'),
                 ),
                 ListTile(
                   onTap: () => const TagsRoute().go(context),

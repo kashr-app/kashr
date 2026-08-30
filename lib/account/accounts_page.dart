@@ -322,7 +322,7 @@ class _AccountListItemState extends State<_AccountListItem> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Synced with ${widget.account.syncSource!.label()}',
+                        'Downloads from ${widget.account.syncSource!.label()}',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.primary,
@@ -331,7 +331,7 @@ class _AccountListItemState extends State<_AccountListItem> {
                       if (widget.account.syncSource != null &&
                           widget.account.syncSource != SyncSource.manual)
                         Text(
-                          'Last sync: ${context.dateFormat.format(widget.account.lastSyncDate)}',
+                          'Last download: ${_formatDate(context, widget.account.downloadCursorDate)}',
                           style: TextStyle(
                             fontSize: 11,
                             color: Theme.of(
@@ -474,3 +474,8 @@ class _HiddenAccountsHint extends StatelessWidget {
     );
   }
 }
+
+/// Formats a date that may be absent, e.g. an account that was never
+/// downloaded.
+String _formatDate(BuildContext context, DateTime? date) =>
+    date == null ? 'Never' : context.dateFormat.format(date);

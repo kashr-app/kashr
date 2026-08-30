@@ -90,13 +90,21 @@ abstract class Account with _$Account {
 
     required String currency,
 
-    @DecimalJsonConverter()
-    required Decimal openingBalance,
+    @DecimalJsonConverter() required Decimal openingBalance,
 
-    required DateTime lastSyncDate,
+    /// Booked transactions are complete through this booking date.
+    ///
+    /// Only set on downloaded (non-manual) accounts. `null` means the account
+    /// has never been downloaded. This is a position in the bank's booking
+    /// calendar, not a wall-clock timestamp of the last download.
+    DateTime? downloadCursorDate,
 
-    @BoolJsonConverter()
-    required bool isHidden,
+    /// The moment the user last reconciled this balance by hand.
+    ///
+    /// Only set on manual accounts.
+    DateTime? lastManualSyncAt,
+
+    @BoolJsonConverter() required bool isHidden,
   }) = _Account;
 
   factory Account.fromJson(Map<String, dynamic> json) =>

@@ -1,0 +1,222 @@
+import 'dart:async';
+
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
+import 'package:kashr/comdirect/comdirect_api.dart';
+import 'package:kashr/comdirect/comdirect_model.dart';
+import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
+import 'package:kashr/dashboard/cubit/dashboard_cubit.dart';
+import 'package:kashr/ingest/download_range.dart';
+import 'package:kashr/ingest/ingest.dart';
+import 'package:logger/logger.dart';
+import 'package:meta/meta.dart';
+
+part 'download_state.dart';
+
+/// Builds the ingestor that downloads from an authenticated bank connection.
+typedef IngestorFactory = DataIngestor Function(ComdirectAPI api);
+
+/// Drives one download from the tap on the download button to the result.
+///
+/// Everything the user is asked is asked here, and there is only one such
+/// question: how far back the very first download should reach. Afterwards
+/// each account's own download cursor answers it.
+class DownloadCubit extends Cubit<DownloadState> {
+  final ComdirectAuthCubit _authCubit;
+  final AccountCubit _accountCubit;
+  final DashboardCubit _dashboardCubit;
+  final IngestorFactory _createIngestor;
+  final Logger log;
+
+  /// Guards against a stray tap starting a second, concurrent download.
+  bool _isRunning = false;
+
+  DownloadCubit(
+    this.log, {
+    required ComdirectAuthCubit authCubit,
+    required AccountCubit accountCubit,
+    required DashboardCubit dashboardCubit,
+    required IngestorFactory createIngestor,
+  }) : _authCubit = authCubit,
+       _accountCubit = accountCubit,
+       _dashboardCubit = dashboardCubit,
+       _createIngestor = createIngestor,
+       super(const DownloadStarting());
+
+  /// Starts the download, asking only what cannot be derived.
+  Future<void> start() async {
+    if (!await Credentials.hasStored()) {
+      log.i('No bank connected yet, offering the connect flow.');
+      _safeEmit(const DownloadNeedsBank());
+      return;
+    }
+    await _startConnected();
+  }
+
+  /// Continues after the user connected a bank in the login flow.
+  Future<void> continueAfterConnect() => _startConnected();
+
+  /// Runs the first download with the depth the user picked.
+  Future<void> startWithDepth(DownloadDepth depth) async {
+    final today = DateTime.now();
+    await _run(DownloadRequest.upTo(today, startDate: depth.startDate(today)));
+  }
+
+  /// Re-runs the download from [startDate] for every account.
+  ///
+  /// Used when the user widens the range by hand; the cursors are ignored so
+  /// that the requested history is actually fetched.
+  Future<void> downloadFrom(DateTime startDate) async {
+    await _run(
+      DownloadRequest.upTo(
+        DateTime.now(),
+        startDate: startDate,
+        ignoreCursors: true,
+      ),
+    );
+  }
+
+  /// Retries after a failure, with the same scope as before.
+  Future<void> retry() async {
+    final request = state.request;
+    if (request == null) {
+      await start();
+      return;
+    }
+    await _run(request);
+  }
+
+  Future<void> _startConnected() async {
+    final accounts = _accountCubit.state.accountById.values;
+    if (isFirstDownload(accounts)) {
+      _safeEmit(const DownloadChoosingDepth());
+      return;
+    }
+
+    final today = DateTime.now();
+    await _run(
+      DownloadRequest.upTo(
+        today,
+        startDate: oldestDownloadCursor(accounts) ?? today,
+      ),
+    );
+  }
+
+  Future<void> _run(DownloadRequest request) async {
+    if (_isRunning) return;
+    _isRunning = true;
+    try {
+      await _attempt(request, allowRelogin: true);
+    } finally {
+      _isRunning = false;
+    }
+  }
+
+  Future<void> _attempt(
+    DownloadRequest request, {
+    required bool allowRelogin,
+  }) async {
+    final range = unionDownloadRange(
+      _accountCubit.state.accountById.values,
+      request: request,
+    );
+
+    final api = await _authenticate(range: range, force: !allowRelogin);
+    if (api == null) return;
+
+    _safeEmit(DownloadRunning(request: request, range: range));
+
+    final result = await _dashboardCubit.ingestData(
+      _createIngestor(api),
+      request,
+    );
+
+    switch (result.status) {
+      case ResultStatus.success:
+        _safeEmit(
+          DownloadFinished(request: request, range: range, result: result),
+        );
+      case ResultStatus.unauthed:
+        if (allowRelogin) {
+          log.i('Download was rejected as unauthenticated, logging in again.');
+          await _attempt(request, allowRelogin: false);
+          return;
+        }
+        _safeEmit(
+          DownloadFailed(
+            request: request,
+            range: range,
+            message: 'The bank ended the session. Please try again.',
+          ),
+        );
+      case ResultStatus.otherError:
+        _safeEmit(
+          DownloadFailed(
+            request: request,
+            range: range,
+            message: result.errorMessage ?? 'The download did not finish.',
+          ),
+        );
+    }
+  }
+
+  /// Returns an authenticated API, logging in when needed.
+  ///
+  /// Emits the connection progress, including the wait for the confirmation
+  /// in the banking app, so the sheet can show what is happening.
+  Future<ComdirectAPI?> _authenticate({
+    required DownloadRange range,
+    required bool force,
+  }) async {
+    final authState = _authCubit.state;
+    if (!force && authState is AuthSuccess) return authState.api;
+
+    final credentials = await Credentials.load();
+    if (credentials == null) {
+      log.w('Stored credentials could not be unlocked.');
+      _safeEmit(const DownloadNeedsBank());
+      return null;
+    }
+
+    _safeEmit(DownloadConnecting(range: range));
+
+    final subscription = _authCubit.stream.listen(
+      (it) => _onAuthState(it, range),
+    );
+    try {
+      await _authCubit.login(credentials);
+    } finally {
+      await subscription.cancel();
+    }
+
+    final result = _authCubit.state;
+    if (result is AuthSuccess) return result.api;
+
+    _safeEmit(
+      DownloadFailed(
+        range: range,
+        message: result is AuthError ? result.message : 'Login failed.',
+      ),
+    );
+    return null;
+  }
+
+  void _onAuthState(ComdirectAuthState authState, DownloadRange range) {
+    switch (authState) {
+      case AuthLoading():
+        _safeEmit(DownloadConnecting(range: range, message: authState.message));
+      case WaitingForTANConfirmation():
+        _safeEmit(DownloadWaitingForConfirmation(range: range));
+      case AuthInitial():
+      case AuthError():
+      case AuthSuccess():
+        break;
+    }
+  }
+
+  /// The sheet can be dismissed while the download keeps running.
+  void _safeEmit(DownloadState state) {
+    if (isClosed) return;
+    emit(state);
+  }
+}

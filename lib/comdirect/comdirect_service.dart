@@ -2,10 +2,9 @@ import 'dart:convert';
 
 import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
-import 'package:jiffy/jiffy.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/associate_by.dart';
-import 'package:kashr/core/model/period.dart';
+import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/services/turnover_matching_service.dart';
@@ -36,20 +35,36 @@ class ComdirectService implements DataIngestor {
   });
 
   @override
-  Future<DataIngestResult> ingest(Period period) =>
-      _fetchAccountsAndTurnovers(period);
+  Future<DataIngestResult> ingest(DownloadRequest request) =>
+      _fetchAccountsAndTurnovers(request);
 
   /// Fetches accounts and turnovers from the Comdirect API.
   /// Also automatically updates the balance for existing accounts.
-  Future<DataIngestResult> _fetchAccountsAndTurnovers(Period period) async {
+  Future<DataIngestResult> _fetchAccountsAndTurnovers(
+    DownloadRequest request,
+  ) async {
     try {
       final (accounts, realBalanceByAccountId) =
-          await _fetchAccountsAndStoreNew(period);
+          await _fetchAccountsAndStoreNew();
+
+      // Accounts that have never been downloaded - including the ones just
+      // discovered - start where the oldest known account already is, so they
+      // land with comparable history without asking the user again.
+      final startDateWithoutCursor = oldestDownloadCursor(
+        accountCubit.state.accountById.values,
+      );
 
       // For each api account, fetch turnovers (transactions)
 
-      final (newIds, existingIds, turnoversById) =
-          await _fetchAndUpsertTurnovers(accounts, period);
+      final (
+        newIds,
+        existingIds,
+        turnoversById,
+      ) = await _fetchAndUpsertTurnovers(
+        accounts,
+        request,
+        startDateWithoutCursor,
+      );
 
       // Assuming the real balance did not change between fetching accounts
       // and fetching the turnovers, we now can reconcile the balance based
@@ -67,6 +82,10 @@ class ComdirectService implements DataIngestor {
         updatedCount: existingIds.length,
         autoMatchedCount: autoMatchedCount,
         unmatchedCount: unmatchedCount,
+        downloadedAccountIds: [
+          for (final account in accounts)
+            if (account.apiId != null) account.id,
+        ],
       );
     } catch (e, s) {
       if (e is DioException) {
@@ -85,7 +104,7 @@ class ComdirectService implements DataIngestor {
   Future<
     (List<Account> accounts, Map<UuidValue, Decimal?> realBalanceByAccountId)
   >
-  _fetchAccountsAndStoreNew(Period period) async {
+  _fetchAccountsAndStoreNew() async {
     final uuid = Uuid();
 
     final accounts = <Account>[];
@@ -125,7 +144,6 @@ class ComdirectService implements DataIngestor {
             syncSource: SyncSource.comdirect,
             currency: a.balance.unit,
             openingBalance: a.balance.value,
-            lastSyncDate: DateTime.now(),
             isHidden: false,
           );
           await accountCubit.addAccount(account);
@@ -156,7 +174,11 @@ class ComdirectService implements DataIngestor {
       Map<UuidValue, Turnover> turnoversById,
     )
   >
-  _fetchAndUpsertTurnovers(Iterable<Account> accounts, Period period) async {
+  _fetchAndUpsertTurnovers(
+    Iterable<Account> accounts,
+    DownloadRequest request,
+    DateTime? startDateWithoutCursor,
+  ) async {
     final uuid = Uuid();
     final turnoversById = <UuidValue, Turnover>{};
     for (final account in accounts) {
@@ -165,18 +187,20 @@ class ComdirectService implements DataIngestor {
         continue;
       }
 
+      final minBookingDate = minBookingDateFor(
+        account,
+        request: request,
+        startDateWithoutCursor: startDateWithoutCursor,
+      );
+
       var index = 0;
       var total = 1;
       while (index < total) {
         // Fetch transactions for each account
         final transactionsResponse = await comdirectAPI.getTransactions(
           accountId: apiId,
-          minBookingDate: _apiDateFormat.format(period.startInclusive),
-          maxBookingDate: _apiDateFormat.format(
-            Jiffy.parseFromDateTime(
-              period.endExclusive,
-            ).subtract(days: 1).dateTime,
-          ),
+          minBookingDate: _apiDateFormat.format(minBookingDate),
+          maxBookingDate: _apiDateFormat.format(request.maxBookingDate),
           index: index,
           pageSize: 50,
         );
@@ -289,7 +313,13 @@ class ComdirectService implements DataIngestor {
       final apiBalance = realBalanceByAccountId[account.id];
       if (apiBalance != null) {
         log.i('Reconciling balance for account ${account.name} to $apiBalance');
-        await accountCubit.syncBalanceFromReal(account, apiBalance);
+        await accountCubit.syncBalanceFromReal(
+          account,
+          apiBalance,
+          // A download is not a manual balance check, and the download
+          // cursor - not a wall clock stamp - records how current the data is.
+          recordManualCheck: false,
+        );
       }
     }
   }

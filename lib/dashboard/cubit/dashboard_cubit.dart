@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
+import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/dashboard/cubit/dashboard_state.dart';
 import 'package:kashr/dashboard/model/tag_prediction.dart';
+import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/tag.dart';
@@ -30,6 +32,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   final TagTurnoverRepository _tagTurnoverRepository;
   final TagRepository _tagRepository;
   final TransferRepository _transferRepository;
+  final AccountCubit _accountCubit;
   final Logger log;
 
   StreamSubscription<dynamic>? _changeSubscription;
@@ -44,11 +47,11 @@ class DashboardCubit extends Cubit<DashboardState> {
     this._tagTurnoverRepository,
     this._tagRepository,
     this._transferRepository,
+    this._accountCubit,
     this.log,
   ) : super(
         DashboardState(
           status: Status.initial,
-          bankDownloadStatus: Status.initial,
           period: Period.now(PeriodType.month),
           totalIncome: Decimal.zero,
           totalExpenses: Decimal.zero,
@@ -150,23 +153,26 @@ class DashboardCubit extends Cubit<DashboardState> {
     return super.close();
   }
 
-  Future<DataIngestResult> ingestData(DataIngestor ingestor) async {
-    void setBankDownloadStatus(Status status) {
-      emit(state.copyWith(bankDownloadStatus: status));
-    }
-
-    setBankDownloadStatus(Status.loading);
-
-    final result = await ingestor.ingest(state.period);
-
-    switch (result.status) {
-      case ResultStatus.success:
-        setBankDownloadStatus(Status.success);
-        unawaited(loadPeriodData());
-      case ResultStatus.unauthed:
-        setBankDownloadStatus(Status.initial);
-      case ResultStatus.otherError:
-        setBankDownloadStatus(Status.error);
+  /// Downloads bank data, records how far it got and refreshes the dashboard.
+  ///
+  /// Moving the download cursors happens here rather than in the ingestor:
+  /// it is bookkeeping about our own data, identical for every bank. Only a
+  /// successful run advances them, and only to the booking date that was
+  /// requested - the overlap is a re-fetch policy applied when reading the
+  /// cursor, storing it would compound backwards on every download.
+  ///
+  /// Progress is reported by the download sheet, which owns the flow.
+  Future<DataIngestResult> ingestData(
+    DataIngestor ingestor,
+    DownloadRequest request,
+  ) async {
+    final result = await ingestor.ingest(request);
+    if (result.status == ResultStatus.success) {
+      await _accountCubit.advanceDownloadCursors(
+        result.downloadedAccountIds,
+        request.maxBookingDate,
+      );
+      unawaited(loadPeriodData());
     }
     return result;
   }

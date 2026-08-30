@@ -19,7 +19,7 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/dashboard/widgets/cashflow_card.dart';
 import 'package:kashr/dashboard/widgets/income_summary_card.dart';
-import 'package:kashr/dashboard/widgets/load_bank_data_section.dart';
+import 'package:kashr/ingest/widgets/download_fab.dart';
 import 'package:kashr/dashboard/widgets/pending_turnovers_hint.dart';
 import 'package:kashr/dashboard/widgets/transfers_need_review_hint.dart';
 import 'package:kashr/dashboard/widgets/spending_summary_card.dart';
@@ -60,6 +60,7 @@ class DashboardPage extends StatelessWidget {
         context.read<TagTurnoverRepository>(),
         context.read<TagRepository>(),
         context.read<TransferRepository>(),
+        context.read<AccountCubit>(),
         context.read<LogService>().log,
       )..loadPeriodData(),
       child: const _DashboardPage(),
@@ -193,8 +194,6 @@ class _DashboardPage extends StatelessWidget {
                         context.read<DashboardCubit>().selectPeriod(period),
                   ),
                   const SizedBox(height: 8),
-                  const LoadBankDataSection(),
-                  const SizedBox(height: 8),
                   CashflowCard(
                     period: state.period,
                     totalIncome: state.totalIncome,
@@ -250,7 +249,9 @@ class _DashboardPage extends StatelessWidget {
               tooltip: 'Log Transfer',
               child: const Icon(Icons.swap_horiz),
             ),
-            Spacer(),
+            const Spacer(),
+            const DownloadFab(),
+            const Spacer(),
             FloatingActionButton(
               onPressed: () => _showQuickExpenseEntry(context),
               tooltip: 'Log Transaction',

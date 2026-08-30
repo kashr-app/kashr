@@ -262,7 +262,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Synced with ${account.syncSource!.label()}',
+                      'Downloads from ${account.syncSource!.label()}',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                       ),
@@ -271,7 +271,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Last sync: ${context.dateFormatValue.format(account.lastSyncDate)}',
+                  'Last download: ${_formatDate(context, account.downloadCursorDate)}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -279,7 +279,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ),
               ] else ...[
                 Text(
-                  'Last balance check: ${context.dateFormatValue.format(account.lastSyncDate)}',
+                  'Last balance check: ${_formatDate(context, account.lastManualSyncAt)}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -486,3 +486,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     );
   }
 }
+
+/// Formats a date that may be absent, e.g. an account that was never
+/// downloaded.
+String _formatDate(BuildContext context, DateTime? date) =>
+    date == null ? 'Never' : context.dateFormatValue.format(date);

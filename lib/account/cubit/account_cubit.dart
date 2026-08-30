@@ -134,10 +134,15 @@ class AccountCubit extends Cubit<AccountState> {
   /// This recalculates the opening balance so that:
   /// currentRealBalance = openingBalance + sum(turnovers)
   /// Therefore: openingBalance = currentRealBalance - sum(turnovers)
+  ///
+  /// [recordManualCheck] stamps [Account.lastManualSyncAt]. Only the user
+  /// reconciling a balance by hand does that; a download reconciles the same
+  /// balance but records its progress in [Account.downloadCursorDate].
   Future<void> syncBalanceFromReal(
     Account account,
-    Decimal currentRealBalance,
-  ) async {
+    Decimal currentRealBalance, {
+    required bool recordManualCheck,
+  }) async {
     try {
       // Get current calculated balance (opening + turnovers)
       final calculatedBalance = await _balanceService.calculateCurrentBalance(
@@ -153,7 +158,9 @@ class AccountCubit extends Cubit<AccountState> {
       // Update the account with new opening balance
       final updatedAccount = account.copyWith(
         openingBalance: newOpeningBalance,
-        lastSyncDate: DateTime.now(),
+        lastManualSyncAt: recordManualCheck
+            ? DateTime.now()
+            : account.lastManualSyncAt,
       );
 
       await _accountRepository.updateAccount(updatedAccount);
@@ -167,6 +174,25 @@ class AccountCubit extends Cubit<AccountState> {
         ),
       );
     }
+  }
+
+  /// Records that booked transactions are complete through [cursorDate] for
+  /// the given accounts.
+  ///
+  /// Reads the accounts from the current state so that a balance
+  /// reconciliation that ran during the same download is not overwritten.
+  Future<void> advanceDownloadCursors(
+    Iterable<UuidValue> accountIds,
+    DateTime cursorDate,
+  ) async {
+    for (final id in accountIds) {
+      final account = state.accountById[id];
+      if (account == null) continue;
+      await _accountRepository.updateAccount(
+        account.copyWith(downloadCursorDate: cursorDate),
+      );
+    }
+    await loadAccounts();
   }
 
   /// Computes opening balance dates for multiple accounts.

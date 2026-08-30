@@ -14,7 +14,6 @@ part '../../_gen/dashboard/cubit/dashboard_state.freezed.dart';
 abstract class DashboardState with _$DashboardState {
   const factory DashboardState({
     required Status status,
-    required Status bankDownloadStatus,
     required Period period,
     required Decimal totalIncome,
     required Decimal totalExpenses,
