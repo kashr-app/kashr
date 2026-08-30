@@ -168,6 +168,9 @@ class _TagTurnoversPageContentState extends State<_TagTurnoversPageContent> {
   ) async {
     final result = await showDialog<TagTurnoversFilter>(
       context: context,
+      // Stay on the caller's navigator so that pages opened from inside
+      // this dialog, account creation in particular, show up above it.
+      useRootNavigator: false,
       builder: (context) => TagTurnoversFilterDialog(
         initialFilter: currentFilter,
         lockedFilters: widget.lockedFilters,

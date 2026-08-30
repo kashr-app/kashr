@@ -272,10 +272,6 @@ class _DashboardPage extends StatelessWidget {
       return;
     }
     final accounts = accountCubit.state.accountById;
-    if (accounts.isEmpty) {
-      Status.error.snack(context, 'Please create an account first');
-      return;
-    }
 
     // If only one account, use it directly
     if (accounts.length == 1) {
@@ -318,17 +314,9 @@ class _DashboardPage extends StatelessWidget {
       );
       return;
     }
-    final accounts = accountCubit.state.accountById;
-    if (accounts.length < 2) {
-      Status.error.snack(context, 'Please create at least two accounts');
-      return;
-    }
 
-    // Show account selector
-    final result = await showDialog<TransferAccountSelection>(
-      context: context,
-      builder: (context) => DualAccountSelectorDialog(),
-    );
+    // Show account selector, which creates the accounts if there are none yet
+    final result = await DualAccountSelectorDialog.show(context);
 
     if (result != null && context.mounted) {
       final fromAccount = result.from;

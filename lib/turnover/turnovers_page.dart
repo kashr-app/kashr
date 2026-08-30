@@ -397,6 +397,9 @@ class _TurnoversPageState extends State<TurnoversPage> {
   Future<void> _openFilterDialog() async {
     final result = await showDialog<TurnoverFilter>(
       context: context,
+      // Stay on the caller's navigator so that pages opened from inside
+      // this dialog, account creation in particular, show up above it.
+      useRootNavigator: false,
       builder: (context) => TurnoverFilterDialog(initialFilter: _filter),
     );
     if (result != null) _updateFilter(result);

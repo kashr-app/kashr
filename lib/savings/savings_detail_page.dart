@@ -165,6 +165,9 @@ class _SavingsDetailPageState extends State<SavingsDetailPage> {
   Future<void> _addVirtualBooking(Savings savings) async {
     final result = await showDialog<bool>(
       context: context,
+      // Stay on the caller's navigator so that pages opened from inside
+      // this dialog, account creation in particular, show up above it.
+      useRootNavigator: false,
       builder: (context) => VirtualBookingDialog(savings: savings),
     );
 
@@ -583,6 +586,9 @@ class _TransactionTile extends StatelessWidget {
       VirtualBookingItem(:final booking) => () async {
         final isChanged = await showDialog<bool>(
           context: context,
+          // Stay on the caller's navigator so that pages opened from inside
+          // this dialog, account creation in particular, show up above it.
+          useRootNavigator: false,
           builder: (context) =>
               VirtualBookingDialog(savings: savings, booking: booking),
         );

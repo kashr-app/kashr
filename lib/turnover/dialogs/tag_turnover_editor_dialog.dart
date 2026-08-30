@@ -40,6 +40,9 @@ class TagTurnoverEditorDialog extends StatefulWidget {
   }) {
     return showDialog<EditTagTurnoverResult>(
       context: context,
+      // Stay on the caller's navigator so that pages opened from inside
+      // this dialog, account creation in particular, show up above it.
+      useRootNavigator: false,
       builder: (context) => TagTurnoverEditorDialog(tagTurnover: tagTurnover),
     );
   }
