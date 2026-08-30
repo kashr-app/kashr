@@ -161,7 +161,7 @@ class AccountsPage extends StatelessWidget {
   }
 
   void _navigateToCreateAccount(BuildContext context) {
-    const CreateAccountRoute().go(context);
+    const CreateAccountRoute().push<Account>(context);
   }
 
   void _navigateToAccountDetails(BuildContext context, Account account) {

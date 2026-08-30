@@ -13,6 +13,15 @@ import 'package:uuid/uuid.dart';
 
 const uuid = Uuid();
 
+/// Route to the account creation form.
+///
+/// Push it to get the created [Account] back:
+///
+/// ```dart
+/// final account = await const CreateAccountRoute().push<Account>(context);
+/// ```
+///
+/// The result is `null` when the user left without creating an account.
 class CreateAccountRoute extends GoRouteData with $CreateAccountRoute {
   const CreateAccountRoute();
 
@@ -22,6 +31,7 @@ class CreateAccountRoute extends GoRouteData with $CreateAccountRoute {
   }
 }
 
+/// Form that creates a single account and pops it to the caller.
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
 
@@ -213,7 +223,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account created successfully')),
         );
-        const AccountsRoute().go(context);
+        _close(account);
       }
     } catch (e) {
       if (mounted) {
@@ -228,6 +238,18 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  /// Returns [account] to whoever opened this page.
+  ///
+  /// Falls back to the accounts list when the page was opened directly, e.g.
+  /// via a deep link, and there is nothing to pop back to.
+  void _close(Account account) {
+    if (context.canPop()) {
+      context.pop(account);
+    } else {
+      const AccountsRoute().go(context);
     }
   }
 }
