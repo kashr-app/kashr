@@ -1,4 +1,3 @@
-import 'package:kashr/backup/model/backup_config.dart';
 import 'package:kashr/db/sqlite_compat.dart';
 
 /// Creates the full database schema at version 12.
@@ -113,7 +112,16 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
   ''');
 
   // Insert default backup config
-  await db.insert('backup_config', BackupConfig.defaultConfig().toJson());
+  // see BackupConfig.defaultConfig().toJson()
+  await db.insert('backup_config', {
+    'id': 1,
+    'auto_backup_enabled': 0,
+    'frequency': 'weekly',
+    'last_auto_backup': null,
+    'encryption_enabled': 0,
+    'max_local_backups': 5,
+    'auto_backup_to_cloud': 0,
+  });
 
   // FTS5 virtual table for full-text search
   await db.execute('''
@@ -157,7 +165,8 @@ Future<void> createSchemaV12(SqliteDatabase db) async {
 
 /// Create FTS triggers to keep turnover_fts in sync
 Future<void> _createTurnoverFTSTriggers(SqliteDatabase db) async {
-  String insert(String tableName) => '''
+  String insert(String tableName) =>
+      '''
       INSERT INTO turnover_fts(turnover_id, content)
       SELECT
         $tableName.id,
