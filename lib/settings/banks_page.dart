@@ -47,7 +47,9 @@ class BanksPage extends StatelessWidget {
               children: [
                 ListTile(
                   title: Text('Comdirect'),
-                  onTap: () => ComdirectLoginRoute().go(context),
+                  // Pushed, so that coming back lands on this list as it was
+                  // rather than rebuilding it from the route alone.
+                  onTap: () => ComdirectLoginRoute().push(context),
                 ),
                 if (offerManualTracking) ...[
                   const Divider(),
