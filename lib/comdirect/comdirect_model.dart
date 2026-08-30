@@ -36,21 +36,49 @@ class Credentials {
     }
   }
 
+  static const _clientIdKey = 'comdirectClientId';
+  static const _clientSecretKey = 'comdirectClientSecret';
+  static const _usernameKey = 'comdirectUsername';
+  static const _passwordKey = 'comdirectPasssword';
+
+  static const _keys = [
+    _clientIdKey,
+    _clientSecretKey,
+    _usernameKey,
+    _passwordKey,
+  ];
+
+  /// Whether a complete set of credentials has been stored.
+  ///
+  /// Reads the storage without prompting for biometrics so callers can tell
+  /// "the user never logged in" apart from "the biometric prompt failed".
+  static Future<bool> hasStored() async {
+    final storage = secureStorage();
+    for (final key in _keys) {
+      final value = await storage.read(key: key);
+      if (value == null || value.isEmpty) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Returns the stored credentials, or `null` if none are stored or the
+  /// biometric authentication was not successful.
   static Future<Credentials?> load() async {
+    if (!await hasStored()) {
+      return null;
+    }
     bool authenticated = await _authenticate();
     if (!authenticated) {
       return null;
     }
     final storage = secureStorage();
-    final clientId = await storage.read(key: 'comdirectClientId') ?? '';
-    final clientSecret = await storage.read(key: 'comdirectClientSecret') ?? '';
-    final username = await storage.read(key: 'comdirectUsername') ?? '';
-    final password = await storage.read(key: 'comdirectPasssword') ?? '';
     return Credentials(
-      clientId: clientId,
-      clientSecret: clientSecret,
-      username: username,
-      password: password,
+      clientId: await storage.read(key: _clientIdKey) ?? '',
+      clientSecret: await storage.read(key: _clientSecretKey) ?? '',
+      username: await storage.read(key: _usernameKey) ?? '',
+      password: await storage.read(key: _passwordKey) ?? '',
     );
   }
 
@@ -60,10 +88,10 @@ class Credentials {
       return false;
     }
     final storage = secureStorage();
-    await storage.write(key: 'comdirectClientId', value: clientId);
-    await storage.write(key: 'comdirectClientSecret', value: clientSecret);
-    await storage.write(key: 'comdirectUsername', value: username);
-    await storage.write(key: 'comdirectPasssword', value: password);
+    await storage.write(key: _clientIdKey, value: clientId);
+    await storage.write(key: _clientSecretKey, value: clientSecret);
+    await storage.write(key: _usernameKey, value: username);
+    await storage.write(key: _passwordKey, value: password);
     return true;
   }
 
@@ -73,10 +101,9 @@ class Credentials {
       return false;
     }
     final storage = secureStorage();
-    await storage.delete(key: 'comdirectClientId');
-    await storage.delete(key: 'comdirectClientSecret');
-    await storage.delete(key: 'comdirectUsername');
-    await storage.delete(key: 'comdirectPasssword');
+    for (final key in _keys) {
+      await storage.delete(key: key);
+    }
     return true;
   }
 

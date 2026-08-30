@@ -125,11 +125,21 @@ class LoadBankDataSection extends StatelessWidget {
   }
 
   Future<void> _handleUnauthenticatedDownload(BuildContext context) async {
+    final router = GoRouter.of(context);
+
+    // Nothing stored yet: send the user to the login page instead of
+    // attempting a login that can only fail.
+    if (!await Credentials.hasStored()) {
+      if (!context.mounted) return;
+      await _navigateToLoginAndDownload(router, context);
+      return;
+    }
+
     final credentials = await Credentials.load();
     if (!context.mounted) return;
 
     if (credentials == null) {
-      _showLoginError(context, 'Please login to download data');
+      _showLoginError(context, 'Could not unlock your saved credentials');
       return;
     }
 
