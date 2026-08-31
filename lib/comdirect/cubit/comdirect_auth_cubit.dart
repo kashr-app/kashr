@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:kashr/core/retry.dart';
+import 'package:kashr/ingest/ingest.dart';
 import 'package:logger/logger.dart';
 import 'package:meta/meta.dart';
 import 'package:kashr/comdirect/comdirect_auth_api.dart';
@@ -86,9 +87,9 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
       final href = tanChallenge.link!.href;
       final authId = href.substring(href.lastIndexOf("/"), href.length);
-      var tanErrorMsg = await _waitForTAN(authId, comdirectAuthAPI);
-      if (tanErrorMsg != null) {
-        emit(AuthError(tanErrorMsg));
+      final tanError = await _waitForTAN(authId, comdirectAuthAPI);
+      if (tanError != null) {
+        emit(AuthError(tanError.message, reason: tanError.reason));
         return;
       }
 
@@ -118,8 +119,8 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
         error: e.error,
         stackTrace: e.stackTrace,
       );
-      final errorMessage = _handleDioException(e);
-      emit(AuthError(errorMessage));
+      final failure = _handleDioException(e);
+      emit(AuthError(failure.message, reason: failure.reason));
     } catch (e, s) {
       log.e('Failed to authenticate', error: e, stackTrace: s);
       emit(AuthError('An unexpected error occurred. Please try again. $e'));
@@ -226,8 +227,8 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       log.i('Token refreshed successfully');
     } on DioException catch (e, s) {
       log.e('Failed to refresh token', error: e, stackTrace: s);
-      final errorMessage = _handleDioException(e);
-      emit(AuthError(errorMessage));
+      final failure = _handleDioException(e);
+      emit(AuthError(failure.message, reason: failure.reason));
     } catch (e, s) {
       log.e('Failed to refresh token', error: e, stackTrace: s);
       emit(AuthError('Failed to refresh token. Please log in again. $e'));
@@ -266,36 +267,63 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
     log.i('Logged out');
   }
 
-  /// Converts a DioException into a user-friendly error message.
-  String _handleDioException(DioException e) {
+  /// Converts a DioException into the reason it failed and what to tell the
+  /// user about it.
+  ({DownloadFailureReason reason, String message}) _handleDioException(
+    DioException e,
+  ) {
     switch (e.type) {
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode;
         if (statusCode == 401 || statusCode == 400) {
-          return 'Invalid username or password. Please check your credentials.';
+          return (
+            reason: DownloadFailureReason.badCredentials,
+            message:
+                'Invalid username or password. Please check your credentials.',
+          );
         } else if (statusCode == 403) {
-          return 'Access denied. Please check your credentials.';
+          return (
+            reason: DownloadFailureReason.badCredentials,
+            message: 'Access denied. Please check your credentials.',
+          );
         } else if (statusCode != null && statusCode >= 500) {
-          return 'Server is currently unavailable. Please try again later.';
+          return (
+            reason: DownloadFailureReason.bankUnavailable,
+            message: 'Server is currently unavailable. Please try again later.',
+          );
         }
-        return 'Authentication failed. Please try again.';
+        return (
+          reason: DownloadFailureReason.unknown,
+          message: 'Authentication failed. Please try again.',
+        );
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return 'Connection timeout. Please check your internet connection.';
+        return (
+          reason: DownloadFailureReason.network,
+          message: 'Connection timeout. Please check your internet connection.',
+        );
       case DioExceptionType.connectionError:
-        return 'Network error. Please check your internet connection.';
-      case DioExceptionType.cancel:
-        return 'Request was cancelled.';
-      case DioExceptionType.badCertificate:
-        return 'Security certificate error. Please contact support.';
       case DioExceptionType.unknown:
-        return 'Network error. Please check your internet connection.';
+        return (
+          reason: DownloadFailureReason.network,
+          message: 'Network error. Please check your internet connection.',
+        );
+      case DioExceptionType.cancel:
+        return (
+          reason: DownloadFailureReason.unknown,
+          message: 'Request was cancelled.',
+        );
+      case DioExceptionType.badCertificate:
+        return (
+          reason: DownloadFailureReason.unknown,
+          message: 'Security certificate error. Please contact support.',
+        );
     }
   }
 
-  /// Returns null if the user successfully confirmed the tan or the error string (e.g. timeout);
-  Future<String?> _waitForTAN(
+  /// Returns null once the user confirmed the tan, otherwise why it failed.
+  Future<({DownloadFailureReason reason, String message})?> _waitForTAN(
     String authId,
     ComdirectAuthAPI comdirectAuthAPI,
   ) async {
@@ -321,7 +349,10 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
             final sleepTime = waitingTime < 8000 ? 1000 : 3000;
             await Future.delayed(Duration(milliseconds: sleepTime));
           default:
-            return 'Invalid authentication status: ${authStatus.status}';
+            return (
+              reason: DownloadFailureReason.unknown,
+              message: 'Invalid authentication status: ${authStatus.status}',
+            );
         }
       } catch (e) {
         consecutiveErrors++;
@@ -333,7 +364,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
           final msg =
               'Failed to poll TAN status after $maxConsecutiveErrors attempts: $e';
           log.e(msg, error: e);
-          return msg;
+          return (reason: DownloadFailureReason.network, message: msg);
         }
 
         // Wait before retrying (exponential backoff)
@@ -342,6 +373,9 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       }
     }
     log.w("TAN confirmation timed out");
-    return 'TAN confirmation timed out';
+    return (
+      reason: DownloadFailureReason.confirmationTimeout,
+      message: 'TAN confirmation timed out',
+    );
   }
 }

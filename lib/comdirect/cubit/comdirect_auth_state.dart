@@ -14,7 +14,11 @@ class WaitingForTANConfirmation extends ComdirectAuthState {}
 
 class AuthError extends ComdirectAuthState {
   final String message;
-  AuthError(this.message);
+
+  /// What went wrong, for callers that offer a way out of it.
+  final DownloadFailureReason reason;
+
+  AuthError(this.message, {this.reason = DownloadFailureReason.unknown});
 }
 
 class AuthSuccess extends ComdirectAuthState {

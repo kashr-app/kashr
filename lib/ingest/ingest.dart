@@ -67,3 +67,24 @@ class DataIngestResult {
 }
 
 enum ResultStatus { success, unauthed, otherError }
+
+/// Why a download stopped, in terms the user can act on.
+///
+/// The sheet picks the way out from this, not from the message: only the
+/// reason knows whether trying the same thing again could ever work.
+enum DownloadFailureReason {
+  /// The bank rejected the stored credentials.
+  badCredentials,
+
+  /// The device could not reach the bank.
+  network,
+
+  /// The bank answered, but could not serve the request.
+  bankUnavailable,
+
+  /// The confirmation in the banking app never arrived.
+  confirmationTimeout,
+
+  /// Anything the app cannot tell apart.
+  unknown,
+}

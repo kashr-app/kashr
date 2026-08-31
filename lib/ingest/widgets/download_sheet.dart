@@ -90,6 +90,7 @@ class _DownloadSheetState extends State<DownloadSheet> {
   Widget _view(DownloadState state) => switch (state) {
     DownloadStarting() ||
     DownloadNeedsBank() => const _BusyView(title: 'Getting ready…'),
+    DownloadNoBankConnected() => const _NoBankView(),
     DownloadChoosingDepth() => const _DepthView(),
     DownloadConnecting() => _BusyView(
       title: state.message ?? 'Connecting to your bank…',
@@ -103,24 +104,25 @@ class _DownloadSheetState extends State<DownloadSheet> {
     DownloadFinished() => _ResultView(result: state.result, range: state.range),
     DownloadFailed() => _FailureView(
       message: state.message,
-      range: state.range,
+      reason: state.reason,
     ),
   };
 
   /// Sends the user into the connect-a-bank flow and picks the download back
   /// up once they are connected.
+  ///
+  /// Both cubits are read before the push so that coming back never depends
+  /// on this context still being mounted, and never on popping a route that
+  /// may no longer be on top.
   Future<void> _connectBank(BuildContext context) async {
     final cubit = context.read<DownloadCubit>();
-    final navigator = Navigator.of(context);
+    final authCubit = context.read<ComdirectAuthCubit>();
 
     await const ComdirectLoginRoute().push<void>(context);
-    if (!context.mounted) return;
 
-    if (context.read<ComdirectAuthCubit>().state is AuthSuccess) {
-      await cubit.continueAfterConnect();
-    } else {
-      navigator.pop();
-    }
+    await cubit.continueAfterConnect(
+      isConnected: authCubit.state is AuthSuccess,
+    );
   }
 }
 
@@ -369,11 +371,76 @@ class _ResultView extends StatelessWidget {
   }
 }
 
+/// The way out of a state that waits on the user.
+///
+/// Cancel is always the way back, so only the one thing worth doing next
+/// changes between states.
+class _Actions extends StatelessWidget {
+  final String primaryLabel;
+  final VoidCallback onPrimary;
+
+  const _Actions({required this.primaryLabel, required this.onPrimary});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(onPressed: onPrimary, child: Text(primaryLabel)),
+      ],
+    );
+  }
+}
+
+/// Where the download stops when the user backed out of the connect flow.
+class _NoBankView extends StatelessWidget {
+  const _NoBankView();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _Title(
+          icon: Icons.account_balance_outlined,
+          text: 'comdirect is not connected',
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Kashr needs your comdirect credentials before it can download '
+          'anything.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _Actions(
+          primaryLabel: 'Connect comdirect',
+          onPrimary: () => context.read<DownloadCubit>().start(),
+        ),
+      ],
+    );
+  }
+}
+
+/// Where the download stopped, and the one thing worth trying next.
+///
+/// The reason picks that action: offering 'Try again' for a rejected password
+/// only sends the user around the same loop.
 class _FailureView extends StatelessWidget {
   final String message;
-  final DownloadRange range;
+  final DownloadFailureReason reason;
 
-  const _FailureView({required this.message, required this.range});
+  const _FailureView({required this.message, required this.reason});
+
+  bool get _isCredentialProblem =>
+      reason == DownloadFailureReason.badCredentials;
 
   @override
   Widget build(BuildContext context) {
@@ -383,7 +450,9 @@ class _FailureView extends StatelessWidget {
       children: [
         _Title(
           icon: Icons.error_outline,
-          text: 'The download stopped',
+          text: _isCredentialProblem
+              ? 'comdirect could not sign you in'
+              : 'The download stopped',
           color: theme.colorScheme.error,
         ),
         const SizedBox(height: 8),
@@ -393,24 +462,26 @@ class _FailureView extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 8),
-        _RangeLine(range: range, canChange: true),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: () => context.read<DownloadCubit>().retry(),
-              child: const Text('Try again'),
-            ),
-          ],
-        ),
+        const SizedBox(height: 16),
+        if (_isCredentialProblem)
+          _Actions(
+            primaryLabel: 'Check credentials',
+            onPrimary: () => _checkCredentials(context),
+          )
+        else
+          _Actions(
+            primaryLabel: 'Try again',
+            onPrimary: () => context.read<DownloadCubit>().retry(),
+          ),
       ],
     );
+  }
+
+  /// Opens the bank's credentials and picks the download back up, so a
+  /// corrected password does not need a second tap.
+  Future<void> _checkCredentials(BuildContext context) async {
+    final cubit = context.read<DownloadCubit>();
+    await const ComdirectLoginRoute().push<void>(context);
+    await cubit.retry();
   }
 }

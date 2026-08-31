@@ -18,8 +18,18 @@ class DownloadStarting extends DownloadState {
 }
 
 /// No bank is connected yet, so the connect flow takes over.
+///
+/// Passing through, the user is already on their way to the login page.
 class DownloadNeedsBank extends DownloadState {
   const DownloadNeedsBank();
+}
+
+/// The user came back from the connect flow without connecting a bank.
+///
+/// A state of its own because waiting on the user must never look like the
+/// app is busy; this is where the download stops and offers a way on.
+class DownloadNoBankConnected extends DownloadState {
+  const DownloadNoBankConnected();
 }
 
 /// The first ever download has no cursor to continue from.
@@ -83,9 +93,13 @@ class DownloadFailed extends DownloadState {
 
   final String message;
 
+  /// What went wrong, so the sheet can offer the way out that fits.
+  final DownloadFailureReason reason;
+
   const DownloadFailed({
     required this.message,
     required this.range,
+    required this.reason,
     this.request,
   });
 }

@@ -53,8 +53,18 @@ class DownloadCubit extends Cubit<DownloadState> {
     await _startConnected();
   }
 
-  /// Continues after the user connected a bank in the login flow.
-  Future<void> continueAfterConnect() => _startConnected();
+  /// Picks the download back up after the connect flow.
+  ///
+  /// When the user left without connecting, the download stops here rather
+  /// than waiting for something that is never going to arrive.
+  Future<void> continueAfterConnect({required bool isConnected}) async {
+    if (!isConnected) {
+      log.i('Left the connect flow without a bank, stopping the download.');
+      _safeEmit(const DownloadNoBankConnected());
+      return;
+    }
+    await _startConnected();
+  }
 
   /// Runs the first download with the depth the user picked.
   Future<void> startWithDepth(DownloadDepth depth) async {
@@ -146,6 +156,7 @@ class DownloadCubit extends Cubit<DownloadState> {
           DownloadFailed(
             request: request,
             range: range,
+            reason: DownloadFailureReason.unknown,
             message: 'The bank ended the session. Please try again.',
           ),
         );
@@ -154,6 +165,7 @@ class DownloadCubit extends Cubit<DownloadState> {
           DownloadFailed(
             request: request,
             range: range,
+            reason: DownloadFailureReason.unknown,
             message: result.errorMessage ?? 'The download did not finish.',
           ),
         );
@@ -196,6 +208,9 @@ class DownloadCubit extends Cubit<DownloadState> {
       DownloadFailed(
         range: range,
         message: result is AuthError ? result.message : 'Login failed.',
+        reason: result is AuthError
+            ? result.reason
+            : DownloadFailureReason.unknown,
       ),
     );
     return null;
