@@ -179,6 +179,10 @@ class AccountCubit extends Cubit<AccountState> {
   /// Records that booked transactions are complete through [cursorDate] for
   /// the given accounts.
   ///
+  /// Only ever moves a cursor forward. A download of a range that ends in the
+  /// past - the user filling a gap in the history - covers less than what the
+  /// account is already caught up on, and must not make it look behind again.
+  ///
   /// Reads the accounts from the current state so that a balance
   /// reconciliation that ran during the same download is not overwritten.
   Future<void> advanceDownloadCursors(
@@ -188,6 +192,8 @@ class AccountCubit extends Cubit<AccountState> {
     for (final id in accountIds) {
       final account = state.accountById[id];
       if (account == null) continue;
+      final current = account.downloadCursorDate;
+      if (current != null && !current.isBefore(cursorDate)) continue;
       await _accountRepository.updateAccount(
         account.copyWith(downloadCursorDate: cursorDate),
       );

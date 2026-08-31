@@ -80,7 +80,11 @@ class _DownloadSheetState extends State<DownloadSheet> {
       canCancel: true,
     ),
     DownloadStopping() => const _BusyView(title: 'Stopping…'),
-    DownloadFinished() => _ResultView(result: state.result, range: state.range),
+    DownloadFinished() => _ResultView(
+      result: state.result,
+      range: state.range,
+      isCustomRange: state.request.ignoreCursors,
+    ),
     DownloadFailed() => _FailureView(
       message: state.message,
       reason: state.reason,
@@ -150,16 +154,25 @@ class _Title extends StatelessWidget {
   }
 }
 
-/// The one range the download covers, oldest start to today.
+/// The one range the download covers, oldest start to newest booking date.
 ///
 /// Per-account ranges are an internal detail, the user sees their union.
 class _RangeLine extends StatelessWidget {
   final DownloadRange range;
 
-  /// Offers widening the range. Only while no download is in flight.
+  /// Offers changing the range. Only while no download is in flight.
   final bool canChange;
 
-  const _RangeLine({required this.range, this.canChange = false});
+  /// Whether [range] is one the user picked by hand.
+  ///
+  /// Only then is there a default to go back to.
+  final bool isCustom;
+
+  const _RangeLine({
+    required this.range,
+    this.canChange = false,
+    this.isCustom = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -175,6 +188,11 @@ class _RangeLine extends StatelessWidget {
             ),
           ),
         ),
+        if (canChange && isCustom)
+          TextButton(
+            onPressed: () => context.read<DownloadCubit>().start(),
+            child: const Text('Use default'),
+          ),
         if (canChange)
           TextButton(
             onPressed: () => _changeRange(context),
@@ -184,18 +202,21 @@ class _RangeLine extends StatelessWidget {
     );
   }
 
+  /// Lets the user pick both ends, so a gap in the history can be filled
+  /// without re-fetching everything since.
   Future<void> _changeRange(BuildContext context) async {
     final cubit = context.read<DownloadCubit>();
-    final today = DateTime.now();
-    final startDate = await showDatePicker(
+    final today = dateOnly(DateTime.now());
+    final picked = await showDateRangePicker(
       context: context,
-      initialDate: range.min,
+      initialDateRange: DateTimeRange(start: range.min, end: range.max),
       firstDate: DateTime(2000),
       lastDate: today,
-      helpText: 'Download from',
+      helpText: 'Download range',
+      saveText: 'Download',
     );
-    if (startDate == null) return;
-    await cubit.downloadFrom(startDate);
+    if (picked == null) return;
+    await cubit.downloadBetween(startDate: picked.start, endDate: picked.end);
   }
 }
 
@@ -337,7 +358,14 @@ class _ResultView extends StatelessWidget {
   final DataIngestResult result;
   final DownloadRange range;
 
-  const _ResultView({required this.result, required this.range});
+  /// Whether the run used a range the user picked rather than the default.
+  final bool isCustomRange;
+
+  const _ResultView({
+    required this.result,
+    required this.range,
+    required this.isCustomRange,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -351,7 +379,7 @@ class _ResultView extends StatelessWidget {
           color: theme.colorScheme.primary,
         ),
         const SizedBox(height: 8),
-        _RangeLine(range: range, canChange: true),
+        _RangeLine(range: range, canChange: true, isCustom: isCustomRange),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerRight,

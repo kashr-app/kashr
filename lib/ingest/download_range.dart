@@ -146,9 +146,23 @@ class DownloadRequest {
     DateTime today, {
     required DateTime startDate,
     bool ignoreCursors = false,
+  }) => DownloadRequest.between(
+    startDate: startDate,
+    endDate: today,
+    ignoreCursors: ignoreCursors,
+  );
+
+  /// A run over the booking dates the user picked, both ends inclusive.
+  ///
+  /// The end may lie in the past, which is the whole point of picking it:
+  /// filling a gap in the history does not have to fetch everything since.
+  factory DownloadRequest.between({
+    required DateTime startDate,
+    required DateTime endDate,
+    bool ignoreCursors = false,
   }) => DownloadRequest(
     startDate: dateOnly(startDate),
-    maxBookingDate: dateOnly(today),
+    maxBookingDate: dateOnly(endDate),
     ignoreCursors: ignoreCursors,
   );
 }

@@ -163,6 +163,34 @@ void main() {
     });
   });
 
+  group('DownloadRequest.between', () {
+    test('keeps both picked ends, stripped to booking dates', () {
+      final request = DownloadRequest.between(
+        startDate: DateTime(2026, 3, 5, 14, 30),
+        endDate: DateTime(2026, 4, 20, 9, 15),
+      );
+
+      expect(request.startDate, DateTime(2026, 3, 5));
+      expect(request.maxBookingDate, DateTime(2026, 4, 20));
+    });
+
+    test('spans a picked range that ends in the past', () {
+      final accounts = [_account(downloadCursorDate: DateTime(2026, 8, 20))];
+
+      final range = unionDownloadRange(
+        accounts,
+        request: DownloadRequest.between(
+          startDate: DateTime(2026, 3, 1),
+          endDate: DateTime(2026, 4, 30),
+          ignoreCursors: true,
+        ),
+      );
+
+      expect(range.min, DateTime(2026, 3, 1));
+      expect(range.max, DateTime(2026, 4, 30));
+    });
+  });
+
   group('DownloadDepth', () {
     test('counts back the offered months', () {
       expect(DownloadDepth.threeMonths.startDate(today), DateTime(2026, 5, 31));

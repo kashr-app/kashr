@@ -84,15 +84,19 @@ class DownloadCubit extends Cubit<DownloadState> {
     await _run(DownloadRequest.upTo(today, startDate: depth.startDate(today)));
   }
 
-  /// Re-runs the download from [startDate] for every account.
+  /// Re-runs the download over the booking dates the user picked.
   ///
-  /// Used when the user widens the range by hand; the cursors are ignored so
-  /// that the requested history is actually fetched.
-  Future<void> downloadFrom(DateTime startDate) async {
+  /// Used when the user picks the range by hand; the cursors are ignored so
+  /// that the requested history is actually fetched, in both directions -
+  /// [endDate] may well lie before a cursor.
+  Future<void> downloadBetween({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
     await _run(
-      DownloadRequest.upTo(
-        DateTime.now(),
+      DownloadRequest.between(
         startDate: startDate,
+        endDate: endDate,
         ignoreCursors: true,
       ),
     );
