@@ -19,6 +19,7 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/dashboard/widgets/cashflow_card.dart';
 import 'package:kashr/dashboard/widgets/income_summary_card.dart';
+import 'package:kashr/ingest/cubit/download_cubit.dart';
 import 'package:kashr/ingest/widgets/download_fab.dart';
 import 'package:kashr/dashboard/widgets/pending_turnovers_hint.dart';
 import 'package:kashr/dashboard/widgets/transfers_need_review_hint.dart';
@@ -60,10 +61,29 @@ class DashboardPage extends StatelessWidget {
         context.read<TagTurnoverRepository>(),
         context.read<TagRepository>(),
         context.read<TransferRepository>(),
-        context.read<AccountCubit>(),
         context.read<LogService>().log,
       )..loadPeriodData(),
-      child: const _DashboardPage(),
+      child: const _RefreshOnDownload(child: _DashboardPage()),
+    );
+  }
+}
+
+/// Reloads the dashboard once a download brought new data in.
+///
+/// The download is app wide and knows nothing about the dashboard, so the
+/// dashboard is the one that listens.
+class _RefreshOnDownload extends StatelessWidget {
+  const _RefreshOnDownload({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<DownloadCubit, DownloadState>(
+      listenWhen: (previous, current) => current is DownloadFinished,
+      listener: (context, state) =>
+          context.read<DashboardCubit>().loadPeriodData(),
+      child: child,
     );
   }
 }

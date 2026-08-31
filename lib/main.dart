@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:kashr/account/account_module.dart';
 import 'package:kashr/backup/backup_module.dart';
 import 'package:kashr/comdirect/comdirect_module.dart';
+import 'package:kashr/ingest/ingest_module.dart';
 import 'package:kashr/core/app_lifecycle_listeners.dart';
 import 'package:kashr/core/module.dart';
 import 'package:kashr/core/restart_widget.dart';
@@ -153,6 +154,7 @@ class _MyAppState extends State<MyApp> {
       SavingsModule(turnoverModule, log),
       AccountModule(turnoverModule, log),
       ComdirectModule(log),
+      IngestModule(turnoverModule, log),
     ];
   }
 

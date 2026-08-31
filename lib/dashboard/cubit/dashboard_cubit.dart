@@ -2,13 +2,10 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
-import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/dashboard/cubit/dashboard_state.dart';
 import 'package:kashr/dashboard/model/tag_prediction.dart';
-import 'package:kashr/ingest/download_range.dart';
-import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
@@ -32,7 +29,6 @@ class DashboardCubit extends Cubit<DashboardState> {
   final TagTurnoverRepository _tagTurnoverRepository;
   final TagRepository _tagRepository;
   final TransferRepository _transferRepository;
-  final AccountCubit _accountCubit;
   final Logger log;
 
   StreamSubscription<dynamic>? _changeSubscription;
@@ -47,7 +43,6 @@ class DashboardCubit extends Cubit<DashboardState> {
     this._tagTurnoverRepository,
     this._tagRepository,
     this._transferRepository,
-    this._accountCubit,
     this.log,
   ) : super(
         DashboardState(
@@ -162,21 +157,6 @@ class DashboardCubit extends Cubit<DashboardState> {
   /// cursor, storing it would compound backwards on every download.
   ///
   /// Progress is reported by the download sheet, which owns the flow.
-  Future<DataIngestResult> ingestData(
-    DataIngestor ingestor,
-    DownloadRequest request,
-  ) async {
-    final result = await ingestor.ingest(request);
-    if (result.status == ResultStatus.success) {
-      await _accountCubit.advanceDownloadCursors(
-        result.downloadedAccountIds,
-        request.maxBookingDate,
-      );
-      unawaited(loadPeriodData());
-    }
-    return result;
-  }
-
   /// Loads data that does not depend on the selected period.
   Future<void> _loadNonPeriodData() async {
     // Run all queries in parallel with type-safe record destructuring

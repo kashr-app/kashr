@@ -1,5 +1,18 @@
 part of 'download_cubit.dart';
 
+/// What a state means to the button and the sheet.
+enum DownloadActivity {
+  /// Work is in flight. The button says so, even with the sheet closed.
+  working,
+
+  /// Nothing is happening, but the download is not over: it needs an answer
+  /// that only the sheet can collect.
+  waitingForUser,
+
+  /// The download is over. Opening the sheet starts a new one.
+  settled,
+}
+
 /// What the download is doing right now.
 @immutable
 sealed class DownloadState {
@@ -9,7 +22,27 @@ sealed class DownloadState {
   /// The booking dates being fetched, shown to the user as one range.
   DownloadRange? get range => null;
 
+  /// How far along the download is, in the only three steps that anything
+  /// outside this file needs to tell apart.
+  DownloadActivity get activity => switch (this) {
+    DownloadStarting() ||
+    DownloadConnecting() ||
+    DownloadWaitingForConfirmation() ||
+    DownloadRunning() => DownloadActivity.working,
+    DownloadNeedsBank() ||
+    DownloadChoosingDepth() => DownloadActivity.waitingForUser,
+    DownloadIdle() ||
+    DownloadNoBankConnected() ||
+    DownloadFinished() ||
+    DownloadFailed() => DownloadActivity.settled,
+  };
+
   const DownloadState();
+}
+
+/// Nothing has been downloaded yet, and nothing is being downloaded.
+class DownloadIdle extends DownloadState {
+  const DownloadIdle();
 }
 
 /// Deciding what to do, before anything is shown.

@@ -5,7 +5,6 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/comdirect/comdirect_api.dart';
 import 'package:kashr/comdirect/comdirect_model.dart';
 import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
-import 'package:kashr/dashboard/cubit/dashboard_cubit.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:logger/logger.dart';
@@ -18,13 +17,15 @@ typedef IngestorFactory = DataIngestor Function(ComdirectAPI api);
 
 /// Drives one download from the tap on the download button to the result.
 ///
+/// Lives as long as the app, not as long as the sheet: a download has to
+/// survive the sheet being dismissed, and there must only ever be one of it.
+///
 /// Everything the user is asked is asked here, and there is only one such
 /// question: how far back the very first download should reach. Afterwards
 /// each account's own download cursor answers it.
 class DownloadCubit extends Cubit<DownloadState> {
   final ComdirectAuthCubit _authCubit;
   final AccountCubit _accountCubit;
-  final DashboardCubit _dashboardCubit;
   final IngestorFactory _createIngestor;
   final Logger log;
 
@@ -35,16 +36,24 @@ class DownloadCubit extends Cubit<DownloadState> {
     this.log, {
     required ComdirectAuthCubit authCubit,
     required AccountCubit accountCubit,
-    required DashboardCubit dashboardCubit,
     required IngestorFactory createIngestor,
   }) : _authCubit = authCubit,
        _accountCubit = accountCubit,
-       _dashboardCubit = dashboardCubit,
        _createIngestor = createIngestor,
-       super(const DownloadStarting());
+       super(const DownloadIdle());
+
+  /// Starts a download unless one is already under way.
+  ///
+  /// Opening the sheet again has to show the download that is running, or
+  /// the question it is stuck on, rather than begin a second one.
+  Future<void> startIfIdle() async {
+    if (state.activity != DownloadActivity.settled) return;
+    await start();
+  }
 
   /// Starts the download, asking only what cannot be derived.
   Future<void> start() async {
+    _safeEmit(const DownloadStarting());
     if (!await Credentials.hasStored()) {
       log.i('No bank connected yet, offering the connect flow.');
       _safeEmit(const DownloadNeedsBank());
@@ -136,10 +145,7 @@ class DownloadCubit extends Cubit<DownloadState> {
 
     _safeEmit(DownloadRunning(request: request, range: range));
 
-    final result = await _dashboardCubit.ingestData(
-      _createIngestor(api),
-      request,
-    );
+    final result = await _ingest(_createIngestor(api), request);
 
     switch (result.status) {
       case ResultStatus.success:
@@ -172,6 +178,22 @@ class DownloadCubit extends Cubit<DownloadState> {
     }
   }
 
+  /// Downloads, and on success records how far each account is caught up so
+  /// the next download can continue from there.
+  Future<DataIngestResult> _ingest(
+    DataIngestor ingestor,
+    DownloadRequest request,
+  ) async {
+    final result = await ingestor.ingest(request);
+    if (result.status == ResultStatus.success) {
+      await _accountCubit.advanceDownloadCursors(
+        result.downloadedAccountIds,
+        request.maxBookingDate,
+      );
+    }
+    return result;
+  }
+
   /// Returns an authenticated API, logging in when needed.
   ///
   /// Emits the connection progress, including the wait for the confirmation
@@ -186,7 +208,13 @@ class DownloadCubit extends Cubit<DownloadState> {
     final credentials = await Credentials.load();
     if (credentials == null) {
       log.w('Stored credentials could not be unlocked.');
-      _safeEmit(const DownloadNeedsBank());
+      _safeEmit(
+        DownloadFailed(
+          range: range,
+          reason: DownloadFailureReason.badCredentials,
+          message: 'Kashr could not unlock your saved credentials.',
+        ),
+      );
       return null;
     }
 
@@ -229,7 +257,8 @@ class DownloadCubit extends Cubit<DownloadState> {
     }
   }
 
-  /// The sheet can be dismissed while the download keeps running.
+  /// The download outlives the sheet, so it can still be running when the
+  /// app tears the cubit down.
   void _safeEmit(DownloadState state) {
     if (isClosed) return;
     emit(state);

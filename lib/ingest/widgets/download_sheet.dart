@@ -1,53 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/comdirect/comdirect_login_page.dart';
-import 'package:kashr/comdirect/comdirect_service.dart';
 import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
-import 'package:kashr/dashboard/cubit/dashboard_cubit.dart';
 import 'package:kashr/ingest/cubit/download_cubit.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
-import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/settings/extensions.dart';
-import 'package:kashr/turnover/services/turnover_matching_service.dart';
-import 'package:kashr/turnover/services/turnover_service.dart';
 
 /// Shows what a download is doing, from connecting to the result.
 ///
 /// The sheet is the whole conversation about a download: it is the only place
 /// the user is asked anything, and the result arrives where they are already
-/// looking.
+/// looking. Dismissing it only closes the window on a download that keeps
+/// going; reopening shows the same one again.
 class DownloadSheet extends StatefulWidget {
   const DownloadSheet({super.key});
 
-  /// Opens the sheet and starts the download.
+  /// Opens the sheet on the app's download.
   static Future<void> show(BuildContext context) {
-    final log = context.read<LogService>().log;
-    final accountCubit = context.read<AccountCubit>();
-    final turnoverService = context.read<TurnoverService>();
-    final matchingService = context.read<TurnoverMatchingService>();
-
-    final cubit = DownloadCubit(
-      log,
-      authCubit: context.read<ComdirectAuthCubit>(),
-      accountCubit: accountCubit,
-      dashboardCubit: context.read<DashboardCubit>(),
-      createIngestor: (api) => ComdirectService(
-        log,
-        comdirectAPI: api,
-        accountCubit: accountCubit,
-        turnoverService: turnoverService,
-        matchingService: matchingService,
-      ),
-    );
-
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) =>
-          BlocProvider.value(value: cubit, child: const DownloadSheet()),
-    ).whenComplete(cubit.close);
+      builder: (_) => const DownloadSheet(),
+    );
   }
 
   @override
@@ -60,7 +35,7 @@ class _DownloadSheetState extends State<DownloadSheet> {
     super.initState();
     // After the first frame, so the state listener below sees every step.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<DownloadCubit>().start();
+      if (mounted) context.read<DownloadCubit>().startIfIdle();
     });
   }
 
@@ -88,6 +63,7 @@ class _DownloadSheetState extends State<DownloadSheet> {
   }
 
   Widget _view(DownloadState state) => switch (state) {
+    DownloadIdle() ||
     DownloadStarting() ||
     DownloadNeedsBank() => const _BusyView(title: 'Getting ready…'),
     DownloadNoBankConnected() => const _NoBankView(),
