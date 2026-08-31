@@ -5,6 +5,8 @@ import 'package:kashr/account/accounts_page.dart';
 import 'package:kashr/analytics/analytics_page.dart';
 import 'package:kashr/backup/backup_list_page.dart';
 import 'package:kashr/backup/widgets/backup_reminder_widget.dart';
+import 'package:kashr/core/dialogs/waiting_dialog.dart';
+import 'package:kashr/core/extensions/bloc_extensions.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/account/account_selector_dialog.dart';
@@ -40,6 +42,7 @@ import 'package:kashr/turnover/widgets/quick_turnover_entry_sheet.dart';
 import 'package:kashr/turnover/turnovers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 
 class DashboardRoute extends GoRouteData with $DashboardRoute {
   const DashboardRoute();
@@ -283,16 +286,34 @@ class _DashboardPage extends StatelessWidget {
     );
   }
 
-  void _showQuickExpenseEntry(BuildContext context) async {
+  /// Waits for the accounts, so that a tap that arrived while they were
+  /// still loading is served instead of dropped.
+  ///
+  /// Returns `null` when they could not be loaded, after saying so.
+  Future<Map<UuidValue, Account>?> _loadedAccounts(BuildContext context) async {
     final accountCubit = context.read<AccountCubit>();
-    if (accountCubit.state.status.isLoading) {
-      Status.error.snack(
-        context,
-        'Accounts still loading, please try again in a second.',
+    final state = await showWhileWaiting(
+      context,
+      accountCubit.waitForState((it) => !it.status.isLoading),
+    );
+    if (!state.status.isError) return state.accountById;
+    if (context.mounted) {
+      Status.error.snack2(
+        ScaffoldMessenger.of(context),
+        Theme.of(context),
+        state.errorMessage ?? 'Failed to load accounts.',
+        action: SnackBarAction(
+          label: 'Retry',
+          onPressed: accountCubit.loadAccounts,
+        ),
       );
-      return;
     }
-    final accounts = accountCubit.state.accountById;
+    return null;
+  }
+
+  void _showQuickExpenseEntry(BuildContext context) async {
+    final accounts = await _loadedAccounts(context);
+    if (accounts == null || !context.mounted) return;
 
     // If only one account, use it directly
     if (accounts.length == 1) {
@@ -327,14 +348,7 @@ class _DashboardPage extends StatelessWidget {
   }
 
   void _showTransferDialog(BuildContext context) async {
-    final accountCubit = context.read<AccountCubit>();
-    if (accountCubit.state.status.isLoading) {
-      Status.error.snack(
-        context,
-        'Accounts still loading, please try again in a second.',
-      );
-      return;
-    }
+    if (await _loadedAccounts(context) == null || !context.mounted) return;
 
     // Show account selector, which creates the accounts if there are none yet
     final result = await DualAccountSelectorDialog.show(context);
