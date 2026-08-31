@@ -1,6 +1,40 @@
 import 'package:kashr/ingest/download_range.dart';
 import 'package:uuid/uuid.dart';
 
+/// Asks a download to stop, without being able to abort what is in flight.
+///
+/// Nothing here cancels an HTTP request. The loops that make a download long
+/// check this between steps instead, so stopping costs one request rather
+/// than the rest of the run.
+///
+/// Stopping needs no rollback. A download cursor only moves once a run
+/// finished, so a stopped run leaves nothing that claims to be complete, and
+/// the next download fetches the same window again.
+class DownloadCancellation {
+  bool _isCancelled = false;
+
+  bool get isCancelled => _isCancelled;
+
+  void cancel() => _isCancelled = true;
+
+  /// Throws [DownloadCancelledException] once [cancel] was called.
+  ///
+  /// Belongs at the points where stopping is safe: before fetching the next
+  /// piece, never between writing what was fetched and the bookkeeping that
+  /// makes it consistent.
+  void throwIfCancelled() {
+    if (_isCancelled) throw const DownloadCancelledException();
+  }
+}
+
+/// Unwinds a download that the user stopped.
+class DownloadCancelledException implements Exception {
+  const DownloadCancelledException();
+
+  @override
+  String toString() => 'The download was cancelled.';
+}
+
 /// A source that can pull bank data into the app.
 abstract class DataIngestor {
   /// Downloads everything [request] covers.
@@ -12,7 +46,13 @@ abstract class DataIngestor {
   /// [DataIngestResult.downloadedAccountIds] is complete through
   /// [DownloadRequest.maxBookingDate]. Moving the download cursors there is
   /// the caller's job, it is the same for every bank.
-  Future<DataIngestResult> ingest(DownloadRequest request);
+  ///
+  /// Throws [DownloadCancelledException] when [cancellation] was cancelled,
+  /// which implementations check only where stopping is safe.
+  Future<DataIngestResult> ingest(
+    DownloadRequest request,
+    DownloadCancellation cancellation,
+  );
 }
 
 class DataIngestResult {

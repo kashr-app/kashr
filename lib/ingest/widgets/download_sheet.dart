@@ -71,12 +71,15 @@ class _DownloadSheetState extends State<DownloadSheet> {
     DownloadConnecting() => _BusyView(
       title: state.message ?? 'Connecting to your bank…',
       range: state.range,
+      canCancel: true,
     ),
     DownloadWaitingForConfirmation() => _ConfirmationView(range: state.range),
     DownloadRunning() => _BusyView(
       title: 'Downloading transactions…',
       range: state.range,
+      canCancel: true,
     ),
+    DownloadStopping() => const _BusyView(title: 'Stopping…'),
     DownloadFinished() => _ResultView(result: state.result, range: state.range),
     DownloadFailed() => _FailureView(
       message: state.message,
@@ -200,7 +203,10 @@ class _BusyView extends StatelessWidget {
   final String title;
   final DownloadRange? range;
 
-  const _BusyView({required this.title, this.range});
+  /// Whether there is work worth stopping. Adds the way to stop it.
+  final bool canCancel;
+
+  const _BusyView({required this.title, this.range, this.canCancel = false});
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +234,30 @@ class _BusyView extends StatelessWidget {
           const SizedBox(height: 8),
           _RangeLine(range: range),
         ],
+        if (canCancel) const _CancelAction(),
       ],
+    );
+  }
+}
+
+/// Stops the download and closes the sheet.
+///
+/// The stop is cooperative, so the download ends at its next safe point
+/// rather than the instant this is tapped.
+class _CancelAction extends StatelessWidget {
+  const _CancelAction();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton(
+        onPressed: () {
+          context.read<DownloadCubit>().cancel();
+          Navigator.of(context).pop();
+        },
+        child: const Text('Cancel'),
+      ),
     );
   }
 }
@@ -261,6 +290,7 @@ class _ConfirmationView extends StatelessWidget {
         const LinearProgressIndicator(),
         const SizedBox(height: 8),
         _RangeLine(range: range),
+        const _CancelAction(),
       ],
     );
   }
@@ -293,6 +323,7 @@ class _DepthView extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.read<DownloadCubit>().startWithDepth(depth),
           ),
+        const _CancelAction(),
       ],
     );
   }

@@ -35,17 +35,24 @@ class ComdirectService implements DataIngestor {
   });
 
   @override
-  Future<DataIngestResult> ingest(DownloadRequest request) =>
-      _fetchAccountsAndTurnovers(request);
+  Future<DataIngestResult> ingest(
+    DownloadRequest request,
+    DownloadCancellation cancellation,
+  ) => _fetchAccountsAndTurnovers(request, cancellation);
 
   /// Fetches accounts and turnovers from the Comdirect API.
   /// Also automatically updates the balance for existing accounts.
+  ///
+  /// [cancellation] is checked while fetching only. Once the turnovers are
+  /// being written, the run finishes: the balance reconciliation that
+  /// follows is what makes them consistent.
   Future<DataIngestResult> _fetchAccountsAndTurnovers(
     DownloadRequest request,
+    DownloadCancellation cancellation,
   ) async {
     try {
       final (accounts, realBalanceByAccountId) =
-          await _fetchAccountsAndStoreNew();
+          await _fetchAccountsAndStoreNew(cancellation);
 
       // Accounts that have never been downloaded - including the ones just
       // discovered - start where the oldest known account already is, so they
@@ -64,6 +71,7 @@ class ComdirectService implements DataIngestor {
         accounts,
         request,
         startDateWithoutCursor,
+        cancellation,
       );
 
       // Assuming the real balance did not change between fetching accounts
@@ -87,6 +95,9 @@ class ComdirectService implements DataIngestor {
             if (account.apiId != null) account.id,
         ],
       );
+    } on DownloadCancelledException {
+      log.i('Download stopped before any turnover was written.');
+      rethrow;
     } catch (e, s) {
       if (e is DioException) {
         if (e.response?.statusCode == 401) {
@@ -104,7 +115,7 @@ class ComdirectService implements DataIngestor {
   Future<
     (List<Account> accounts, Map<UuidValue, Decimal?> realBalanceByAccountId)
   >
-  _fetchAccountsAndStoreNew() async {
+  _fetchAccountsAndStoreNew(DownloadCancellation cancellation) async {
     final uuid = Uuid();
 
     final accounts = <Account>[];
@@ -120,6 +131,10 @@ class ComdirectService implements DataIngestor {
     var index = 0;
     var total = 1;
     while (index < total) {
+      // Stopping here can leave accounts from earlier pages stored. They are
+      // matched by apiId next time, so the run simply picks them up again.
+      cancellation.throwIfCancelled();
+
       // Fetch account balances
       final accountsPage = await comdirectAPI.getBalances(index: index);
       total = accountsPage.paging.matches;
@@ -178,6 +193,7 @@ class ComdirectService implements DataIngestor {
     Iterable<Account> accounts,
     DownloadRequest request,
     DateTime? startDateWithoutCursor,
+    DownloadCancellation cancellation,
   ) async {
     final uuid = Uuid();
     final turnoversById = <UuidValue, Turnover>{};
@@ -196,6 +212,10 @@ class ComdirectService implements DataIngestor {
       var index = 0;
       var total = 1;
       while (index < total) {
+        // Everything fetched so far is still only in memory, so stopping
+        // here writes nothing at all.
+        cancellation.throwIfCancelled();
+
         // Fetch transactions for each account
         final transactionsResponse = await comdirectAPI.getTransactions(
           accountId: apiId,

@@ -28,7 +28,8 @@ sealed class DownloadState {
     DownloadStarting() ||
     DownloadConnecting() ||
     DownloadWaitingForConfirmation() ||
-    DownloadRunning() => DownloadActivity.working,
+    DownloadRunning() ||
+    DownloadStopping() => DownloadActivity.working,
     DownloadNeedsBank() ||
     DownloadChoosingDepth() => DownloadActivity.waitingForUser,
     DownloadIdle() ||
@@ -97,6 +98,14 @@ class DownloadRunning extends DownloadState {
   final DownloadRange range;
 
   const DownloadRunning({required this.request, required this.range});
+}
+
+/// The user asked to stop, and the download is unwinding.
+///
+/// Its own state because stopping is not instant: the run ends at its next
+/// safe point, and until then it is honest to say so.
+class DownloadStopping extends DownloadState {
+  const DownloadStopping();
 }
 
 /// The data has arrived.

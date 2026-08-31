@@ -22,7 +22,15 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
   ComdirectAuthCubit(this.log) : super(AuthInitial());
 
-  Future<void> login(Credentials credentials) async {
+  /// Signs in, all the way through the confirmation in the banking app.
+  ///
+  /// Throws [DownloadCancelledException] when [cancellation] is cancelled
+  /// while waiting for that confirmation, which is the one step long enough
+  /// to be worth stopping.
+  Future<void> login(
+    Credentials credentials, {
+    DownloadCancellation? cancellation,
+  }) async {
     try {
       final authTokenResponse = await ComdirectAuthAPI(Dio())
           .createLoginAuthToken(
@@ -87,7 +95,11 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
       final href = tanChallenge.link!.href;
       final authId = href.substring(href.lastIndexOf("/"), href.length);
-      final tanError = await _waitForTAN(authId, comdirectAuthAPI);
+      final tanError = await _waitForTAN(
+        authId,
+        comdirectAuthAPI,
+        cancellation,
+      );
       if (tanError != null) {
         emit(AuthError(tanError.message, reason: tanError.reason));
         return;
@@ -112,6 +124,10 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       final api = ComdirectAPI(dioApi);
 
       emit(AuthSuccess(apiToken, api, dioApi));
+    } on DownloadCancelledException {
+      log.i('Login stopped while waiting for the confirmation.');
+      emit(AuthInitial());
+      rethrow;
     } on DioException catch (e, s) {
       log.e('Failed to authenticate', error: e, stackTrace: s);
       log.e(
@@ -326,6 +342,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
   Future<({DownloadFailureReason reason, String message})?> _waitForTAN(
     String authId,
     ComdirectAuthAPI comdirectAuthAPI,
+    DownloadCancellation? cancellation,
   ) async {
     final startWaitingAt = DateTime.now().millisecondsSinceEpoch;
     const timeoutMillis =
@@ -335,6 +352,9 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
     while (DateTime.now().millisecondsSinceEpoch <
         startWaitingAt + timeoutMillis) {
+      // The one wait long enough that stopping has to be possible: without
+      // this the user would be held for up to ten minutes.
+      cancellation?.throwIfCancelled();
       try {
         final authStatus = await comdirectAuthAPI.getAuthStatus(authId);
         consecutiveErrors = 0; // Reset error counter on successful request
@@ -354,6 +374,8 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
               message: 'Invalid authentication status: ${authStatus.status}',
             );
         }
+      } on DownloadCancelledException {
+        rethrow;
       } catch (e) {
         consecutiveErrors++;
         log.w(

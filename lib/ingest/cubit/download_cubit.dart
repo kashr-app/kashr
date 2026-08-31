@@ -32,6 +32,9 @@ class DownloadCubit extends Cubit<DownloadState> {
   /// Guards against a stray tap starting a second, concurrent download.
   bool _isRunning = false;
 
+  /// The stop signal of the run in flight, if there is one.
+  DownloadCancellation? _cancellation;
+
   DownloadCubit(
     this.log, {
     required ComdirectAuthCubit authCubit,
@@ -95,6 +98,21 @@ class DownloadCubit extends Cubit<DownloadState> {
     );
   }
 
+  /// Stops the download at the next point where stopping is safe.
+  ///
+  /// Nothing is rolled back and nothing needs to be: a download cursor only
+  /// moves once a run finished, so whatever was already written is simply
+  /// fetched again next time.
+  void cancel() {
+    if (_isRunning) {
+      log.i('Download cancelled, stopping at the next safe point.');
+      _cancellation?.cancel();
+      _safeEmit(const DownloadStopping());
+      return;
+    }
+    _safeEmit(const DownloadIdle());
+  }
+
   /// Retries after a failure, with the same scope as before.
   Future<void> retry() async {
     final request = state.request;
@@ -124,15 +142,22 @@ class DownloadCubit extends Cubit<DownloadState> {
   Future<void> _run(DownloadRequest request) async {
     if (_isRunning) return;
     _isRunning = true;
+    final cancellation = DownloadCancellation();
+    _cancellation = cancellation;
     try {
-      await _attempt(request, allowRelogin: true);
+      await _attempt(request, cancellation, allowRelogin: true);
+    } on DownloadCancelledException {
+      log.i('Download stopped.');
+      _safeEmit(const DownloadIdle());
     } finally {
       _isRunning = false;
+      _cancellation = null;
     }
   }
 
   Future<void> _attempt(
-    DownloadRequest request, {
+    DownloadRequest request,
+    DownloadCancellation cancellation, {
     required bool allowRelogin,
   }) async {
     final range = unionDownloadRange(
@@ -140,12 +165,17 @@ class DownloadCubit extends Cubit<DownloadState> {
       request: request,
     );
 
-    final api = await _authenticate(range: range, force: !allowRelogin);
+    final api = await _authenticate(
+      range: range,
+      cancellation: cancellation,
+      force: !allowRelogin,
+    );
     if (api == null) return;
 
+    cancellation.throwIfCancelled();
     _safeEmit(DownloadRunning(request: request, range: range));
 
-    final result = await _ingest(_createIngestor(api), request);
+    final result = await _ingest(_createIngestor(api), request, cancellation);
 
     switch (result.status) {
       case ResultStatus.success:
@@ -155,7 +185,7 @@ class DownloadCubit extends Cubit<DownloadState> {
       case ResultStatus.unauthed:
         if (allowRelogin) {
           log.i('Download was rejected as unauthenticated, logging in again.');
-          await _attempt(request, allowRelogin: false);
+          await _attempt(request, cancellation, allowRelogin: false);
           return;
         }
         _safeEmit(
@@ -183,8 +213,9 @@ class DownloadCubit extends Cubit<DownloadState> {
   Future<DataIngestResult> _ingest(
     DataIngestor ingestor,
     DownloadRequest request,
+    DownloadCancellation cancellation,
   ) async {
-    final result = await ingestor.ingest(request);
+    final result = await ingestor.ingest(request, cancellation);
     if (result.status == ResultStatus.success) {
       await _accountCubit.advanceDownloadCursors(
         result.downloadedAccountIds,
@@ -200,6 +231,7 @@ class DownloadCubit extends Cubit<DownloadState> {
   /// in the banking app, so the sheet can show what is happening.
   Future<ComdirectAPI?> _authenticate({
     required DownloadRange range,
+    required DownloadCancellation cancellation,
     required bool force,
   }) async {
     final authState = _authCubit.state;
@@ -224,7 +256,7 @@ class DownloadCubit extends Cubit<DownloadState> {
       (it) => _onAuthState(it, range),
     );
     try {
-      await _authCubit.login(credentials);
+      await _authCubit.login(credentials, cancellation: cancellation);
     } finally {
       await subscription.cancel();
     }
