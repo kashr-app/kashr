@@ -475,7 +475,7 @@ class _PendingTurnoverItem extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        context.dateFormat.format(tt.bookingDate),
+                        tt.bookingDate.format(context.dateFormat),
                         style: TextStyle(
                           fontSize: 12,
                           color: theme.colorScheme.onSurfaceVariant,

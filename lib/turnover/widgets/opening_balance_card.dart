@@ -3,13 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/theme.dart';
 import 'package:uuid/uuid.dart';
 
 class OpeningBalanceCard extends StatelessWidget {
   final UuidValue accountId;
-  final DateTime openingBalanceDate;
+  final BookingDate openingBalanceDate;
 
   const OpeningBalanceCard({
     required this.accountId,
@@ -54,7 +55,7 @@ class OpeningBalanceCard extends StatelessWidget {
                               ?.copyWith(fontWeight: FontWeight.w500),
                         ),
                         Text(
-                          '${account.name} • ${context.dateFormat.format(openingBalanceDate)}',
+                          '${account.name} • ${openingBalanceDate.format(context.dateFormat)}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],

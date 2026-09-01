@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/color_utils.dart';
 import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/dashboard/model/tag_prediction.dart';
 import 'package:kashr/turnover/model/tag.dart';
@@ -40,7 +41,7 @@ class TagSummaryRow extends StatelessWidget {
     final label = _getLabel();
     final percentage = _calculatePercentage();
     final (avg, avgPerUnit) = period.avgPerFullPeriod(amount);
-    final isCurrentPeriod = period.contains(DateTime.now());
+    final isCurrentPeriod = period.contains(BookingDate.today());
 
     final textColor = Color.lerp(color, theme.colorScheme.onSurface, 0.4)!;
 

@@ -1,3 +1,4 @@
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/turnover/widgets/opening_balance_card.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
@@ -21,7 +22,7 @@ final class TurnoverListItem extends TurnoversListItem {
 /// An opening balance card for a specific account.
 final class OpeningBalanceListItem extends TurnoversListItem {
   final UuidValue accountId;
-  final DateTime openingBalanceDate;
+  final BookingDate openingBalanceDate;
 
   OpeningBalanceListItem(this.accountId, this.openingBalanceDate);
 }

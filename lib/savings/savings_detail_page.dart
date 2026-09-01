@@ -6,6 +6,7 @@ import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/app_gate.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/savings/cubit/savings_cubit.dart';
 import 'package:kashr/savings/cubit/savings_state.dart';
 import 'package:kashr/savings/dialogs/delete_savings_dialog.dart';
@@ -41,7 +42,7 @@ class SavingsDetailRoute extends GoRouteData with $SavingsDetailRoute {
 /// Represents a transaction that affects the savings balance.
 /// Can be either a virtual booking or a tag turnover.
 sealed class SavingsTransactionItem {
-  DateTime get bookingDate;
+  BookingDate get bookingDate;
   Decimal get amountValue;
   String get amountUnit;
   String? get note;
@@ -55,7 +56,7 @@ class VirtualBookingItem extends SavingsTransactionItem {
   VirtualBookingItem(this.booking);
 
   @override
-  DateTime get bookingDate => booking.bookingDate;
+  BookingDate get bookingDate => booking.bookingDate;
 
   @override
   Decimal get amountValue => booking.amountValue;
@@ -73,7 +74,7 @@ class TagTurnoverItem extends SavingsTransactionItem {
   TagTurnoverItem(this.turnover);
 
   @override
-  DateTime get bookingDate => turnover.bookingDate;
+  BookingDate get bookingDate => turnover.bookingDate;
 
   @override
   Decimal get amountValue => turnover.amountValue;
@@ -634,7 +635,7 @@ class _TransactionTile extends StatelessWidget {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(DateFormat.yMMMd().format(transaction.bookingDate)),
+          Text(transaction.bookingDate.format(DateFormat.yMMMd())),
           if (transaction.note != null && transaction.note!.isNotEmpty)
             Text(transaction.note!, style: theme.textTheme.bodySmall),
         ],

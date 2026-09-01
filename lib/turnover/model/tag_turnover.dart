@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
+import 'package:kashr/core/booking_date_json_converter.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/uuid_json_converter.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -30,7 +32,7 @@ abstract class TagTurnover with _$TagTurnover {
     String? counterPart,
     String? note,
     required DateTime createdAt,
-    required DateTime bookingDate,
+    @BookingDateJsonConverter() required BookingDate bookingDate,
 
     @UUIDJsonConverter() required UuidValue accountId,
 
@@ -40,7 +42,7 @@ abstract class TagTurnover with _$TagTurnover {
   String formatAmount() =>
       Currency.currencyFrom(amountUnit).format(amountValue);
 
-  String formatDate(DateFormat dateFormat) => dateFormat.format(bookingDate);
+  String formatDate(DateFormat dateFormat) => bookingDate.format(dateFormat);
 
   // Computed properties
   bool get isMatched => turnoverId != null;
@@ -54,7 +56,7 @@ abstract class TagTurnover with _$TagTurnover {
 }
 
 /// The tag turnovers touching one period, split by where they were booked.
-/// 
+///
 /// Two DISJOINT sets
 /// - [allocatedInPeriod]: [TagTurnover]s with booking_date in the period
 /// - [allocatedOutsidePeriodButTurnoverInPeriod]: [TagTurnover]s outside

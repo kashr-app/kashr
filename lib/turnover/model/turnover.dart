@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:kashr/core/booking_date_json_converter.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/uuid_json_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:kashr/turnover/widgets/turnover_sign_icon.dart';
@@ -45,7 +47,7 @@ abstract class Turnover with _$Turnover {
 
     @UUIDJsonConverter() required UuidValue accountId,
 
-    DateTime? bookingDate,
+    @BookingDateNullableJsonConverter() BookingDate? bookingDate,
 
     @DecimalJsonConverter() required Decimal amountValue,
 
@@ -66,10 +68,7 @@ abstract class Turnover with _$Turnover {
   String formatAmount() =>
       Currency.currencyFrom(amountUnit).format(amountValue);
 
-  String? formatDate(DateFormat dateFormat) {
-    final bd = bookingDate;
-    return bd != null ? dateFormat.format(bd) : null;
-  }
+  String? formatDate(DateFormat dateFormat) => bookingDate?.format(dateFormat);
 
   TurnoverSign get sign => TurnoverSign.fromDecimal(amountValue);
 }

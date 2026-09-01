@@ -6,6 +6,7 @@ import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/map_values.dart';
 import 'package:kashr/app_gate.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/turnover/model/tag_turnover_change.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
@@ -66,7 +67,7 @@ class _TurnoversPageState extends State<TurnoversPage> {
   final _scrollController = ScrollController();
   final Map<UuidValue, TurnoverWithTagTurnovers> _itemsByTurnoverId = {};
   final Map<UuidValue, TransferWithDetails> _transferByTagTurnoverId = {};
-  final Map<UuidValue, DateTime> _openingBalanceDatesByAccountId = {};
+  final Map<UuidValue, BookingDate> _openingBalanceDatesByAccountId = {};
 
   static const _pageSize = 10;
   int _currentOffset = 0;

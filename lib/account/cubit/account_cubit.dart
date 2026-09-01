@@ -4,6 +4,7 @@ import 'package:decimal/decimal.dart';
 import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/account/services/balance_calculation_service.dart';
 import 'package:kashr/core/associate_by.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/turnover/model/turnover_change.dart';
@@ -89,7 +90,7 @@ class AccountCubit extends Cubit<AccountState> {
 
       final projected = await _balanceService.calculateProjectedBalance(
         account,
-        endExclusive: projectionPeriod.endExclusive,
+        endExclusive: BookingDate.on(projectionPeriod.endExclusive),
       );
       projectedBalances[account.id] = projected;
     }
@@ -198,7 +199,7 @@ class AccountCubit extends Cubit<AccountState> {
   /// Returns a map of accountId to opening balance date. The opening balance
   /// date is calculated as 1 day before the earliest turnover booking date,
   /// or the account creation date if no turnovers exist.
-  Future<Map<UuidValue, DateTime>> getOpeningBalanceDates(
+  Future<Map<UuidValue, BookingDate>> getOpeningBalanceDates(
     Iterable<UuidValue> accountIds,
   ) async {
     if (accountIds.isEmpty) {
@@ -208,17 +209,17 @@ class AccountCubit extends Cubit<AccountState> {
     final earliestDates = await _turnoverRepository
         .getEarliestBookingDatesForAccounts(accountIds: accountIds);
 
-    final result = <UuidValue, DateTime>{};
+    final result = <UuidValue, BookingDate>{};
     for (final accountId in accountIds) {
       final account = state.accountById[accountId];
       if (account == null) continue;
 
       final earliestDate = earliestDates[accountId];
       if (earliestDate == null) {
-        result[accountId] = account.createdAt;
+        result[accountId] = BookingDate.on(account.createdAt);
       } else {
         // One day before earliest turnover
-        result[accountId] = earliestDate.subtract(const Duration(days: 1));
+        result[accountId] = earliestDate.addDays(-1);
       }
     }
 

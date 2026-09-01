@@ -6,6 +6,7 @@ import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/constants.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/settings/settings_cubit.dart';
@@ -59,7 +60,7 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
 
   Tag? _selectedTag;
   String? _tagError;
-  DateTime _selectedDate = DateTime.now();
+  BookingDate _selectedDate = BookingDate.today();
   bool _isSubmitting = false;
 
   late final Logger log;
@@ -147,14 +148,14 @@ class _QuickTurnoverEntrySheetState extends State<QuickTurnoverEntrySheet> {
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: _selectedDate.atMidnight,
       firstDate: minDate,
       lastDate: maxDate,
     );
 
     if (picked != null && mounted) {
       setState(() {
-        _selectedDate = picked;
+        _selectedDate = BookingDate.on(picked);
       });
     }
   }
@@ -482,7 +483,7 @@ Future<(Turnover?, TagTurnover)> createTurnoverAndTagTurnoverOnAccount(
   Decimal amount,
   String? note,
   String? counterpart,
-  DateTime bookingDate,
+  BookingDate bookingDate,
   Tag tag,
   TurnoverRepository turnoverRepository,
   TagTurnoverRepository tagTurnoverRepository,

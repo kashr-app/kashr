@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 
 part '../../_gen/core/model/period.freezed.dart';
 part '../../_gen/core/model/period.g.dart';
@@ -33,8 +34,9 @@ abstract class Period with _$Period {
 
   factory Period.fromJson(Map<String, dynamic> json) => _$PeriodFromJson(json);
 
-  bool contains(DateTime date) {
-    return !date.isBefore(startInclusive) && date.isBefore(endExclusive);
+  bool contains(BookingDate day) {
+    final at = day.atMidnight;
+    return !at.isBefore(startInclusive) && at.isBefore(endExclusive);
   }
 
   Period add({int delta = 1}) =>

@@ -1,3 +1,4 @@
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/transfer_with_details.dart';
@@ -36,11 +37,11 @@ abstract class TransferItem with _$TransferItem {
   );
 
   /// Booking date for sorting
-  DateTime get bookingDate => when(
+  BookingDate get bookingDate => when(
     withTransfer: (details) =>
         details.fromTagTurnover?.bookingDate ??
         details.toTagTurnover?.bookingDate ??
-        details.transfer.createdAt,
+        BookingDate.on(details.transfer.createdAt),
     unlinkedFromTransfer: (tt, _) => tt.bookingDate,
   );
 }

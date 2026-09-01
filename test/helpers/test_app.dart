@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/account/model/account_repository.dart';
 import 'package:kashr/account/services/balance_calculation_service.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
@@ -25,8 +26,8 @@ final _now = DateTime.now();
 /// `DashboardCubit` opens on `Period.now(...)`. Neither takes a clock, so a
 /// test that wants a booking on the last day of "this month" has to read the
 /// same clock instead of a frozen literal.
-final midThisMonth = DateTime(_now.year, _now.month, 15);
-final lastDayOfThisMonth = DateTime(_now.year, _now.month + 1, 0);
+final midThisMonth = BookingDate(_now.year, _now.month, 15);
+final lastDayOfThisMonth = BookingDate(_now.year, _now.month + 1, 0);
 
 /// The production object graph without the widgets, over whatever database
 /// [DatabaseHelper] currently holds.
@@ -81,7 +82,10 @@ class TestApp {
     return accountRepository.createAccount(account);
   }
 
-  Future<Tag> givenTag({String name = 'Groceries', TagSemantic? semantic}) async {
+  Future<Tag> givenTag({
+    String name = 'Groceries',
+    TagSemantic? semantic,
+  }) async {
     final tag = Tag(id: _uuid.v4obj(), name: name, semantic: semantic);
     await tagRepository.createTag(tag);
     return tag;
@@ -89,7 +93,7 @@ class TestApp {
 
   Future<Turnover> givenTurnover(
     Account account, {
-    required DateTime bookedOn,
+    required BookingDate bookedOn,
     required String amount,
   }) async {
     final turnover = Turnover(
@@ -108,7 +112,7 @@ class TestApp {
   Future<TagTurnover> givenTagTurnover(
     Account account, {
     required Tag tag,
-    required DateTime bookedOn,
+    required BookingDate bookedOn,
     required String amount,
     Turnover? turnover,
   }) async {
@@ -130,7 +134,7 @@ class TestApp {
   Future<TagTurnover> givenPending(
     Account account, {
     required Tag tag,
-    required DateTime bookedOn,
+    required BookingDate bookedOn,
     required String amount,
   }) => givenTagTurnover(account, tag: tag, bookedOn: bookedOn, amount: amount);
 }

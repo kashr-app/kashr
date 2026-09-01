@@ -1,17 +1,13 @@
-// Fails until the date boundary bug is fixed; see test/README.md.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/turnover/services/turnover_matching_service.dart';
 
 import '../../helpers/test_app.dart';
 import '../../helpers/test_database.dart';
 
-// A January window: no DST transition within +-7 days, so the Duration
-// arithmetic lands on the midnight the fixture booked.
-final _bookedOn = DateTime(2026, 1, 15);
-final _weekBefore = _bookedOn.subtract(
-  const Duration(days: dateMatchingWindow),
-);
-final _weekAfter = _bookedOn.add(const Duration(days: dateMatchingWindow));
+final _bookedOn = BookingDate(2026, 1, 15);
+final _weekBefore = _bookedOn.addDays(-dateMatchingWindow);
+final _weekAfter = _bookedOn.addDays(dateMatchingWindow);
 
 void main() {
   useInMemoryDatabase();

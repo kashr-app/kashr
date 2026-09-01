@@ -221,7 +221,7 @@ class _LinkedSideCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        dateFormat.format(tagTurnover.bookingDate),
+                        tagTurnover.bookingDate.format(dateFormat),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

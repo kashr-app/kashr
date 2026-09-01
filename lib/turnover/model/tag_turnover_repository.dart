@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/core/extensions/date_time_extensions.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/db/db_helper.dart';
 import 'package:kashr/turnover/model/fts.dart';
 import 'package:kashr/core/model/period.dart';
@@ -160,7 +161,7 @@ class TagTurnoverRepository {
         counterPart: turnover.counterPart,
         note: null,
         createdAt: DateTime.now(),
-        bookingDate: turnover.bookingDate ?? DateTime.now(),
+        bookingDate: turnover.bookingDate ?? BookingDate.today(),
         accountId: turnover.accountId,
       );
 
@@ -304,8 +305,8 @@ class TagTurnoverRepository {
   /// Optionally filter by account and date range
   Future<List<TagTurnover>> getUnmatched({
     UuidValue? accountId,
-    DateTime? startInclusive,
-    DateTime? endExclusive,
+    BookingDate? startInclusive,
+    BookingDate? endExclusive,
   }) async {
     final db = await DatabaseHelper().database;
 
@@ -319,12 +320,12 @@ class TagTurnoverRepository {
 
     if (startInclusive != null) {
       whereClauses.add('booking_date >= ?');
-      whereArgs.add(startInclusive.isoDate);
+      whereArgs.add(startInclusive.iso);
     }
 
     if (endExclusive != null) {
       whereClauses.add('booking_date < ?');
-      whereArgs.add(endExclusive.isoDate);
+      whereArgs.add(endExclusive.iso);
     }
 
     final maps = await db.query(

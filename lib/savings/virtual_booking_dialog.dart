@@ -6,6 +6,7 @@ import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/constants.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:kashr/savings/model/savings_virtual_booking.dart';
 import 'package:kashr/savings/model/savings_virtual_booking_repository.dart';
@@ -67,7 +68,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
 
   UuidValue? _selectedAccountId;
   int? _amountScaled;
-  DateTime _bookingDate = DateTime.now();
+  BookingDate _bookingDate = BookingDate.today();
   bool _isAllocating =
       true; // true = add to savings, false = remove from savings
   bool _isLoading = false;
@@ -124,14 +125,14 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
   Future<void> _selectDate() async {
     final selectedDate = await showDatePicker(
       context: context,
-      initialDate: _bookingDate,
+      initialDate: _bookingDate.atMidnight,
       firstDate: minDate,
       lastDate: maxDate,
     );
 
     if (selectedDate != null) {
       setState(() {
-        _bookingDate = selectedDate;
+        _bookingDate = BookingDate.on(selectedDate);
       });
     }
   }
@@ -357,7 +358,7 @@ class _VirtualBookingDialogState extends State<VirtualBookingDialog> {
                       border: OutlineInputBorder(),
                       suffixIcon: Icon(Icons.calendar_today),
                     ),
-                    child: Text(context.dateFormat.format(_bookingDate)),
+                    child: Text(_bookingDate.format(context.dateFormat)),
                   ),
                 ),
                 const SizedBox(height: 16),

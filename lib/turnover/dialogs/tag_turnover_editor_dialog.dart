@@ -7,6 +7,7 @@ import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/constants.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
@@ -58,7 +59,7 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
   late Decimal _amountValue;
   late UuidValue _selectedTagId;
   late UuidValue _selectedAccountId;
-  late DateTime _bookingDate;
+  late BookingDate _bookingDate;
   final _formKey = GlobalKey<FormState>();
   bool _isDeleting = false;
 
@@ -152,14 +153,14 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
   Future<void> _selectDate() async {
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: _bookingDate,
+      initialDate: _bookingDate.atMidnight,
       firstDate: minDate,
       lastDate: maxDate,
     );
 
     if (pickedDate != null) {
       setState(() {
-        _bookingDate = pickedDate;
+        _bookingDate = BookingDate.on(pickedDate);
       });
     }
   }
@@ -371,7 +372,7 @@ class _TagTurnoverEditorDialogState extends State<TagTurnoverEditorDialog> {
                               suffixIcon: Icon(Icons.calendar_today),
                             ),
                             child: Text(
-                              context.dateFormat.format(_bookingDate),
+                              _bookingDate.format(context.dateFormat),
                             ),
                           ),
                         ),

@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/account/model/account.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
 
@@ -17,7 +18,7 @@ class BalanceCalculationService {
   /// [endExclusive], or of all time when it is null)
   Future<Decimal> calculateCurrentBalance(
     Account account, {
-    DateTime? endExclusive,
+    BookingDate? endExclusive,
   }) async {
     final turnoverSum = await _turnoverRepository.sumTurnoversForAccount(
       accountId: account.id,
@@ -32,7 +33,7 @@ class BalanceCalculationService {
   /// If [endExclusive] is null, projects for all time.
   Future<Decimal> calculateProjectedBalance(
     Account account, {
-    DateTime? endExclusive,
+    BookingDate? endExclusive,
   }) async {
     final current = await calculateCurrentBalance(
       account,

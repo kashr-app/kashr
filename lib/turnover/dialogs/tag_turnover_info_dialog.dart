@@ -74,7 +74,9 @@ class TagTurnoverInfoDialog {
                           // Booking date
                           Center(
                             child: Text(
-                              context.dateFormat.format(tagTurnover.bookingDate),
+                              tagTurnover.bookingDate.format(
+                                context.dateFormat,
+                              ),
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: colorScheme.onSurface.withValues(
                                   alpha: 0.6,
@@ -170,7 +172,7 @@ class TagTurnoverInfoDialog {
                             decoration: BoxDecoration(
                               color: colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
-                            ), 
+                            ),
                             child: Text(
                               tagTurnover.note ?? 'N/A',
                               style: theme.textTheme.bodyMedium,

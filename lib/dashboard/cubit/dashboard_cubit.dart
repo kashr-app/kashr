@@ -7,6 +7,7 @@ import 'package:kashr/core/status.dart';
 import 'package:kashr/dashboard/cubit/dashboard_state.dart';
 import 'package:kashr/dashboard/model/period_totals.dart';
 import 'package:kashr/dashboard/model/tag_prediction.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
@@ -135,7 +136,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   }
 
   /// Checks if a booking date falls within the selected period.
-  bool _bookingDateInPeriod(DateTime date) {
+  bool _bookingDateInPeriod(BookingDate date) {
     return state.period.contains(date);
   }
 

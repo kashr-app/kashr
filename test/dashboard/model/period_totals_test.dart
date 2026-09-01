@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/dashboard/model/period_totals.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
@@ -21,7 +22,7 @@ Turnover _turnover(String amount) => Turnover(
   id: _uuid.v4obj(),
   createdAt: DateTime(2026, 1, 1),
   accountId: _accountId,
-  bookingDate: DateTime(2026, 1, 15),
+  bookingDate: BookingDate(2026, 1, 15),
   amountValue: Decimal.parse(amount),
   amountUnit: 'EUR',
   purpose: 'Turnover',
@@ -35,7 +36,7 @@ TagTurnover _tagTurnover(String amount, {Turnover? turnover, Tag? tag}) =>
       amountValue: Decimal.parse(amount),
       amountUnit: 'EUR',
       createdAt: DateTime(2026, 1, 1),
-      bookingDate: DateTime(2026, 1, 15),
+      bookingDate: BookingDate(2026, 1, 15),
       accountId: _accountId,
     );
 

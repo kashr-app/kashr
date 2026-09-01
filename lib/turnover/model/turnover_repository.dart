@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/core/extensions/date_time_extensions.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/db/db_helper.dart';
 import 'package:kashr/turnover/model/fts.dart';
 import 'package:kashr/core/model/period.dart';
@@ -270,7 +271,7 @@ class TurnoverRepository {
   /// Sums all turnovers for a specific account booked before [endExclusive].
   Future<Decimal> sumTurnoversForAccount({
     required UuidValue accountId,
-    DateTime? endExclusive,
+    BookingDate? endExclusive,
   }) async {
     final db = await DatabaseHelper().database;
 
@@ -279,7 +280,7 @@ class TurnoverRepository {
 
     if (endExclusive != null) {
       whereClauses.add('t.booking_date < ?');
-      whereArgs.add(endExclusive.isoDate);
+      whereArgs.add(endExclusive.iso);
     }
 
     final whereClause = 'WHERE ${whereClauses.join(' AND ')}';
@@ -297,7 +298,7 @@ class TurnoverRepository {
   ///
   /// Returns a map of accountId to earliest non-null booking date.
   /// Accounts with no turnovers or no booking dates are not included in result.
-  Future<Map<UuidValue, DateTime>> getEarliestBookingDatesForAccounts({
+  Future<Map<UuidValue, BookingDate>> getEarliestBookingDatesForAccounts({
     required Iterable<UuidValue> accountIds,
   }) async {
     if (accountIds.isEmpty) {
@@ -322,12 +323,12 @@ class TurnoverRepository {
       [...args],
     );
 
-    final result = <UuidValue, DateTime>{};
+    final result = <UuidValue, BookingDate>{};
     for (final map in maps) {
       final accountId = UuidValue.fromString(map['account_id'] as String);
       final dateStr = map['earliest_date'] as String?;
       if (dateStr != null) {
-        result[accountId] = DateTime.parse(dateStr);
+        result[accountId] = BookingDate.parse(dateStr);
       }
     }
 
@@ -376,8 +377,8 @@ class TurnoverRepository {
   /// [startInclusive] .. [endExclusive].
   Future<List<Turnover>> getUnmatchedTurnoversForAccount({
     required UuidValue accountId,
-    DateTime? startInclusive,
-    DateTime? endExclusive,
+    BookingDate? startInclusive,
+    BookingDate? endExclusive,
     int? limit,
     SortDirection direction = SortDirection.asc,
   }) async {
@@ -388,12 +389,12 @@ class TurnoverRepository {
 
     if (startInclusive != null) {
       whereClauses.add('t.booking_date >= ?');
-      whereArgs.add(startInclusive.isoDate);
+      whereArgs.add(startInclusive.iso);
     }
 
     if (endExclusive != null) {
       whereClauses.add('t.booking_date < ?');
-      whereArgs.add(endExclusive.isoDate);
+      whereArgs.add(endExclusive.iso);
     }
 
     final whereClause = 'WHERE ${whereClauses.join(' AND ')}';

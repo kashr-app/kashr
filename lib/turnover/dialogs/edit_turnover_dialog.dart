@@ -3,6 +3,7 @@ import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/constants.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +30,7 @@ class EditTurnoverDialog extends StatefulWidget {
 class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
   late TextEditingController _counterPartController;
   late TextEditingController _purposeController;
-  late DateTime? _bookingDate;
+  late BookingDate? _bookingDate;
   late Decimal _amountValue;
   final _formKey = GlobalKey<FormState>();
 
@@ -54,14 +55,14 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
   Future<void> _selectDate() async {
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: _bookingDate ?? DateTime.now(),
+      initialDate: _bookingDate?.atMidnight ?? DateTime.now(),
       firstDate: minDate,
       lastDate: maxDate,
     );
 
     if (pickedDate != null) {
       setState(() {
-        _bookingDate = pickedDate;
+        _bookingDate = BookingDate.on(pickedDate);
       });
     }
   }
@@ -137,9 +138,7 @@ class _EditTurnoverDialogState extends State<EditTurnoverDialog> {
                     suffixIcon: Icon(Icons.calendar_today),
                   ),
                   child: Text(
-                    _bookingDate != null
-                        ? context.dateFormat.format(_bookingDate!)
-                        : 'No date',
+                    _bookingDate?.format(context.dateFormat) ?? 'No date',
                   ),
                 ),
               ),

@@ -5,6 +5,7 @@ import 'package:kashr/account/model/account.dart';
 import 'package:kashr/account/model/account_repository.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/extensions/map_extensios.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/turnover/cubit/turnover_tags_state.dart';
 import 'package:kashr/turnover/model/tag.dart';
@@ -189,7 +190,7 @@ class TurnoverTagsCubit extends Cubit<TurnoverTagsState> {
       counterPart: t.counterPart,
       note: null,
       createdAt: DateTime.now(),
-      bookingDate: t.bookingDate ?? DateTime.now(),
+      bookingDate: t.bookingDate ?? BookingDate.today(),
       accountId: t.accountId,
     );
 

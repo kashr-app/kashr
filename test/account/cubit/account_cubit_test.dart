@@ -1,4 +1,3 @@
-// Fails until the date boundary bug is fixed; see test/README.md.
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';

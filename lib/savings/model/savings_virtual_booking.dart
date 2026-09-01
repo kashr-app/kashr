@@ -1,5 +1,7 @@
+import 'package:kashr/core/booking_date_json_converter.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/uuid_json_converter.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
@@ -30,7 +32,7 @@ abstract class SavingsVirtualBooking with _$SavingsVirtualBooking {
 
     required String amountUnit,
     String? note,
-    required DateTime bookingDate,
+    @BookingDateJsonConverter() required BookingDate bookingDate,
     required DateTime createdAt,
   }) = _SavingsVirtualBooking;
 

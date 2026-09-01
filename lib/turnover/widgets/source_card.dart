@@ -151,7 +151,7 @@ class SourceCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      dateFormat.format(tagTurnover.bookingDate),
+                      tagTurnover.bookingDate.format(dateFormat),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

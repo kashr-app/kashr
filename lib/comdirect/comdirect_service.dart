@@ -4,6 +4,7 @@ import 'package:decimal/decimal.dart';
 import 'package:dio/dio.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/associate_by.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/turnover/model/turnover.dart';
@@ -235,7 +236,10 @@ class ComdirectService implements DataIngestor {
             id: uuid.v4obj(),
             createdAt: DateTime.now(),
             accountId: account.id,
-            bookingDate: transaction.bookingDate,
+            bookingDate: switch (transaction.bookingDate) {
+              final it? => BookingDate.on(it),
+              null => null,
+            },
             amountValue: transaction.amount.value,
             amountUnit: transaction.amount.unit,
             counterPart: counterPartInfo.name,

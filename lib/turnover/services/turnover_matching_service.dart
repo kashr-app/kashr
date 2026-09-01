@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:decimal/decimal.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/turnover/model/tag_turnover.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/turnover.dart';
@@ -24,21 +25,12 @@ class TurnoverMatchingService {
   );
 
   /// Both edge days are candidates, so the exclusive end is one day past the
-  /// last. Built from calendar fields rather than [Duration] arithmetic, which
-  /// would land on the wrong day across a DST change.
-  (DateTime startInclusive, DateTime endExclusive) _calcMatchingWindow(
-    DateTime bookingDate,
+  /// last.
+  (BookingDate startInclusive, BookingDate endExclusive) _calcMatchingWindow(
+    BookingDate bookingDate,
   ) => (
-    DateTime(
-      bookingDate.year,
-      bookingDate.month,
-      bookingDate.day - dateMatchingWindow,
-    ),
-    DateTime(
-      bookingDate.year,
-      bookingDate.month,
-      bookingDate.day + dateMatchingWindow + 1,
-    ),
+    bookingDate.addDays(-dateMatchingWindow),
+    bookingDate.addDays(dateMatchingWindow + 1),
   );
 
   /// Find potential matches for a turnover
@@ -48,8 +40,8 @@ class TurnoverMatchingService {
   ) async {
     final bookingDate =
         turnover.bookingDate ??
-        DateTime.now() /* we expect a turnover without a booking date to be booked very soon,
-                          so now() is a good fallback for the algorithm. */;
+        BookingDate.today() /* we expect a turnover without a booking date to be booked very soon,
+                          so today() is a good fallback for the algorithm. */;
 
     final (startInclusive, endExclusive) = _calcMatchingWindow(bookingDate);
 
@@ -237,7 +229,7 @@ class TurnoverMatchingService {
 
     // Date proximity (20% weight)
     final dateWeight = 0.2;
-    final daysDiff = tt.bookingDate.difference(t.bookingDate!).inDays.abs();
+    final daysDiff = tt.bookingDate.daysUntil(t.bookingDate!).abs();
     final dateSimilarity =
         (dateMatchingWindow - daysDiff) / dateMatchingWindow.toDouble();
     confidence += dateSimilarity.clamp(0.0, 1.0) * dateWeight;
