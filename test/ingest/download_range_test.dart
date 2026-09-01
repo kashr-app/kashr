@@ -53,39 +53,39 @@ void main() {
     });
   });
 
-  group('minBookingDateFor', () {
+  group('startInclusiveFor', () {
     final request = DownloadRequest.upTo(
-      today,
-      startDate: BookingDate(2026, 1, 1),
+      endInclusive: today,
+      startInclusive: BookingDate(2026, 1, 1),
     );
 
     test('re-fetches the overlap before the cursor', () {
       final account = _account(downloadCursorDate: BookingDate(2026, 8, 20));
 
-      final min = minBookingDateFor(
+      final min = startInclusiveFor(
         account,
         request: request,
-        startDateWithoutCursor: null,
+        startInclusiveWithoutCursor: null,
       );
 
       expect(min, BookingDate(2026, 8, 20).addDays(-14));
     });
 
     test('starts a cursorless account where the oldest one already is', () {
-      final min = minBookingDateFor(
+      final min = startInclusiveFor(
         _account(),
         request: request,
-        startDateWithoutCursor: BookingDate(2026, 7, 1),
+        startInclusiveWithoutCursor: BookingDate(2026, 7, 1),
       );
 
       expect(min, BookingDate(2026, 7, 1));
     });
 
     test('falls back to the requested start without any cursor', () {
-      final min = minBookingDateFor(
+      final min = startInclusiveFor(
         _account(),
         request: request,
-        startDateWithoutCursor: null,
+        startInclusiveWithoutCursor: null,
       );
 
       expect(min, BookingDate(2026, 1, 1));
@@ -93,15 +93,15 @@ void main() {
 
     test('ignores the cursor when the user widened the range', () {
       final widened = DownloadRequest.upTo(
-        today,
-        startDate: BookingDate(2025, 1, 1),
+        endInclusive: today,
+        startInclusive: BookingDate(2025, 1, 1),
         ignoreCursors: true,
       );
 
-      final min = minBookingDateFor(
+      final min = startInclusiveFor(
         _account(downloadCursorDate: BookingDate(2026, 8, 20)),
         request: widened,
-        startDateWithoutCursor: null,
+        startInclusiveWithoutCursor: null,
       );
 
       expect(min, BookingDate(2025, 1, 1));
@@ -118,25 +118,25 @@ void main() {
       final range = unionDownloadRange(
         accounts,
         request: DownloadRequest.upTo(
-          today,
-          startDate: BookingDate(2026, 1, 1),
+          endInclusive: today,
+          startInclusive: BookingDate(2026, 1, 1),
         ),
       );
 
-      expect(range.min, BookingDate(2026, 6, 30).addDays(-14));
-      expect(range.max, today);
+      expect(range.startInclusive, BookingDate(2026, 6, 30).addDays(-14));
+      expect(range.endInclusive, today);
     });
 
     test('falls back to the requested start without accounts', () {
       final range = unionDownloadRange(
         [],
         request: DownloadRequest.upTo(
-          today,
-          startDate: BookingDate(2026, 5, 1),
+          endInclusive: today,
+          startInclusive: BookingDate(2026, 5, 1),
         ),
       );
 
-      expect(range.min, BookingDate(2026, 5, 1));
+      expect(range.startInclusive, BookingDate(2026, 5, 1));
     });
   });
 
@@ -173,12 +173,12 @@ void main() {
   group('DownloadRequest.between', () {
     test('keeps both picked ends, stripped to booking dates', () {
       final request = DownloadRequest.between(
-        startDate: BookingDate.on(DateTime(2026, 3, 5, 14, 30)),
-        endDate: BookingDate.on(DateTime(2026, 4, 20, 9, 15)),
+        startInclusive: BookingDate.on(DateTime(2026, 3, 5, 14, 30)),
+        endInclusive: BookingDate.on(DateTime(2026, 4, 20, 9, 15)),
       );
 
-      expect(request.startDate, BookingDate(2026, 3, 5));
-      expect(request.maxBookingDate, BookingDate(2026, 4, 20));
+      expect(request.startInclusive, BookingDate(2026, 3, 5));
+      expect(request.endInclusive, BookingDate(2026, 4, 20));
     });
 
     test('spans a picked range that ends in the past', () {
@@ -187,25 +187,25 @@ void main() {
       final range = unionDownloadRange(
         accounts,
         request: DownloadRequest.between(
-          startDate: BookingDate(2026, 3, 1),
-          endDate: BookingDate(2026, 4, 30),
+          startInclusive: BookingDate(2026, 3, 1),
+          endInclusive: BookingDate(2026, 4, 30),
           ignoreCursors: true,
         ),
       );
 
-      expect(range.min, BookingDate(2026, 3, 1));
-      expect(range.max, BookingDate(2026, 4, 30));
+      expect(range.startInclusive, BookingDate(2026, 3, 1));
+      expect(range.endInclusive, BookingDate(2026, 4, 30));
     });
   });
 
   group('DownloadDepth', () {
     test('counts back the offered months', () {
       expect(
-        DownloadDepth.threeMonths.startDate(today),
+        DownloadDepth.threeMonths.startInclusive(today),
         BookingDate(2026, 5, 31),
       );
       expect(
-        DownloadDepth.twelveMonths.startDate(today),
+        DownloadDepth.twelveMonths.startInclusive(today),
         BookingDate(2025, 8, 31),
       );
     });
@@ -213,7 +213,7 @@ void main() {
     test('asks for more history than a bank is likely to keep', () {
       expect(
         DownloadDepth.everything
-            .startDate(today)
+            .startInclusive(today)
             .isBefore(BookingDate(2010, 1, 1)),
         isTrue,
       );

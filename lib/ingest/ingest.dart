@@ -44,7 +44,7 @@ abstract class DataIngestor {
   ///
   /// A successful result means every account in
   /// [DataIngestResult.downloadedAccountIds] is complete through
-  /// [DownloadRequest.maxBookingDate]. Moving the download cursors there is
+  /// [DownloadRequest.endInclusive]. Moving the download cursors there is
   /// the caller's job, it is the same for every bank.
   ///
   /// Throws [DownloadCancelledException] when [cancellation] was cancelled,

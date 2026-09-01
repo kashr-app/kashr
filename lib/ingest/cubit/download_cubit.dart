@@ -82,22 +82,27 @@ class DownloadCubit extends Cubit<DownloadState> {
   /// Runs the first download with the depth the user picked.
   Future<void> startWithDepth(DownloadDepth depth) async {
     final today = BookingDate.today();
-    await _run(DownloadRequest.upTo(today, startDate: depth.startDate(today)));
+    await _run(
+      DownloadRequest.upTo(
+        endInclusive: today,
+        startInclusive: depth.startInclusive(today),
+      ),
+    );
   }
 
   /// Re-runs the download over the booking dates the user picked.
   ///
   /// Used when the user picks the range by hand; the cursors are ignored so
   /// that the requested history is actually fetched, in both directions -
-  /// [endDate] may well lie before a cursor.
+  /// [endInclusive] may well lie before a cursor.
   Future<void> downloadBetween({
-    required BookingDate startDate,
-    required BookingDate endDate,
+    required BookingDate startInclusive,
+    required BookingDate endInclusive,
   }) async {
     await _run(
       DownloadRequest.between(
-        startDate: startDate,
-        endDate: endDate,
+        startInclusive: startInclusive,
+        endInclusive: endInclusive,
         ignoreCursors: true,
       ),
     );
@@ -138,8 +143,8 @@ class DownloadCubit extends Cubit<DownloadState> {
     final today = BookingDate.today();
     await _run(
       DownloadRequest.upTo(
-        today,
-        startDate: oldestDownloadCursor(accounts) ?? today,
+        endInclusive: today,
+        startInclusive: oldestDownloadCursor(accounts) ?? today,
       ),
     );
   }
@@ -224,7 +229,7 @@ class DownloadCubit extends Cubit<DownloadState> {
     if (result.status == ResultStatus.success) {
       await _accountCubit.advanceDownloadCursors(
         result.downloadedAccountIds,
-        request.maxBookingDate,
+        request.endInclusive,
       );
     }
     return result;
