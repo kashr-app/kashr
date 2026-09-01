@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:decimal/decimal.dart';
+import 'package:intl/intl.dart';
 import 'package:kashr/account/account_all_turnovers_page.dart';
 import 'package:kashr/account/accounts_page.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
@@ -272,7 +273,16 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Last download: ${_formatDay(context, account.downloadCursorDate)}',
+                  'Booked through '
+                  '${_formatDay(context, account.downloadCursorDate)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  'Last download: '
+                  '${_formatMoment(context, account.lastDownloadAt)}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -280,7 +290,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ),
               ] else ...[
                 Text(
-                  'Last balance check: ${_formatDate(context, account.lastManualSyncAt)}',
+                  'Last balance check: '
+                  '${_formatMoment(context, account.lastManualSyncAt)}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -488,10 +499,11 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   }
 }
 
-/// Formats a date that may be absent, e.g. an account that was never
+/// Formats a moment that may be absent, e.g. an account that was never
 /// downloaded.
-String _formatDate(BuildContext context, DateTime? date) =>
-    date == null ? 'Never' : context.dateFormatValue.format(date);
+String _formatMoment(BuildContext context, DateTime? at) => at == null
+    ? 'Never'
+    : '${context.dateFormatValue.format(at)} ${DateFormat.Hm().format(at)}';
 
 /// Formats a booking date that may be absent, e.g. an account that was never
 /// downloaded.

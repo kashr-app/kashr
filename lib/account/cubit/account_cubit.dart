@@ -169,26 +169,31 @@ class AccountCubit extends Cubit<AccountState> {
     }
   }
 
-  /// Records that booked transactions are complete through [cursorDate] for
-  /// the given accounts.
+  /// Records a finished download of [bookedThrough] for the given accounts.
   ///
-  /// Only ever moves a cursor forward. A download of a range that ends in the
-  /// past - the user filling a gap in the history - covers less than what the
-  /// account is already caught up on, and must not make it look behind again.
+  /// The cursor only ever moves forward. A download of a range that ends in
+  /// the past - the user filling a gap in the history - covers less than what
+  /// the account is already caught up on, and must not make it look behind
+  /// again. The download still happened, so the timestamp is stamped either
+  /// way, and every account in one run shares the same moment.
   ///
   /// Reads the accounts from the current state so that a balance
   /// reconciliation that ran during the same download is not overwritten.
-  Future<void> advanceDownloadCursors(
-    Iterable<UuidValue> accountIds,
-    BookingDate cursorDate,
-  ) async {
+  Future<void> recordDownload(
+    Iterable<UuidValue> accountIds, {
+    required BookingDate bookedThrough,
+  }) async {
+    final finishedAt = DateTime.now();
     for (final id in accountIds) {
       final account = state.accountById[id];
       if (account == null) continue;
-      final current = account.downloadCursorDate;
-      if (current != null && !current.isBefore(cursorDate)) continue;
+      final cursor = account.downloadCursorDate;
+      final isBehind = cursor == null || cursor.isBefore(bookedThrough);
       await _accountRepository.updateAccount(
-        account.copyWith(downloadCursorDate: cursorDate),
+        account.copyWith(
+          downloadCursorDate: isBehind ? bookedThrough : cursor,
+          lastDownloadAt: finishedAt,
+        ),
       );
     }
     await loadAccounts();

@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import 'package:intl/intl.dart';
 import 'package:kashr/account/account_details_page.dart';
 import 'package:kashr/account/create_account_page.dart';
 import 'package:kashr/account/cubit/account_state.dart';
@@ -330,17 +331,22 @@ class _AccountListItemState extends State<_AccountListItem> {
                           color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
-                      if (widget.account.syncSource != null &&
-                          widget.account.syncSource != SyncSource.manual)
-                        Text(
-                          'Last download: ${_formatDate(context, widget.account.downloadCursorDate)}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
+                      Text(
+                        'Booked through '
+                        '${_formatDay(context, widget.account.downloadCursorDate)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
+                      ),
+                      Text(
+                        'Last download: '
+                        '${_formatMoment(context, widget.account.lastDownloadAt)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -477,7 +483,13 @@ class _HiddenAccountsHint extends StatelessWidget {
   }
 }
 
-/// Formats a date that may be absent, e.g. an account that was never
+/// Formats a booking date that may be absent, e.g. an account that was never
 /// downloaded.
-String _formatDate(BuildContext context, BookingDate? date) =>
-    date == null ? 'Never' : date.format(context.dateFormat);
+String _formatDay(BuildContext context, BookingDate? day) =>
+    day == null ? 'Never' : day.format(context.dateFormat);
+
+/// Formats a moment that may be absent, e.g. an account whose last download
+/// predates Kashr recording them.
+String _formatMoment(BuildContext context, DateTime? at) => at == null
+    ? 'Never'
+    : '${context.dateFormat.format(at)} ${DateFormat.Hm().format(at)}';

@@ -72,14 +72,20 @@ class TestApp {
   // the gap between how a booking date is written and how it is queried, so a
   // fixture writing its own SQL could hide exactly that.
 
-  Future<Account> givenAccount({String openingBalance = '0'}) async {
+  Future<Account> givenAccount({
+    String openingBalance = '0',
+    SyncSource? syncSource,
+    BookingDate? bookedThrough,
+  }) async {
     final account = Account(
       id: _uuid.v4obj(),
       createdAt: DateTime(2020, 1, 1),
       name: 'Checking',
       accountType: AccountType.checking,
+      syncSource: syncSource,
       currency: 'EUR',
       openingBalance: Decimal.parse(openingBalance),
+      downloadCursorDate: bookedThrough,
       isHidden: false,
     );
     return accountRepository.createAccount(account);

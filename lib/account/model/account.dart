@@ -101,6 +101,13 @@ abstract class Account with _$Account {
     /// calendar, not a wall-clock timestamp of the last download.
     @BookingDateNullableJsonConverter() BookingDate? downloadCursorDate,
 
+    /// The moment a download last finished for this account.
+    ///
+    /// Only set on downloaded accounts, and only from v20 on, so `null` also
+    /// means "downloaded before Kashr started recording this". Says nothing
+    /// about how far the data reaches - that is [downloadCursorDate].
+    DateTime? lastDownloadAt,
+
     /// The moment the user last reconciled this balance by hand.
     ///
     /// Only set on manual accounts.

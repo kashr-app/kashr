@@ -9,6 +9,7 @@ import 'package:kashr/db/migrations/v16.dart';
 import 'package:kashr/db/migrations/v17.dart';
 import 'package:kashr/db/migrations/v18.dart';
 import 'package:kashr/db/migrations/v19.dart';
+import 'package:kashr/db/migrations/v20.dart';
 import 'package:kashr/db/sqlite_compat.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:meta/meta.dart';
@@ -99,6 +100,7 @@ class DatabaseHelper {
     17: v17,
     18: v18,
     19: v19,
+    20: v20,
   };
 
   Future<void> _migrate(SqliteDatabase db) async {

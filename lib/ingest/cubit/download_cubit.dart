@@ -227,9 +227,9 @@ class DownloadCubit extends Cubit<DownloadState> {
   ) async {
     final result = await ingestor.ingest(request, cancellation);
     if (result.status == ResultStatus.success) {
-      await _accountCubit.advanceDownloadCursors(
+      await _accountCubit.recordDownload(
         result.downloadedAccountIds,
-        request.endInclusive,
+        bookedThrough: request.endInclusive,
       );
     }
     return result;
