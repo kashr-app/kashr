@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
+import 'package:kashr/ingest/ingest_source.dart';
 import 'package:kashr/settings/settings_cubit.dart';
 import 'package:provider/provider.dart';
 
@@ -29,4 +30,10 @@ extension SettingsContext on BuildContext {
   ///
   /// The widget won't rebuild when the date format changes.
   DateFormat get dateFormatValue => read<SettingsCubit>().state.dateFormat;
+
+  /// Gets the source the add transactions button goes to, and rebuilds when
+  /// it changes.
+  IngestSource get defaultIngestSource => select<SettingsCubit, IngestSource>(
+    (cubit) => cubit.state.defaultIngestSource,
+  );
 }

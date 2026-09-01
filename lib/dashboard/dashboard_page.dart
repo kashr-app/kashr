@@ -273,7 +273,10 @@ class _DashboardPage extends StatelessWidget {
               child: const Icon(Icons.swap_horiz),
             ),
             const Spacer(),
-            const DownloadFab(),
+            DownloadFab(
+              onLogTransaction: () => _showQuickExpenseEntry(context),
+              onLogTransfer: () => _showTransferDialog(context),
+            ),
             const Spacer(),
             FloatingActionButton(
               onPressed: () => _showQuickExpenseEntry(context),

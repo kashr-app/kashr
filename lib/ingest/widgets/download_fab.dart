@@ -4,19 +4,36 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/ingest/cubit/download_cubit.dart';
 import 'package:kashr/ingest/download_range.dart';
+import 'package:kashr/ingest/ingest_source.dart';
+import 'package:kashr/ingest/widgets/csv_import_dialog.dart';
 import 'package:kashr/ingest/widgets/download_sheet.dart';
+import 'package:kashr/ingest/widgets/ingest_source_sheet.dart';
+import 'package:kashr/ingest/widgets/manual_entry_explainer.dart';
+import 'package:kashr/settings/extensions.dart';
 
-/// Starts a bank data download with one tap, and shows one that is going on.
+/// Opens the way of adding transactions the user asked for, and shows a
+/// download that is going on.
 ///
 /// Small on purpose: downloading is a periodic action, unlike logging a
 /// transaction. The dot marks that the downloaded data is behind; the spinner
 /// marks a download in flight, which outlives the sheet, so this is the only
 /// place left that can still show it.
 class DownloadFab extends StatelessWidget {
-  const DownloadFab({super.key});
+  const DownloadFab({
+    super.key,
+    required this.onLogTransaction,
+    required this.onLogTransfer,
+  });
+
+  /// Logs a transaction by hand, which this button only points at.
+  final VoidCallback onLogTransaction;
+
+  /// Logs a transfer by hand, which this button only points at.
+  final VoidCallback onLogTransfer;
 
   @override
   Widget build(BuildContext context) {
+    final defaultSource = context.defaultIngestSource;
     return BlocBuilder<DownloadCubit, DownloadState>(
       builder: (context, download) {
         final isWorking = download.activity == DownloadActivity.working;
@@ -31,8 +48,16 @@ class DownloadFab extends StatelessWidget {
               backgroundColor: Theme.of(context).colorScheme.tertiary,
               child: FloatingActionButton.small(
                 heroTag: null,
-                onPressed: () => DownloadSheet.show(context),
-                tooltip: _tooltip(isWorking: isWorking, isStale: isStale),
+                onPressed: () => _onTap(
+                  context,
+                  isWorking: isWorking,
+                  defaultSource: defaultSource,
+                ),
+                tooltip: _tooltip(
+                  isWorking: isWorking,
+                  isStale: isStale,
+                  defaultSource: defaultSource,
+                ),
                 child: isWorking
                     ? const _RunningIndicator()
                     : const Icon(Icons.move_to_inbox_outlined),
@@ -44,10 +69,49 @@ class DownloadFab extends StatelessWidget {
     );
   }
 
-  String _tooltip({required bool isWorking, required bool isStale}) {
+  /// A download that is already running owns the button: showing what it is
+  /// doing beats offering to start something else.
+  Future<void> _onTap(
+    BuildContext context, {
+    required bool isWorking,
+    required IngestSource defaultSource,
+  }) {
+    if (isWorking) return DownloadSheet.show(context);
+    return _open(context, defaultSource);
+  }
+
+  Future<void> _open(BuildContext context, IngestSource source) =>
+      switch (source) {
+        IngestSource.ask => _chooseThenOpen(context),
+        IngestSource.manual => showManualEntryExplainer(
+          context,
+          onLogTransaction: onLogTransaction,
+          onLogTransfer: onLogTransfer,
+        ),
+        IngestSource.csv => showCsvImportDialog(context),
+        IngestSource.bank => DownloadSheet.show(context),
+      };
+
+  Future<void> _chooseThenOpen(BuildContext context) async {
+    final picked = await IngestSourceSheet.show(context);
+    // Guarding against [IngestSource.ask] keeps this from recursing on an
+    // answer the sheet does not offer today but could tomorrow.
+    if (picked == null || picked == IngestSource.ask) return;
+    if (!context.mounted) return;
+    await _open(context, picked);
+  }
+
+  String _tooltip({
+    required bool isWorking,
+    required bool isStale,
+    required IngestSource defaultSource,
+  }) {
     if (isWorking) return 'Downloading bank data, tap to see the progress';
-    if (isStale) return 'Download bank data, last download is a few days old';
-    return 'Download bank data';
+    final what = defaultSource == IngestSource.bank
+        ? 'Download bank data'
+        : 'Add transactions';
+    if (isStale) return '$what, last download is a few days old';
+    return what;
   }
 }
 
