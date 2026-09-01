@@ -9,7 +9,6 @@ import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/turnover_change.dart';
 import 'package:kashr/turnover/model/turnover_filter.dart';
 import 'package:kashr/turnover/model/turnover_sort.dart';
-import 'package:jiffy/jiffy.dart';
 import 'package:uuid/uuid.dart';
 
 import 'turnover.dart';
@@ -373,13 +372,12 @@ class TurnoverRepository {
   /// This ensures 1:1 matching semantics which are expected and easy to understand by the user.
   /// I.e. a turnover can only be matched fully and not partially.
   ///
-  /// Optionally filter by date range.
-  /// [startDateInclusive] filters turnovers with bookingDate >= startDate
-  /// [endDateInclusive] filters turnovers with bookingDate <= endDate
+  /// Optionally filter by the half-open date range
+  /// [startInclusive] .. [endExclusive].
   Future<List<Turnover>> getUnmatchedTurnoversForAccount({
     required UuidValue accountId,
-    DateTime? startDateInclusive,
-    DateTime? endDateInclusive,
+    DateTime? startInclusive,
+    DateTime? endExclusive,
     int? limit,
     SortDirection direction = SortDirection.asc,
   }) async {
@@ -388,22 +386,14 @@ class TurnoverRepository {
     final whereClauses = ['t.account_id = ?'];
     final whereArgs = <Object>[accountId.uuid];
 
-    if (startDateInclusive != null) {
+    if (startInclusive != null) {
       whereClauses.add('t.booking_date >= ?');
-      whereArgs.add(
-        Jiffy.parseFromDateTime(
-          startDateInclusive,
-        ).format(pattern: isoDateFormat),
-      );
+      whereArgs.add(startInclusive.isoDate);
     }
 
-    if (endDateInclusive != null) {
-      whereClauses.add('t.booking_date <= ?');
-      whereArgs.add(
-        Jiffy.parseFromDateTime(
-          endDateInclusive,
-        ).format(pattern: isoDateFormat),
-      );
+    if (endExclusive != null) {
+      whereClauses.add('t.booking_date < ?');
+      whereArgs.add(endExclusive.isoDate);
     }
 
     final whereClause = 'WHERE ${whereClauses.join(' AND ')}';

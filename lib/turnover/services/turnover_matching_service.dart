@@ -23,16 +23,23 @@ class TurnoverMatchingService {
     this.log,
   );
 
-  (DateTime startDate, DateTime endDate) _calcMatchingWindow(
+  /// Both edge days are candidates, so the exclusive end is one day past the
+  /// last. Built from calendar fields rather than [Duration] arithmetic, which
+  /// would land on the wrong day across a DST change.
+  (DateTime startInclusive, DateTime endExclusive) _calcMatchingWindow(
     DateTime bookingDate,
-  ) {
-    // Get unmatched TagTurnovers in time window
-    final startDate = bookingDate.subtract(
-      const Duration(days: dateMatchingWindow),
-    );
-    final endDate = bookingDate.add(const Duration(days: dateMatchingWindow));
-    return (startDate, endDate);
-  }
+  ) => (
+    DateTime(
+      bookingDate.year,
+      bookingDate.month,
+      bookingDate.day - dateMatchingWindow,
+    ),
+    DateTime(
+      bookingDate.year,
+      bookingDate.month,
+      bookingDate.day + dateMatchingWindow + 1,
+    ),
+  );
 
   /// Find potential matches for a turnover
   /// Returns list sorted by confidence (highest first)
@@ -44,12 +51,12 @@ class TurnoverMatchingService {
         DateTime.now() /* we expect a turnover without a booking date to be booked very soon,
                           so now() is a good fallback for the algorithm. */;
 
-    final (startDate, endDate) = _calcMatchingWindow(bookingDate);
+    final (startInclusive, endExclusive) = _calcMatchingWindow(bookingDate);
 
     final candidates = await _tagTurnoverRepository.getUnmatched(
       accountId: turnover.accountId,
-      startInclusive: startDate,
-      endExclusive: endDate,
+      startInclusive: startInclusive,
+      endExclusive: endExclusive,
     );
 
     return _calcMatches([turnover], candidates);
@@ -67,13 +74,13 @@ class TurnoverMatchingService {
   ) async {
     final bookingDate = tagTurnover.bookingDate;
 
-    final (startDate, endDate) = _calcMatchingWindow(bookingDate);
+    final (startInclusive, endExclusive) = _calcMatchingWindow(bookingDate);
 
     final candidates = await _turnoverRepository
         .getUnmatchedTurnoversForAccount(
           accountId: tagTurnover.accountId,
-          startDateInclusive: startDate,
-          endDateInclusive: endDate,
+          startInclusive: startInclusive,
+          endExclusive: endExclusive,
         );
 
     return _calcMatches(candidates, [tagTurnover]);
