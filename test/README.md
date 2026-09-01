@@ -23,6 +23,7 @@ to it.
 | --- | --- | --- |
 | `account_cubit_test.dart` | projected balance `62` | `77` — the last day's turnover and pending expense are both missing |
 | `turnover_matching_service_test.dart` — both tests | the ±7-day match window reaches both edges | it reaches −7 but only +6 |
+| `dashboard_cubit_test.dart` | September totals `(30, 1, 1, 1)` however you reach it | `(20, 0, 1, 0)` as opened, `(30, 1, 1, 1)` after stepping a month back and forward |
 
 ## The harness
 
