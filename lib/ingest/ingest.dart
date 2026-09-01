@@ -65,6 +65,13 @@ abstract class DataIngestor {
 class DataIngestResult {
   final ResultStatus status;
   final String? errorMessage;
+
+  /// Why it failed, so the sheet can offer the way out that fits.
+  ///
+  /// Null when the run succeeded, and [DownloadFailureReason.unknown]
+  /// whenever the source cannot tell one failure from another - which is
+  /// what every ingest failure used to be.
+  final DownloadFailureReason? reason;
   final int newCount;
   final int updatedCount;
   final int autoMatchedCount;
@@ -79,6 +86,7 @@ class DataIngestResult {
   const DataIngestResult._({
     required this.status,
     this.errorMessage,
+    this.reason,
     required this.newCount,
     required this.updatedCount,
     required this.autoMatchedCount,
@@ -101,16 +109,20 @@ class DataIngestResult {
          downloadedAccountIds: downloadedAccountIds,
        );
 
-  const DataIngestResult.error(ResultStatus status, {String? errorMessage})
-    : this._(
-        status: status,
-        errorMessage: errorMessage,
-        newCount: 0,
-        updatedCount: 0,
-        autoMatchedCount: 0,
-        unmatchedCount: 0,
-        downloadedAccountIds: const [],
-      );
+  const DataIngestResult.error(
+    ResultStatus status, {
+    String? errorMessage,
+    DownloadFailureReason reason = DownloadFailureReason.unknown,
+  }) : this._(
+         status: status,
+         errorMessage: errorMessage,
+         reason: reason,
+         newCount: 0,
+         updatedCount: 0,
+         autoMatchedCount: 0,
+         unmatchedCount: 0,
+         downloadedAccountIds: const [],
+       );
 }
 
 enum ResultStatus { success, unauthed, otherError }

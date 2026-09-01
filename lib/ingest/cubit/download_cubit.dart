@@ -243,7 +243,7 @@ class DownloadCubit extends Cubit<DownloadState> {
           DownloadFailed(
             request: request,
             range: range,
-            reason: DownloadFailureReason.unknown,
+            reason: result.reason ?? DownloadFailureReason.unknown,
             message: result.errorMessage ?? 'The download did not finish.',
           ),
         );

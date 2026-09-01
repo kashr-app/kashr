@@ -17,8 +17,33 @@ part 'comdirect_auth_state.dart';
 
 final requestIdFormat = DateFormat("HHmmssSSS");
 
+/// A Dio that gives up rather than waiting forever.
+///
+/// Every request to the bank goes through one of these. Without the timeouts
+/// a socket that never answers hangs the whole download: the sheet keeps
+/// spinning, and Cancel cannot help because stopping only takes effect
+/// between requests, never inside one.
+///
+/// Receiving is given the longest rope of the three; a page of transactions
+/// is the slowest thing the bank is asked for.
+Dio _bankDio() => Dio(
+  BaseOptions(
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 60),
+    sendTimeout: const Duration(seconds: 30),
+  ),
+);
+
 class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
   final Logger log;
+
+  /// The credentials behind the session in flight.
+  ///
+  /// Kept for as long as the session so that refreshing a token halfway
+  /// through a download does not unlock the stored ones again, which would
+  /// put a biometric prompt on screen in the middle of a run the user is
+  /// only watching. Dropped on logout.
+  Credentials? _sessionCredentials;
 
   ComdirectAuthCubit(this.log) : super(AuthInitial());
 
@@ -32,7 +57,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
     DownloadCancellation? cancellation,
   }) async {
     try {
-      final authTokenResponse = await ComdirectAuthAPI(Dio())
+      final authTokenResponse = await ComdirectAuthAPI(_bankDio())
           .createLoginAuthToken(
             CreateLoginAuthTokenReqDTO(
               clientId: credentials.clientId,
@@ -118,11 +143,20 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       log.i("2FA successfull");
       emit(AuthLoading("2FA successfull. Getting api token..."));
 
+      final tokenCreatedAt = DateTime.now().millisecondsSinceEpoch;
       final apiToken = await _createApiToken(credentials, authTokenResponse);
+      // Stored so that AuthInterceptor's proactive refresh can find it. Until
+      // it was, the token was never on disk after a login, the refresh never
+      // fired, and the session simply died at its ten minute mark - in the
+      // middle of a first download, which then restarted from nothing behind
+      // a second confirmation in the banking app.
+      await apiToken.store(tokenCreatedAt);
+
       final dioApi = _createDioWithHeaders(apiToken, clientRequestInfo);
       dioApi.interceptors.add(AuthInterceptor(this, log));
       final api = ComdirectAPI(dioApi);
 
+      _sessionCredentials = credentials;
       emit(AuthSuccess(apiToken, api, dioApi));
     } on DownloadCancelledException {
       log.i('Login stopped while waiting for the confirmation.');
@@ -147,7 +181,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
     TokenDTO apiToken,
     ClientRequestInfoDTO clientRequestInfo,
   ) {
-    final dioApi = Dio();
+    final dioApi = _bankDio();
 
     dioApi.options.headers.clear();
     dioApi.options.headers["Content-Type"] = "application/json";
@@ -166,7 +200,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
   ) async {
     return await retry(
       maxAttempts: 3,
-      action: () => ComdirectAuthAPI(Dio()).createApiToken(
+      action: () => ComdirectAuthAPI(_bankDio()).createApiToken(
         ApiAccessTokenReqDTO(
           clientId: credentials.clientId,
           clientSecret: credentials.clientSecret,
@@ -213,7 +247,9 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
         return;
       }
 
-      final credentials = await Credentials.load();
+      // The session's own credentials first: falling through to the stored
+      // ones asks for a fingerprint, and a refresh happens mid-download.
+      final credentials = _sessionCredentials ?? await Credentials.load();
       if (credentials == null) {
         log.e('No credentials found');
         emit(AuthError('No credentials found'));
@@ -222,7 +258,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
 
       emit(AuthLoading("Refreshing token..."));
 
-      final dio = Dio();
+      final dio = _bankDio();
       final comdirectAuthAPI = ComdirectAuthAPI(dio);
 
       final tokenCreatedAt = DateTime.now().millisecondsSinceEpoch;
@@ -257,7 +293,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
     final s = state;
     if (s is AuthSuccess) {
       final accessToken = s.apiToken.accessToken;
-      final dio = Dio();
+      final dio = _bankDio();
       dio.options.headers.clear();
       dio.options.headers["Content-Type"] = "application/json";
       dio.options.headers["Accept"] = "application/json";
@@ -279,6 +315,7 @@ class ComdirectAuthCubit extends Cubit<ComdirectAuthState> {
       );
     }
     await TokenDTO.delete();
+    _sessionCredentials = null;
     emit(AuthInitial());
     log.i('Logged out');
   }

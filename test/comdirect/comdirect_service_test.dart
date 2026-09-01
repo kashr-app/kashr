@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/model/account.dart';
@@ -68,14 +69,23 @@ class _FakeComdirectAPI implements ComdirectAPI {
   final List<AccountsPage> balancePages;
   final int transactionMatches;
 
+  /// Thrown instead of answering, to stand in for a bank that does not.
+  final DioException? failWith;
+
   int balanceCalls = 0;
   final Map<String, int> transactionCallsByApiId = {};
 
-  _FakeComdirectAPI(this.balancePages, {this.transactionMatches = 0});
+  _FakeComdirectAPI(
+    this.balancePages, {
+    this.transactionMatches = 0,
+    this.failWith,
+  });
 
   @override
   Future<AccountsPage> getBalances({int index = 0, int pageSize = 20}) async {
     balanceCalls++;
+    final failWith = this.failWith;
+    if (failWith != null) throw failWith;
     if (balanceCalls > balancePages.length + 2) {
       throw StateError('getBalances asked $balanceCalls times, it is looping');
     }
@@ -184,6 +194,38 @@ void main() {
     // it where it started.
     final reconciled = await app.accountRepository.getAccountById(existing.id);
     expect(reconciled?.openingBalance, Decimal.parse('500'));
+  });
+
+  test('says the bank was unreachable when nothing came back', () async {
+    final api = _FakeComdirectAPI(
+      const [],
+      failWith: DioException.connectionTimeout(
+        timeout: const Duration(seconds: 30),
+        requestOptions: RequestOptions(),
+      ),
+    );
+
+    final result = await ingest(api);
+
+    expect(result.status, ResultStatus.otherError);
+    expect(result.reason, DownloadFailureReason.network);
+    expect(result.errorMessage, isNot(contains('DioException')));
+  });
+
+  test('does not blame the network for an answer it cannot read', () async {
+    final options = RequestOptions();
+    final api = _FakeComdirectAPI(
+      const [],
+      failWith: DioException.badResponse(
+        statusCode: 500,
+        requestOptions: options,
+        response: Response<void>(statusCode: 500, requestOptions: options),
+      ),
+    );
+
+    final result = await ingest(api);
+
+    expect(result.reason, DownloadFailureReason.unknown);
   });
 
   test('stops asking for accounts when a page comes back empty', () async {

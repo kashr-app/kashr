@@ -40,6 +40,29 @@ class ComdirectService implements DataIngestor {
     DownloadProgressSink progress,
   ) => _fetchAccountsAndTurnovers(request, cancellation, progress);
 
+  /// What to tell the user about a request that never got an answer.
+  ///
+  /// Only the failures where nothing arrived. Null for anything the bank
+  /// actually answered, which is either the 401 handled above or something
+  /// this app cannot tell apart and should not guess at.
+  ({DownloadFailureReason reason, String message})? _networkFailure(
+    DioException e,
+  ) => switch (e.type) {
+    DioExceptionType.connectionTimeout ||
+    DioExceptionType.sendTimeout ||
+    DioExceptionType.receiveTimeout => (
+      reason: DownloadFailureReason.network,
+      message: 'Your bank took too long to answer. Please try again.',
+    ),
+    DioExceptionType.connectionError => (
+      reason: DownloadFailureReason.network,
+      message:
+          'Kashr could not reach your bank. Please check your connection '
+          'and try again.',
+    ),
+    _ => null,
+  };
+
   /// Fetches accounts and turnovers from the Comdirect API.
   /// Also automatically updates the balance for existing accounts.
   ///
@@ -109,6 +132,14 @@ class ComdirectService implements DataIngestor {
       if (e is DioException) {
         if (e.response?.statusCode == 401) {
           return DataIngestResult.error(ResultStatus.unauthed);
+        }
+        if (_networkFailure(e) case final failure?) {
+          log.w('Could not reach the bank: ${e.type.name}', error: e);
+          return DataIngestResult.error(
+            ResultStatus.otherError,
+            errorMessage: failure.message,
+            reason: failure.reason,
+          );
         }
       }
       log.e('Error fetching turnovers: $e', error: e, stackTrace: s);
