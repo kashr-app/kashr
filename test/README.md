@@ -21,6 +21,7 @@ to it.
 
 | Test | Expected | Actual |
 | --- | --- | --- |
+| `account_cubit_test.dart` | projected balance `62` | `77` — the last day's turnover and pending expense are both missing |
 | `turnover_matching_service_test.dart` — both tests | the ±7-day match window reaches both edges | it reaches −7 but only +6 |
 
 ## The harness
