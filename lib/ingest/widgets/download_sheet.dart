@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kashr/comdirect/comdirect_login_page.dart';
 import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:kashr/core/model/booking_date.dart';
+import 'package:kashr/core/widgets/sheet_grabber.dart';
 import 'package:kashr/ingest/cubit/download_cubit.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
@@ -53,7 +54,7 @@ class _DownloadSheetState extends State<DownloadSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _Grabber(),
+              const SheetGrabber(),
               const SizedBox(height: 16),
               _view(state),
             ],
@@ -106,24 +107,6 @@ class _DownloadSheetState extends State<DownloadSheet> {
 
     await cubit.continueAfterConnect(
       isConnected: authCubit.state is AuthSuccess,
-    );
-  }
-}
-
-class _Grabber extends StatelessWidget {
-  const _Grabber();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 40,
-        height: 4,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.outlineVariant,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
     );
   }
 }
