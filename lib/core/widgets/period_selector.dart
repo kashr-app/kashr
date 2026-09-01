@@ -1,3 +1,4 @@
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/year_month.dart';
 import 'package:kashr/turnover/model/year_week.dart';
@@ -82,8 +83,7 @@ class PeriodSelector extends StatelessWidget {
             if (!locked)
               IconButton(
                 icon: const Icon(Icons.chevron_right),
-                onPressed: () =>
-                    onPeriodSelected(selectedPeriod.add(delta: 1)),
+                onPressed: () => onPeriodSelected(selectedPeriod.add(delta: 1)),
                 tooltip: 'Next period',
               ),
             if (onAction != null && !locked)
@@ -135,11 +135,11 @@ class _PeriodPickerDialogState extends State<PeriodPickerDialog> {
   }
 
   void _selectToday() {
-    final now = DateTime.now();
+    final today = BookingDate.today();
     setState(() {
-      _selectedYear = now.year;
-      _selectedMonth = now.month;
-      _selectedWeek = YearWeek.of(now).week;
+      _selectedYear = today.year;
+      _selectedMonth = today.month;
+      _selectedWeek = YearWeek.of(today).week;
     });
   }
 
@@ -153,7 +153,10 @@ class _PeriodPickerDialogState extends State<PeriodPickerDialog> {
         year: _selectedYear,
         month: _selectedMonth,
       ).period,
-      PeriodType.year => Period.of(DateTime(_selectedYear), PeriodType.year),
+      PeriodType.year => Period.of(
+        BookingDate(_selectedYear, 1, 1),
+        PeriodType.year,
+      ),
     };
   }
 

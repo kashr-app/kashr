@@ -215,7 +215,7 @@ class _AccountListItemState extends State<_AccountListItem> {
     }
   }
 
-  String _formatMonth(DateTime date) {
+  String _formatMonth(BookingDate date) {
     const months = [
       'January',
       'February',

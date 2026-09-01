@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:jiffy/jiffy.dart';
+import 'package:kashr/core/booking_date_json_converter.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
 import 'package:kashr/core/model/booking_date.dart';
 
@@ -14,17 +15,14 @@ abstract class Period with _$Period {
 
   const factory Period(
     PeriodType type, {
-    required DateTime startInclusive,
-    required DateTime endExclusive,
+    @BookingDateJsonConverter() required BookingDate startInclusive,
+    @BookingDateJsonConverter() required BookingDate endExclusive,
   }) = _Period;
 
-  factory Period.now(PeriodType type) {
-    final now = DateTime.now();
-    return Period.of(now, type);
-  }
+  factory Period.now(PeriodType type) => Period.of(BookingDate.today(), type);
 
-  factory Period.of(DateTime d, PeriodType type) {
-    final startInclusive = type.startOf(d);
+  factory Period.of(BookingDate day, PeriodType type) {
+    final startInclusive = type.startOf(day);
     return Period(
       type,
       startInclusive: startInclusive,
@@ -34,20 +32,19 @@ abstract class Period with _$Period {
 
   factory Period.fromJson(Map<String, dynamic> json) => _$PeriodFromJson(json);
 
-  bool contains(BookingDate day) {
-    final at = day.atMidnight;
-    return !at.isBefore(startInclusive) && at.isBefore(endExclusive);
-  }
+  bool contains(BookingDate day) =>
+      !day.isBefore(startInclusive) && day.isBefore(endExclusive);
 
   Period add({int delta = 1}) =>
       Period.of(startInclusive.addPeriod(type, delta: delta), type);
 
   String format() {
     final start = startInclusive;
-    final end = type.lastInstantOf(start);
+    final lastDay = endExclusive.addDays(-1);
     return switch (type) {
       PeriodType.week =>
-        '${start.year} ${start.day}.${start.month}-${end.day}.${end.month}',
+        '${start.year} ${start.day}.${start.month}'
+            '-${lastDay.day}.${lastDay.month}',
       PeriodType.month => '${start.year} ${_getMonthName(start.month)}',
       PeriodType.year => '${start.year}',
     };
@@ -83,22 +80,15 @@ enum PeriodType {
   month,
   year;
 
-  DateTime startOf(DateTime d) {
+  BookingDate startOf(BookingDate day) {
     final Unit unit = switch (this) {
       PeriodType.week => Unit.week,
       PeriodType.month => Unit.month,
       PeriodType.year => Unit.year,
     };
-    return Jiffy.parseFromDateTime(d).startOf(unit).dateTime;
-  }
-
-  DateTime lastInstantOf(DateTime d) {
-    final Unit unit = switch (this) {
-      PeriodType.week => Unit.week,
-      PeriodType.month => Unit.month,
-      PeriodType.year => Unit.year,
-    };
-    return Jiffy.parseFromDateTime(d).endOf(unit).dateTime;
+    return BookingDate.on(
+      Jiffy.parseFromDateTime(day.atMidnight).startOf(unit).dateTime,
+    );
   }
 
   String title(BuildContext context) {
@@ -128,14 +118,15 @@ String _getMonthName(int month) {
   return monthNames[month - 1];
 }
 
-extension DateTimePeriodExt on DateTime {
+extension BookingDatePeriodExt on BookingDate {
   /// [delta] may be negative
-  DateTime addPeriod(PeriodType type, {int delta = 1}) =>
-      Jiffy.parseFromDateTime(this)
-          .add(
-            weeks: type == PeriodType.week ? delta : 0,
-            months: type == PeriodType.month ? delta : 0,
-            years: type == PeriodType.year ? delta : 0,
-          )
-          .dateTime;
+  BookingDate addPeriod(PeriodType type, {int delta = 1}) => BookingDate.on(
+    Jiffy.parseFromDateTime(atMidnight)
+        .add(
+          weeks: type == PeriodType.week ? delta : 0,
+          months: type == PeriodType.month ? delta : 0,
+          years: type == PeriodType.year ? delta : 0,
+        )
+        .dateTime,
+  );
 }

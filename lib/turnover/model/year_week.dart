@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:jiffy/jiffy.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/model/period.dart';
 
 part '../../_gen/turnover/model/year_week.freezed.dart';
@@ -21,23 +22,23 @@ abstract class YearWeek with _$YearWeek {
 
   /// Creates a YearWeek from the current date
   factory YearWeek.now() {
-    return YearWeek.of(DateTime.now());
+    return YearWeek.of(BookingDate.today());
   }
 
-  /// Creates a YearWeek from the given date
-  factory YearWeek.of(DateTime date) {
-    final weekData = _getIsoWeekNumber(date);
+  /// Creates a YearWeek from the given day
+  factory YearWeek.of(BookingDate day) {
+    final weekData = _getIsoWeekNumber(day.atMidnight);
     return YearWeek(year: weekData.$1, week: weekData.$2);
   }
 
-  /// Creates a DateTime representing the first day of this week (Monday)
-  DateTime toDateTime() {
+  /// The first day of this week (Monday)
+  BookingDate get firstDay {
     // Start from Jan 4th which is always in week 1
     final jan4 = DateTime(year, 1, 4);
     final jiffy = Jiffy.parseFromDateTime(jan4);
     final weekStart = jiffy.startOf(Unit.week);
     // Add weeks to get to the desired week
-    return weekStart.add(weeks: week - 1).dateTime;
+    return BookingDate.on(weekStart.add(weeks: week - 1).dateTime);
   }
 
   /// Calculates ISO 8601 week number for a given date.
@@ -62,14 +63,11 @@ abstract class YearWeek with _$YearWeek {
     return (thursday.year, weekNumber);
   }
 
-  Period get period {
-    final startDate = Jiffy.parseFromDateTime(toDateTime());
-    return Period(
-      PeriodType.week,
-      startInclusive: startDate.dateTime,
-      endExclusive: startDate.add(weeks: 1).dateTime,
-    );
-  }
+  Period get period => Period(
+    PeriodType.week,
+    startInclusive: firstDay,
+    endExclusive: firstDay.addPeriod(PeriodType.week),
+  );
 
   factory YearWeek.fromJson(Map<String, dynamic> json) =>
       _$YearWeekFromJson(json);

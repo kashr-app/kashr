@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
-import 'package:kashr/core/extensions/date_time_extensions.dart';
 import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/db/db_helper.dart';
 import 'package:kashr/turnover/model/fts.dart';
@@ -64,7 +63,7 @@ class TurnoverRepository {
     final maps = await db.query(
       'turnover',
       where: 'booking_date >= ? AND booking_date < ?',
-      whereArgs: [period.startInclusive.isoDate, period.endExclusive.isoDate],
+      whereArgs: [period.startInclusive.iso, period.endExclusive.iso],
       orderBy: 'booking_date DESC',
     );
 
@@ -166,10 +165,7 @@ class TurnoverRepository {
     final whereArgs = <String>[];
     if (period != null) {
       whereClauses.add('t.booking_date >= ? AND t.booking_date < ?');
-      whereArgs.addAll([
-        period.startInclusive.isoDate,
-        period.endExclusive.isoDate,
-      ]);
+      whereArgs.addAll([period.startInclusive.iso, period.endExclusive.iso]);
     }
 
     final where = whereClauses.isEmpty
@@ -203,10 +199,7 @@ class TurnoverRepository {
     final whereArgs = <String>[];
     if (period != null) {
       whereClauses.add('t.booking_date >= ? AND t.booking_date < ?');
-      whereArgs.addAll([
-        period.startInclusive.isoDate,
-        period.endExclusive.isoDate,
-      ]);
+      whereArgs.addAll([period.startInclusive.iso, period.endExclusive.iso]);
     }
 
     final where = whereClauses.isEmpty
@@ -254,7 +247,7 @@ class TurnoverRepository {
       ORDER BY ABS(t.amount_value) DESC, t.booking_date DESC NULLS FIRST
       LIMIT ?
       ''',
-      [period.startInclusive.isoDate, period.endExclusive.isoDate, limit],
+      [period.startInclusive.iso, period.endExclusive.iso, limit],
     );
 
     if (turnoverMaps.isEmpty) {
@@ -429,8 +422,8 @@ class TurnoverRepository {
     // Period filter
     if (filter.period != null) {
       whereClauses.add('t.booking_date >= ? AND t.booking_date < ?');
-      whereArgs.add(filter.period!.startInclusive.isoDate);
-      whereArgs.add(filter.period!.endExclusive.isoDate);
+      whereArgs.add(filter.period!.startInclusive.iso);
+      whereArgs.add(filter.period!.endExclusive.iso);
     }
 
     // Sign filter - filter by income (positive) or expense (negative)

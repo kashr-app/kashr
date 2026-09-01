@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:decimal/decimal.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
-import 'package:kashr/core/extensions/date_time_extensions.dart';
 import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/db/db_helper.dart';
 import 'package:kashr/turnover/model/fts.dart';
@@ -571,7 +570,7 @@ class TagTurnoverRepository {
       GROUP BY t.id, t.name, t.color, t.semantic
       ORDER BY total_amount DESC
       ''',
-      [period.startInclusive.isoDate, period.endExclusive.isoDate],
+      [period.startInclusive.iso, period.endExclusive.iso],
     );
 
     return result.map((map) {
@@ -620,8 +619,8 @@ class TagTurnoverRepository {
       ''',
       [
         //
-        period.startInclusive.isoDate,
-        period.endExclusive.isoDate,
+        period.startInclusive.iso,
+        period.endExclusive.iso,
         ...tagArgs,
       ],
     );
@@ -649,7 +648,7 @@ class TagTurnoverRepository {
       FROM tag_turnover tt
       WHERE tt.booking_date >= ? AND tt.booking_date < ?
       ''',
-      [period.startInclusive.isoDate, period.endExclusive.isoDate],
+      [period.startInclusive.iso, period.endExclusive.iso],
     );
 
     return result.first['count'] as int;
@@ -661,8 +660,8 @@ class TagTurnoverRepository {
   ) async {
     final db = await DatabaseHelper().database;
 
-    final start = period.startInclusive.isoDate;
-    final end = period.endExclusive.isoDate;
+    final start = period.startInclusive.iso;
+    final end = period.endExclusive.iso;
 
     final result = await db.rawQuery(
       '''
@@ -770,8 +769,8 @@ class TagTurnoverRepository {
     if (filter.period != null) {
       whereClauses.add('tt.booking_date >= ?');
       whereClauses.add('tt.booking_date < ?');
-      whereArgs.add(filter.period!.startInclusive.isoDate);
-      whereArgs.add(filter.period!.endExclusive.isoDate);
+      whereArgs.add(filter.period!.startInclusive.iso);
+      whereArgs.add(filter.period!.endExclusive.iso);
     }
 
     // Filter by tag IDs

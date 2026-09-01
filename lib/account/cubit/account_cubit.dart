@@ -90,7 +90,7 @@ class AccountCubit extends Cubit<AccountState> {
 
       final projected = await _balanceService.calculateProjectedBalance(
         account,
-        endExclusive: BookingDate.on(projectionPeriod.endExclusive),
+        endExclusive: projectionPeriod.endExclusive,
       );
       projectedBalances[account.id] = projected;
     }

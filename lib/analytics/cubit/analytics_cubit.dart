@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:kashr/analytics/cubit/analytics_state.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/turnover/model/tag_repository.dart';
@@ -15,12 +16,12 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
   AnalyticsCubit(this._tagTurnoverRepository, this._tagRepository)
     : super(
         AnalyticsState(
-          startInclusive: DateTime(
+          startInclusive: BookingDate(
             DateTime.now().year,
             DateTime.now().month - 5,
             1,
           ),
-          endExclusive: DateTime(
+          endExclusive: BookingDate(
             DateTime.now().year,
             DateTime.now().month + 1,
             1,

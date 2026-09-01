@@ -1,3 +1,5 @@
+import 'package:kashr/core/booking_date_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/turnover/model/tag.dart';
 import 'package:kashr/turnover/model/tag_turnover_repository.dart';
@@ -27,8 +29,8 @@ abstract class AnalyticsState with _$AnalyticsState {
     @Default({})
     Map<String, List<TagSummary>> dataSummaries,
 
-    required DateTime startInclusive,
-    required DateTime endExclusive,
+    @BookingDateJsonConverter() required BookingDate startInclusive,
+    @BookingDateJsonConverter() required BookingDate endExclusive,
 
     String? errorMessage,
   }) = _AnalyticsState;
