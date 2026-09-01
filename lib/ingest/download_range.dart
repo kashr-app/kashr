@@ -142,6 +142,19 @@ class DownloadRange {
     required this.startInclusive,
     required this.endInclusive,
   });
+
+  /// A value type, so two reports of the same window compare equal.
+  ///
+  /// The progress sink leans on this to drop repeats: an ingestor that builds
+  /// a fresh range per page would otherwise never look unchanged.
+  @override
+  bool operator ==(Object other) =>
+      other is DownloadRange &&
+      other.startInclusive == startInclusive &&
+      other.endInclusive == endInclusive;
+
+  @override
+  int get hashCode => Object.hash(startInclusive, endInclusive);
 }
 
 /// The scope of one download run.
