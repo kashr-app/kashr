@@ -283,28 +283,25 @@ class DashboardCubit extends Cubit<DashboardState> {
             untaggedAmount.abs();
       }
 
-      // Total = tagged (by tt.booking_date) + untagged (by tv.booking_date)
-      final totalAllIncomeAbs =
-          (totalAbsTTByType[TurnoverType.income] ?? Decimal.zero) +
-          (totalAbsUntaggedBySign[TurnoverSign.income] ?? Decimal.zero);
-      final totalAllExpensesAbs =
-          (totalAbsTTByType[TurnoverType.expense] ?? Decimal.zero) +
-          (totalAbsUntaggedBySign[TurnoverSign.expense] ?? Decimal.zero);
-
       final unallocatedIncome =
           totalAbsUntaggedBySign[TurnoverSign.income] ?? Decimal.zero;
       final unallocatedExpenses =
           totalAbsUntaggedBySign[TurnoverSign.expense] ?? Decimal.zero;
 
       // Total income/expenses for cashflow = allocated + unallocated
-      final totalIncome = totalAllIncomeAbs + unallocatedIncome;
-      final totalExpenses = totalAllExpensesAbs + unallocatedExpenses;
+      // Total = tagged (by tt.booking_date) + untagged (by tv.booking_date)
+      final totalAllIncomeAbs =
+          (totalAbsTTByType[TurnoverType.income] ?? Decimal.zero) +
+          unallocatedIncome;
+      final totalAllExpensesAbs =
+          (totalAbsTTByType[TurnoverType.expense] ?? Decimal.zero) +
+          unallocatedExpenses;
 
       emit(
         state.copyWith(
           status: Status.success,
-          totalIncome: totalIncome,
-          totalExpenses: totalExpenses,
+          totalIncome: totalAllIncomeAbs,
+          totalExpenses: totalAllExpensesAbs,
           totalTransfers: totalTransfers,
           unallocatedIncome: unallocatedIncome,
           unallocatedExpenses: unallocatedExpenses,
