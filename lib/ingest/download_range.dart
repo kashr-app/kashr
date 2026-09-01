@@ -1,5 +1,6 @@
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/model/booking_date.dart';
+import 'package:kashr/core/model/period.dart';
 
 /// How far back before the download cursor to re-fetch on every download.
 ///
@@ -106,6 +107,26 @@ DownloadRange unionDownloadRange(
   return DownloadRange(
     startInclusive: earliest ?? request.startInclusive,
     endInclusive: request.endInclusive,
+  );
+}
+
+/// The booking dates a download of [period] covers.
+///
+/// Null when [period] has not begun yet. There is nothing to ask a bank for,
+/// and offering the download would only produce an empty one.
+///
+/// The end is clamped to [today] because no bank books the future, and
+/// asking for it would move the download cursors past the data that exists.
+DownloadRange? periodDownloadRange(Period period, {BookingDate? today}) {
+  final lastFetchableDay = today ?? BookingDate.today();
+  if (period.startInclusive.isAfter(lastFetchableDay)) return null;
+
+  final lastDay = period.endExclusive.addDays(-1);
+  return DownloadRange(
+    startInclusive: period.startInclusive,
+    endInclusive: lastDay.isAfter(lastFetchableDay)
+        ? lastFetchableDay
+        : lastDay,
   );
 }
 

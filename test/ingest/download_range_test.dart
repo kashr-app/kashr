@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/model/booking_date.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:uuid/uuid.dart';
 
@@ -24,6 +25,47 @@ Account _account({
 
 void main() {
   final today = BookingDate(2026, 8, 31);
+
+  group('periodDownloadRange', () {
+    test('covers a past period end to end', () {
+      final period = Period.of(BookingDate(2026, 6, 15), PeriodType.month);
+
+      final range = periodDownloadRange(period, today: today);
+
+      expect(range, isNotNull);
+      expect(range!.startInclusive, BookingDate(2026, 6, 1));
+      expect(range.endInclusive, BookingDate(2026, 6, 30));
+    });
+
+    test('stops at today rather than asking for days not yet booked', () {
+      final period = Period.of(today, PeriodType.month);
+
+      final range = periodDownloadRange(period, today: today);
+
+      expect(range!.startInclusive, BookingDate(2026, 8, 1));
+      expect(range.endInclusive, today);
+    });
+
+    test('has nothing to fetch for a period that has not begun', () {
+      final period = Period.of(BookingDate(2026, 10, 5), PeriodType.month);
+
+      expect(periodDownloadRange(period, today: today), isNull);
+    });
+
+    test('offers a period that begins today', () {
+      final period = Period(
+        PeriodType.month,
+        startInclusive: today,
+        endExclusive: today.addDays(30),
+      );
+
+      final range = periodDownloadRange(period, today: today);
+
+      expect(range, isNotNull);
+      expect(range!.startInclusive, today);
+      expect(range.endInclusive, today);
+    });
+  });
 
   group('isFirstDownload', () {
     test('is true when nothing was ever downloaded', () {

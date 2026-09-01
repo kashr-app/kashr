@@ -8,6 +8,7 @@ import 'package:kashr/backup/widgets/backup_reminder_widget.dart';
 import 'package:kashr/core/dialogs/waiting_dialog.dart';
 import 'package:kashr/core/extensions/bloc_extensions.dart';
 import 'package:kashr/core/status.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/widgets/period_selector.dart';
 import 'package:kashr/account/account_selector_dialog.dart';
 import 'package:kashr/account/dual_account_selector.dart';
@@ -273,9 +274,13 @@ class _DashboardPage extends StatelessWidget {
               child: const Icon(Icons.swap_horiz),
             ),
             const Spacer(),
-            DownloadFab(
-              onLogTransaction: () => _showQuickExpenseEntry(context),
-              onLogTransfer: () => _showTransferDialog(context),
+            BlocSelector<DashboardCubit, DashboardState, Period>(
+              selector: (state) => state.period,
+              builder: (context, period) => DownloadFab(
+                selectedPeriod: period,
+                onLogTransaction: () => _showQuickExpenseEntry(context),
+                onLogTransfer: () => _showTransferDialog(context),
+              ),
             ),
             const Spacer(),
             FloatingActionButton(

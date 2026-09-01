@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/ingest/cubit/download_cubit.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest_source.dart';
@@ -23,7 +24,11 @@ class DownloadFab extends StatelessWidget {
     super.key,
     required this.onLogTransaction,
     required this.onLogTransfer,
+    this.selectedPeriod,
   });
+
+  /// The period on screen, which the download can be narrowed to.
+  final Period? selectedPeriod;
 
   /// Logs a transaction by hand, which this button only points at.
   final VoidCallback onLogTransaction;
@@ -76,7 +81,7 @@ class DownloadFab extends StatelessWidget {
     required bool isWorking,
     required IngestSource defaultSource,
   }) {
-    if (isWorking) return DownloadSheet.show(context);
+    if (isWorking) return _showDownloadSheet(context);
     return _open(context, defaultSource);
   }
 
@@ -89,7 +94,7 @@ class DownloadFab extends StatelessWidget {
           onLogTransfer: onLogTransfer,
         ),
         IngestSource.csv => showCsvImportDialog(context),
-        IngestSource.bank => DownloadSheet.show(context),
+        IngestSource.bank => _showDownloadSheet(context),
       };
 
   Future<void> _chooseThenOpen(BuildContext context) async {
@@ -100,6 +105,9 @@ class DownloadFab extends StatelessWidget {
     if (!context.mounted) return;
     await _open(context, picked);
   }
+
+  Future<void> _showDownloadSheet(BuildContext context) =>
+      DownloadSheet.show(context, selectedPeriod: selectedPeriod);
 
   String _tooltip({
     required bool isWorking,

@@ -32,7 +32,8 @@ sealed class DownloadState {
     DownloadStopping() => DownloadActivity.working,
     DownloadExplainingBank() ||
     DownloadNeedsBank() ||
-    DownloadChoosingDepth() => DownloadActivity.waitingForUser,
+    DownloadChoosingDepth() ||
+    DownloadChoosingScope() => DownloadActivity.waitingForUser,
     DownloadIdle() ||
     DownloadNoBankConnected() ||
     DownloadFinished() ||
@@ -78,6 +79,18 @@ class DownloadNoBankConnected extends DownloadState {
 /// The first ever download has no cursor to continue from.
 class DownloadChoosingDepth extends DownloadState {
   const DownloadChoosingDepth();
+}
+
+/// Waiting for the user to say how much of the history to fetch.
+///
+/// Asked every time rather than once, because the answer is about what the
+/// user is doing right now, not about the account. [latestRange] is what
+/// carrying on from the cursors would fetch, which is the answer nearly
+/// always wanted and so the one that costs a single tap.
+class DownloadChoosingScope extends DownloadState {
+  final DownloadRange latestRange;
+
+  const DownloadChoosingScope({required this.latestRange});
 }
 
 /// Logging in.

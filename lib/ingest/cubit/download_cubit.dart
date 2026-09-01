@@ -137,6 +137,9 @@ class DownloadCubit extends Cubit<DownloadState> {
     await _run(request);
   }
 
+  /// Downloads everything the accounts have not caught up on yet.
+  Future<void> startLatest() => _run(_latestRequest());
+
   Future<void> _startConnected() async {
     final accounts = _accountCubit.state.accountById.values;
     if (isFirstDownload(accounts)) {
@@ -144,12 +147,20 @@ class DownloadCubit extends Cubit<DownloadState> {
       return;
     }
 
-    final today = BookingDate.today();
-    await _run(
-      DownloadRequest.upTo(
-        endInclusive: today,
-        startInclusive: oldestDownloadCursor(accounts) ?? today,
+    _safeEmit(
+      DownloadChoosingScope(
+        latestRange: unionDownloadRange(accounts, request: _latestRequest()),
       ),
+    );
+  }
+
+  /// The run that carries every account on from where it stopped.
+  DownloadRequest _latestRequest() {
+    final accounts = _accountCubit.state.accountById.values;
+    final today = BookingDate.today();
+    return DownloadRequest.upTo(
+      endInclusive: today,
+      startInclusive: oldestDownloadCursor(accounts) ?? today,
     );
   }
 

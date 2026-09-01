@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kashr/comdirect/comdirect_login_page.dart';
 import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:kashr/core/model/booking_date.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/widgets/sheet_grabber.dart';
 import 'package:kashr/ingest/cubit/download_cubit.dart';
 import 'package:kashr/ingest/download_range.dart';
@@ -17,14 +18,20 @@ import 'package:kashr/settings/extensions.dart';
 /// looking. Dismissing it only closes the window on a download that keeps
 /// going; reopening shows the same one again.
 class DownloadSheet extends StatefulWidget {
-  const DownloadSheet({super.key});
+  const DownloadSheet({super.key, this.selectedPeriod});
+
+  /// The period the user is looking at, offered as a download of its own.
+  ///
+  /// Lives here rather than in the cubit because it is about what is on
+  /// screen, not about the download; the cubit never needs to know.
+  final Period? selectedPeriod;
 
   /// Opens the sheet on the app's download.
-  static Future<void> show(BuildContext context) {
+  static Future<void> show(BuildContext context, {Period? selectedPeriod}) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const DownloadSheet(),
+      builder: (_) => DownloadSheet(selectedPeriod: selectedPeriod),
     );
   }
 
@@ -72,6 +79,10 @@ class _DownloadSheetState extends State<DownloadSheet> {
     DownloadExplainingBank() => const _ExplainBankView(),
     DownloadNoBankConnected() => const _NoBankView(),
     DownloadChoosingDepth() => const _DepthView(),
+    DownloadChoosingScope() => _ScopeView(
+      latestRange: state.latestRange,
+      period: widget.selectedPeriod,
+    ),
     DownloadConnecting() => _BusyView(
       title: state.message ?? 'Connecting to your bank…',
       range: state.range,
@@ -143,6 +154,38 @@ class _Title extends StatelessWidget {
 /// The one range the download covers, oldest start to newest booking date.
 ///
 /// Per-account ranges are an internal detail, the user sees their union.
+String _formatRange(BuildContext context, DownloadRange range) {
+  final format = context.dateFormat;
+  return '${range.startInclusive.format(format)} - '
+      '${range.endInclusive.format(format)}';
+}
+
+/// Lets the user pick both ends, so a gap in the history can be filled
+/// without re-fetching everything since.
+Future<void> _pickDownloadRange(
+  BuildContext context,
+  DownloadRange initial,
+) async {
+  final cubit = context.read<DownloadCubit>();
+  final today = BookingDate.today();
+  final picked = await showDateRangePicker(
+    context: context,
+    initialDateRange: DateTimeRange(
+      start: initial.startInclusive.atMidnight,
+      end: initial.endInclusive.atMidnight,
+    ),
+    firstDate: DateTime(2000),
+    lastDate: today.atMidnight,
+    helpText: 'Download range',
+    saveText: 'Download',
+  );
+  if (picked == null) return;
+  await cubit.downloadBetween(
+    startInclusive: BookingDate.on(picked.start),
+    endInclusive: BookingDate.on(picked.end),
+  );
+}
+
 class _RangeLine extends StatelessWidget {
   final DownloadRange range;
 
@@ -163,13 +206,11 @@ class _RangeLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final format = context.dateFormat;
     return Row(
       children: [
         Expanded(
           child: Text(
-            '${range.startInclusive.format(format)} – '
-            '${range.endInclusive.format(format)}',
+            _formatRange(context, range),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -177,38 +218,15 @@ class _RangeLine extends StatelessWidget {
         ),
         if (canChange && isCustom)
           TextButton(
-            onPressed: () => context.read<DownloadCubit>().start(),
+            onPressed: () => context.read<DownloadCubit>().startLatest(),
             child: const Text('Use default'),
           ),
         if (canChange)
           TextButton(
-            onPressed: () => _changeRange(context),
+            onPressed: () => _pickDownloadRange(context, range),
             child: const Text('Change range'),
           ),
       ],
-    );
-  }
-
-  /// Lets the user pick both ends, so a gap in the history can be filled
-  /// without re-fetching everything since.
-  Future<void> _changeRange(BuildContext context) async {
-    final cubit = context.read<DownloadCubit>();
-    final today = BookingDate.today();
-    final picked = await showDateRangePicker(
-      context: context,
-      initialDateRange: DateTimeRange(
-        start: range.startInclusive.atMidnight,
-        end: range.endInclusive.atMidnight,
-      ),
-      firstDate: DateTime(2000),
-      lastDate: today.atMidnight,
-      helpText: 'Download range',
-      saveText: 'Download',
-    );
-    if (picked == null) return;
-    await cubit.downloadBetween(
-      startInclusive: BookingDate.on(picked.start),
-      endInclusive: BookingDate.on(picked.end),
     );
   }
 }
@@ -339,6 +357,112 @@ class _DepthView extends StatelessWidget {
           ),
         const _CancelAction(),
       ],
+    );
+  }
+}
+
+/// Asks what to download, with the usual answer one tap away.
+///
+/// Every option here is offered before anything runs, which is the point:
+/// the old sheet had already started by the time it was on screen.
+class _ScopeView extends StatelessWidget {
+  final DownloadRange latestRange;
+
+  /// The period on screen behind the sheet, if there is one.
+  final Period? period;
+
+  const _ScopeView({required this.latestRange, this.period});
+
+  @override
+  Widget build(BuildContext context) {
+    final period = this.period;
+    final periodRange = period == null ? null : periodDownloadRange(period);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _Title(
+          icon: Icons.move_to_inbox_outlined,
+          text: 'Download from comdirect',
+        ),
+        const SizedBox(height: 16),
+        _LatestAction(range: latestRange),
+        if (periodRange != null)
+          _ScopeOption(
+            icon: Icons.calendar_month_outlined,
+            label: 'Download ${period!.format()}',
+            range: periodRange,
+            onTap: () => context.read<DownloadCubit>().downloadBetween(
+              startInclusive: periodRange.startInclusive,
+              endInclusive: periodRange.endInclusive,
+            ),
+          ),
+        _ScopeOption(
+          icon: Icons.date_range_outlined,
+          label: 'Pick a range',
+          onTap: () => _pickDownloadRange(context, latestRange),
+        ),
+        const _CancelAction(),
+      ],
+    );
+  }
+}
+
+/// Carrying on from where the last download stopped, as a single tap.
+///
+/// The one answer nearly everyone wants nearly every time, so it is the only
+/// filled button on the sheet and it names the days it will fetch.
+class _LatestAction extends StatelessWidget {
+  final DownloadRange range;
+
+  const _LatestAction({required this.range});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FilledButton(
+      onPressed: () => context.read<DownloadCubit>().startLatest(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Download latest'),
+          Text(
+            _formatRange(context, range),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A download the user has to mean, offered under the default one.
+class _ScopeOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  /// The days this would fetch. Absent when the user is about to pick them.
+  final DownloadRange? range;
+
+  final VoidCallback onTap;
+
+  const _ScopeOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.range,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final range = this.range;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon),
+      title: Text(label),
+      subtitle: range == null ? null : Text(_formatRange(context, range)),
+      onTap: onTap,
     );
   }
 }
