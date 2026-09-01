@@ -23,10 +23,11 @@ abstract class Period with _$Period {
   }
 
   factory Period.of(DateTime d, PeriodType type) {
+    final startInclusive = type.startOf(d);
     return Period(
       type,
-      startInclusive: type.startOf(d),
-      endExclusive: type.endOf(d),
+      startInclusive: startInclusive,
+      endExclusive: type.startOf(startInclusive.addPeriod(type)),
     );
   }
 
@@ -36,18 +37,12 @@ abstract class Period with _$Period {
     return !date.isBefore(startInclusive) && date.isBefore(endExclusive);
   }
 
-  Period add({int delta = 1}) {
-    final newStart = startInclusive.addPeriod(type, delta: delta);
-    return Period(
-      type,
-      startInclusive: newStart,
-      endExclusive: type.startOf(newStart.addPeriod(type)),
-    );
-  }
+  Period add({int delta = 1}) =>
+      Period.of(startInclusive.addPeriod(type, delta: delta), type);
 
   String format() {
     final start = startInclusive;
-    final end = type.endOf(start);
+    final end = type.lastInstantOf(start);
     return switch (type) {
       PeriodType.week =>
         '${start.year} ${start.day}.${start.month}-${end.day}.${end.month}',
@@ -95,7 +90,7 @@ enum PeriodType {
     return Jiffy.parseFromDateTime(d).startOf(unit).dateTime;
   }
 
-  DateTime endOf(DateTime d) {
+  DateTime lastInstantOf(DateTime d) {
     final Unit unit = switch (this) {
       PeriodType.week => Unit.week,
       PeriodType.month => Unit.month,
