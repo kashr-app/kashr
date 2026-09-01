@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:kashr/core/bool_json_converter.dart';
+import 'package:kashr/ingest/ingest_source.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/local_auth/auth_delay.dart';
 import 'package:kashr/settings/model/amazon_order_behavior.dart';
@@ -36,6 +37,9 @@ abstract class SettingsState with _$SettingsState {
     @Default(AmazonOrderBehavior.askOnTap)
     AmazonOrderBehavior amazonOrderBehavior,
     @AmazonTldConverter() @Default(AmazonTld.de) AmazonTld amazonTld,
+    @IngestSourceConverter()
+    @Default(IngestSource.ask)
+    IngestSource defaultIngestSource,
     @NullableDateTimeConverter() DateTime? onboardingCompletedOn,
     @FeatureTipMapConverter()
     @Default({})

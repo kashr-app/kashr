@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:kashr/backup/backup_list_page.dart';
 import 'package:kashr/db/db_helper.dart';
+import 'package:kashr/ingest/ingest_source.dart';
 import 'package:kashr/app_gate.dart';
 import 'package:kashr/logging/log_viewer_page.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
@@ -175,6 +176,22 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         onTap: () =>
                             const AmazonOrderDetectionRoute().go(context),
+                      ),
+                      ListTile(
+                        leading: Icon(state.defaultIngestSource.icon),
+                        title: const Text("Add Transactions Button"),
+                        subtitle: Text(state.defaultIngestSource.displayName),
+                        onTap: () async {
+                          final newValue = await showDefaultIngestSourceDialog(
+                            context,
+                            state.defaultIngestSource,
+                          );
+                          if (newValue != null && context.mounted) {
+                            await context
+                                .read<SettingsCubit>()
+                                .setDefaultIngestSource(newValue);
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -541,7 +558,6 @@ class _SettingsPageState extends State<SettingsPage> {
       },
     );
   }
-
 }
 
 class _SettingsHeadline extends StatelessWidget {

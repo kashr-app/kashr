@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:intl/intl.dart';
+import 'package:kashr/ingest/ingest_source.dart';
 import 'package:kashr/logging/model/log_level_setting.dart';
 import 'package:kashr/logging/services/log_service.dart';
 import 'package:kashr/local_auth/auth_delay.dart';
@@ -102,6 +103,11 @@ class SettingsCubit extends Cubit<SettingsState> {
   Future<void> setAmazonTld(AmazonTld value) async {
     final newState = state.copyWith(amazonTld: value);
     await _upsertAndEmit('amazonTld', newState);
+  }
+
+  Future<void> setDefaultIngestSource(IngestSource value) async {
+    final newState = state.copyWith(defaultIngestSource: value);
+    await _upsertAndEmit('defaultIngestSource', newState);
   }
 
   Future<void> completeOnboarding() async {
