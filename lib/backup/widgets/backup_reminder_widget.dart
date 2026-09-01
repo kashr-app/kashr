@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:kashr/backup/model/backup_config.dart';
 import 'package:kashr/backup/services/backup_service.dart';
-import 'package:kashr/core/extensions/date_time_extensions.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/settings/settings_cubit.dart';
 import 'package:kashr/theme.dart';
 
@@ -77,7 +78,8 @@ class _BackupReminderWidgetState extends State<BackupReminderWidget> {
         final lastBackupAt = config?.lastBackupAt;
         final message = lastBackupAt == null
             ? 'No backup yet. Your data only lives on this device.'
-            : 'Last backup: ${lastBackupAt.format}';
+            : 'Last backup: ${context.dateFormat.format(lastBackupAt)} '
+                  '${DateFormat.Hm().format(lastBackupAt)}';
 
         return Card(
           margin: widget.margin ?? const EdgeInsets.all(8),
