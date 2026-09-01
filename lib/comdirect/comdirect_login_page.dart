@@ -7,6 +7,7 @@ import 'package:kashr/app_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ComdirectLoginRoute extends GoRouteData with $ComdirectLoginRoute {
   const ComdirectLoginRoute({this.from});
@@ -355,27 +356,96 @@ class _StorageNote extends StatelessWidget {
 }
 
 /// Says where the four values come from, for the first-timer facing them.
+///
+/// The link carries this more than the prose does. comdirect's developer
+/// access sits four steps deep in online banking behind German labels a
+/// first-timer has no reason to recognise, so the page offers both: the
+/// page itself, and the path there for anyone who would rather navigate.
 class _WhereToFindNote extends StatelessWidget {
   const _WhereToFindNote();
+
+  static final _developerAccess = Uri.parse(
+    'https://www.comdirect.de/itx/oauth_privatkunden',
+  );
+
+  static const _steps = [
+    'Sign in, then open "Verwaltung".',
+    'Choose "Entwicklerzugang".',
+    'Tap "Freischalten" to switch it on, once.',
+    'Create an OAuth client of type "ClientCredentials".',
+  ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final bodyStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
     return Card(
       child: ExpansionTile(
         leading: const Icon(Icons.help_outline),
         title: const Text('Where do I find these?'),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Client ID and Client Secret come from comdirect, not from Kashr. '
-            'You request API access once in comdirect\'s online banking and '
-            'they issue the pair to you. Username and password are the ones '
-            'you already use to sign in to comdirect.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            'Client ID and Client Secret come from comdirect, not from '
+            'Kashr. You switch developer access on once in comdirect\'s '
+            'online banking, and it issues the pair to you there.',
+            style: bodyStyle,
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.tonalIcon(
+              onPressed: () => launchUrl(
+                _developerAccess,
+                mode: LaunchMode.externalApplication,
+              ),
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: const Text('Open developer access'),
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            'That link opens the page directly. comdirect asks you to sign '
+            'in first.',
+            style: bodyStyle,
+          ),
+          const SizedBox(height: 12),
+          Text('Or find it yourself, after signing in:', style: bodyStyle),
+          const SizedBox(height: 8),
+          for (final (index, step) in _steps.indexed)
+            _Step(number: index + 1, text: step, style: bodyStyle),
+          const SizedBox(height: 12),
+          Text(
+            'Username and password are the ones you already use to sign in '
+            'to comdirect.',
+            style: bodyStyle,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One numbered step of the path through comdirect's online banking.
+class _Step extends StatelessWidget {
+  const _Step({required this.number, required this.text, this.style});
+
+  final int number;
+  final String text;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 20, child: Text('$number.', style: style)),
+          Expanded(child: Text(text, style: style)),
         ],
       ),
     );
