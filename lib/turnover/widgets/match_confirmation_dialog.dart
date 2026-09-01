@@ -33,17 +33,17 @@ class _MatchConfirmationDialogState extends State<MatchConfirmationDialog> {
       await matchingService.confirmMatch(suggestion.match);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Match confirmed')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Match confirmed')));
 
         _moveToNext();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error confirming match: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error confirming match: $e')));
       }
     } finally {
       if (mounted) {
@@ -84,10 +84,7 @@ class _MatchConfirmationDialogState extends State<MatchConfirmationDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Suggested Match',
-                  style: theme.textTheme.titleLarge,
-                ),
+                Text('Suggested Match', style: theme.textTheme.titleLarge),
                 Text(
                   '${_currentIndex + 1}/${widget.suggestions.length}',
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -218,10 +215,7 @@ class _MatchConfirmationDialogState extends State<MatchConfirmationDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            turnover.purpose,
-            style: theme.textTheme.titleMedium,
-          ),
+          Text(turnover.purpose, style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -279,7 +273,7 @@ class _MatchConfirmationDialogState extends State<MatchConfirmationDialog> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${tagTurnover.bookingDate.day.toString().padLeft(2, '0')}.${tagTurnover.bookingDate.month.toString().padLeft(2, '0')}.${tagTurnover.bookingDate.year}',
+                tagTurnover.bookingDate.format(context.dateFormat),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

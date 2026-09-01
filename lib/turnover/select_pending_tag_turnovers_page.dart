@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/cubit/account_state.dart';
+import 'package:kashr/settings/extensions.dart';
 import 'package:kashr/turnover/cubit/tag_cubit.dart';
 import 'package:kashr/turnover/cubit/tag_state.dart';
 import 'package:kashr/turnover/cubit/turnover_tags_cubit.dart';
@@ -375,7 +376,7 @@ class _SelectablePendingTurnoverItem extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${tt.bookingDate.day.toString().padLeft(2, '0')}.${tt.bookingDate.month.toString().padLeft(2, '0')}.${tt.bookingDate.year}',
+                        tt.bookingDate.format(context.dateFormat),
                         style: TextStyle(
                           fontSize: 12,
                           color: theme.colorScheme.onSurfaceVariant,
@@ -418,8 +419,5 @@ class _TagTurnoverWithAccount {
   final TagTurnover tagTurnover;
   final UuidValue accountId;
 
-  _TagTurnoverWithAccount({
-    required this.tagTurnover,
-    required this.accountId,
-  });
+  _TagTurnoverWithAccount({required this.tagTurnover, required this.accountId});
 }
