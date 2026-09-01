@@ -4,6 +4,8 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/amount_dialog.dart';
 import 'package:kashr/core/currency.dart';
+import 'package:kashr/ingest/ingest_source.dart';
+import 'package:kashr/ingest/widgets/ingest_source_tile.dart';
 import 'package:kashr/settings/banks_page.dart';
 import 'package:kashr/app_gate.dart';
 import 'package:flutter/material.dart';
@@ -311,26 +313,9 @@ class _TransactionSourceStep extends StatelessWidget {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.edit_outlined),
-            title: const Text('I\'ll enter them myself'),
-            subtitle: const Text(
-              'For cash, or a bank you\'d rather track by hand.',
-            ),
-            onTap: onEnterManually,
-          ),
-        ),
+        IngestSourceTile(source: IngestSource.manual, onTap: onEnterManually),
         const SizedBox(height: 8),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.account_balance_outlined),
-            title: const Text('Download from my bank'),
-            subtitle: const Text('Connect your bank and download turnovers.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: onDownloadFromBank,
-          ),
-        ),
+        IngestSourceTile(source: IngestSource.bank, onTap: onDownloadFromBank),
       ],
     );
   }
