@@ -183,7 +183,8 @@ class _RangeLine extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            '${range.min.format(format)} – ${range.max.format(format)}',
+            '${range.startInclusive.format(format)} – '
+            '${range.endInclusive.format(format)}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -211,8 +212,8 @@ class _RangeLine extends StatelessWidget {
     final picked = await showDateRangePicker(
       context: context,
       initialDateRange: DateTimeRange(
-        start: range.min.atMidnight,
-        end: range.max.atMidnight,
+        start: range.startInclusive.atMidnight,
+        end: range.endInclusive.atMidnight,
       ),
       firstDate: DateTime(2000),
       lastDate: today.atMidnight,
@@ -221,8 +222,8 @@ class _RangeLine extends StatelessWidget {
     );
     if (picked == null) return;
     await cubit.downloadBetween(
-      startDate: BookingDate.on(picked.start),
-      endDate: BookingDate.on(picked.end),
+      startInclusive: BookingDate.on(picked.start),
+      endInclusive: BookingDate.on(picked.end),
     );
   }
 }

@@ -15,8 +15,16 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
   AnalyticsCubit(this._tagTurnoverRepository, this._tagRepository)
     : super(
         AnalyticsState(
-          startDate: DateTime(DateTime.now().year, DateTime.now().month - 5, 1),
-          endDate: DateTime(DateTime.now().year, DateTime.now().month + 1, 1),
+          startInclusive: DateTime(
+            DateTime.now().year,
+            DateTime.now().month - 5,
+            1,
+          ),
+          endExclusive: DateTime(
+            DateTime.now().year,
+            DateTime.now().month + 1,
+            1,
+          ),
         ),
       );
 
@@ -39,8 +47,8 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
             period: Period(
               // TODO PeriodType.year is not really true because we show some months only, but good enough for now
               PeriodType.year,
-              startInclusive: state.startDate,
-              endExclusive: state.endDate,
+              startInclusive: state.startInclusive,
+              endExclusive: state.endExclusive,
             ),
             tagIds: selectedTagIds.isEmpty ? null : selectedTagIds,
           );

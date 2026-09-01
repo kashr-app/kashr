@@ -27,8 +27,8 @@ abstract class AnalyticsState with _$AnalyticsState {
     @Default({})
     Map<String, List<TagSummary>> dataSummaries,
 
-    required DateTime startDate,
-    required DateTime endDate,
+    required DateTime startInclusive,
+    required DateTime endExclusive,
 
     String? errorMessage,
   }) = _AnalyticsState;

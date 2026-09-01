@@ -55,7 +55,7 @@ class ComdirectService implements DataIngestor {
       // Accounts that have never been downloaded - including the ones just
       // discovered - start where the oldest known account already is, so they
       // land with comparable history without asking the user again.
-      final startDateWithoutCursor = oldestDownloadCursor(
+      final startInclusiveWithoutCursor = oldestDownloadCursor(
         accountCubit.state.accountById.values,
       );
 
@@ -68,7 +68,7 @@ class ComdirectService implements DataIngestor {
       ) = await _fetchAndUpsertTurnovers(
         accounts,
         request,
-        startDateWithoutCursor,
+        startInclusiveWithoutCursor,
         cancellation,
       );
 
@@ -190,7 +190,7 @@ class ComdirectService implements DataIngestor {
   _fetchAndUpsertTurnovers(
     Iterable<Account> accounts,
     DownloadRequest request,
-    BookingDate? startDateWithoutCursor,
+    BookingDate? startInclusiveWithoutCursor,
     DownloadCancellation cancellation,
   ) async {
     final uuid = Uuid();
@@ -201,10 +201,10 @@ class ComdirectService implements DataIngestor {
         continue;
       }
 
-      final minBookingDate = minBookingDateFor(
+      final startInclusive = startInclusiveFor(
         account,
         request: request,
-        startDateWithoutCursor: startDateWithoutCursor,
+        startInclusiveWithoutCursor: startInclusiveWithoutCursor,
       );
 
       var index = 0;
@@ -217,8 +217,8 @@ class ComdirectService implements DataIngestor {
         // Fetch transactions for each account
         final transactionsResponse = await comdirectAPI.getTransactions(
           accountId: apiId,
-          minBookingDate: minBookingDate.iso,
-          maxBookingDate: request.maxBookingDate.iso,
+          minBookingDate: startInclusive.iso,
+          maxBookingDate: request.endInclusive.iso,
           index: index,
           pageSize: 50,
         );

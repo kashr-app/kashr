@@ -55,18 +55,18 @@ bool isDownloadStale(Iterable<Account> accounts, {BookingDate? today}) {
 ///
 /// Every account is fetched from its own cursor, so accounts that were added
 /// or downloaded at different times each catch up on exactly what they miss.
-BookingDate minBookingDateFor(
+BookingDate startInclusiveFor(
   Account account, {
   required DownloadRequest request,
-  required BookingDate? startDateWithoutCursor,
+  required BookingDate? startInclusiveWithoutCursor,
 }) {
-  if (request.ignoreCursors) return request.startDate;
+  if (request.ignoreCursors) return request.startInclusive;
 
   final cursor = account.downloadCursorDate;
   if (cursor != null) {
     return cursor.addDays(-downloadOverlapDays);
   }
-  return startDateWithoutCursor ?? request.startDate;
+  return startInclusiveWithoutCursor ?? request.startInclusive;
 }
 
 /// The oldest download cursor across [accounts].
@@ -90,29 +90,37 @@ DownloadRange unionDownloadRange(
   Iterable<Account> accounts, {
   required DownloadRequest request,
 }) {
-  final startDateWithoutCursor = oldestDownloadCursor(accounts);
+  final startInclusiveWithoutCursor = oldestDownloadCursor(accounts);
 
-  BookingDate? min;
+  BookingDate? earliest;
   for (final account in downloadableAccounts(accounts)) {
-    final accountMin = minBookingDateFor(
+    final accountStart = startInclusiveFor(
       account,
       request: request,
-      startDateWithoutCursor: startDateWithoutCursor,
+      startInclusiveWithoutCursor: startInclusiveWithoutCursor,
     );
-    if (min == null || accountMin.isBefore(min)) min = accountMin;
+    if (earliest == null || accountStart.isBefore(earliest)) {
+      earliest = accountStart;
+    }
   }
   return DownloadRange(
-    min: min ?? request.startDate,
-    max: request.maxBookingDate,
+    startInclusive: earliest ?? request.startInclusive,
+    endInclusive: request.endInclusive,
   );
 }
 
-/// An inclusive range of booking dates.
+/// A range of booking dates that includes both of its ends.
+///
+/// The exception to the half-open rule in `doc/README.md`, because the bank
+/// defines it that way and the user picks both edges by hand.
 class DownloadRange {
-  final BookingDate min;
-  final BookingDate max;
+  final BookingDate startInclusive;
+  final BookingDate endInclusive;
 
-  const DownloadRange({required this.min, required this.max});
+  const DownloadRange({
+    required this.startInclusive,
+    required this.endInclusive,
+  });
 }
 
 /// The scope of one download run.
@@ -122,44 +130,44 @@ class DownloadRequest {
   ///
   /// Accounts with an [Account.downloadCursorDate] start at that cursor minus
   /// [downloadOverlapDays] instead, unless [ignoreCursors] is set.
-  final BookingDate startDate;
+  final BookingDate startInclusive;
 
-  /// Newest booking date to fetch, inclusive. Normally today.
-  final BookingDate maxBookingDate;
+  /// Newest booking date to fetch. Normally today.
+  final BookingDate endInclusive;
 
-  /// Fetches every account from [startDate], ignoring the cursors.
+  /// Fetches every account from [startInclusive], ignoring the cursors.
   ///
   /// Set when the user widened the range by hand.
   final bool ignoreCursors;
 
   const DownloadRequest({
-    required this.startDate,
-    required this.maxBookingDate,
+    required this.startInclusive,
+    required this.endInclusive,
     this.ignoreCursors = false,
   });
 
-  /// A run that catches every account up to [today].
-  factory DownloadRequest.upTo(
-    BookingDate today, {
-    required BookingDate startDate,
+  /// A run that catches every account up to [endInclusive].
+  factory DownloadRequest.upTo({
+    required BookingDate endInclusive,
+    required BookingDate startInclusive,
     bool ignoreCursors = false,
   }) => DownloadRequest.between(
-    startDate: startDate,
-    endDate: today,
+    startInclusive: startInclusive,
+    endInclusive: endInclusive,
     ignoreCursors: ignoreCursors,
   );
 
-  /// A run over the booking dates the user picked, both ends inclusive.
+  /// A run over the booking dates the user picked.
   ///
   /// The end may lie in the past, which is the whole point of picking it:
   /// filling a gap in the history does not have to fetch everything since.
   factory DownloadRequest.between({
-    required BookingDate startDate,
-    required BookingDate endDate,
+    required BookingDate startInclusive,
+    required BookingDate endInclusive,
     bool ignoreCursors = false,
   }) => DownloadRequest(
-    startDate: startDate,
-    maxBookingDate: endDate,
+    startInclusive: startInclusive,
+    endInclusive: endInclusive,
     ignoreCursors: ignoreCursors,
   );
 }
@@ -179,11 +187,11 @@ enum DownloadDepth {
   /// `null` asks for more history than any bank is likely to keep.
   final int? months;
 
-  /// The start date to request, relative to [today].
+  /// The oldest booking date to request, relative to [today].
   ///
   /// For [everything] the bank decides where the data really starts; the
   /// cursor then ends up wherever that is.
-  BookingDate startDate(BookingDate today) {
+  BookingDate startInclusive(BookingDate today) {
     final months = this.months;
     if (months == null) return BookingDate(2000, 1, 1);
     return BookingDate(today.year, today.month - months, today.day);
