@@ -5,6 +5,7 @@ import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/app_gate.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:kashr/savings/savings_detail_page.dart';
@@ -136,7 +137,7 @@ class AccountsPage extends StatelessWidget {
                       account: account,
                       balance: balance,
                       projectedBalance: projectedBalance,
-                      projectionDate: state.projectionDate,
+                      projectionPeriod: state.projectionPeriod,
                       onTap: () => _navigateToAccountDetails(context, account),
                     );
                   } else {
@@ -173,14 +174,14 @@ class _AccountListItem extends StatefulWidget {
   final Account account;
   final Decimal? balance;
   final Decimal? projectedBalance;
-  final DateTime projectionDate;
+  final Period projectionPeriod;
   final VoidCallback onTap;
 
   const _AccountListItem({
     required this.account,
     required this.balance,
     required this.projectedBalance,
-    required this.projectionDate,
+    required this.projectionPeriod,
     required this.onTap,
   });
 
@@ -291,7 +292,7 @@ class _AccountListItemState extends State<_AccountListItem> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'End of ${_formatMonth(widget.projectionDate)}: ',
+                            'End of ${_formatMonth(widget.projectionPeriod.startInclusive)}: ',
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(

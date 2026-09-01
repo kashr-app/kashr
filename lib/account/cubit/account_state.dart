@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:kashr/account/model/account.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/status.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
@@ -17,7 +18,7 @@ abstract class AccountState with _$AccountState {
     @Default([]) List<Account> visibleAccounts,
     @Default({}) Map<UuidValue, Decimal> balances,
     @Default({}) Map<UuidValue, Decimal> projectedBalances,
-    required DateTime projectionDate,
+    required Period projectionPeriod,
     @Default(false) bool showHiddenAccounts,
     String? errorMessage,
   }) = _AccountState;

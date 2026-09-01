@@ -48,8 +48,8 @@ class TurnoverMatchingService {
 
     final candidates = await _tagTurnoverRepository.getUnmatched(
       accountId: turnover.accountId,
-      startDate: startDate,
-      endDate: endDate,
+      startInclusive: startDate,
+      endExclusive: endDate,
     );
 
     return _calcMatches([turnover], candidates);

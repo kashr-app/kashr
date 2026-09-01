@@ -13,7 +13,6 @@ import 'package:kashr/turnover/model/tag_turnover_change.dart';
 import 'package:kashr/turnover/model/tag_turnover_sort.dart';
 import 'package:kashr/turnover/model/tag_turnovers_filter.dart';
 import 'package:kashr/turnover/model/turnover.dart';
-import 'package:jiffy/jiffy.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -305,8 +304,8 @@ class TagTurnoverRepository {
   /// Optionally filter by account and date range
   Future<List<TagTurnover>> getUnmatched({
     UuidValue? accountId,
-    DateTime? startDate,
-    DateTime? endDate,
+    DateTime? startInclusive,
+    DateTime? endExclusive,
   }) async {
     final db = await DatabaseHelper().database;
 
@@ -318,18 +317,14 @@ class TagTurnoverRepository {
       whereArgs.add(accountId.uuid);
     }
 
-    if (startDate != null) {
+    if (startInclusive != null) {
       whereClauses.add('booking_date >= ?');
-      whereArgs.add(
-        Jiffy.parseFromDateTime(startDate).format(pattern: isoDateFormat),
-      );
+      whereArgs.add(startInclusive.isoDate);
     }
 
-    if (endDate != null) {
+    if (endExclusive != null) {
       whereClauses.add('booking_date < ?');
-      whereArgs.add(
-        Jiffy.parseFromDateTime(endDate).format(pattern: isoDateFormat),
-      );
+      whereArgs.add(endExclusive.isoDate);
     }
 
     final maps = await db.query(

@@ -268,24 +268,19 @@ class TurnoverRepository {
     return turnovers;
   }
 
-  /// Sumes all turnovers for a specific account up until
-  /// [endDateInclusive] filters turnovers with bookingDate <= endDate
+  /// Sums all turnovers for a specific account booked before [endExclusive].
   Future<Decimal> sumTurnoversForAccount({
     required UuidValue accountId,
-    DateTime? endDateInclusive,
+    DateTime? endExclusive,
   }) async {
     final db = await DatabaseHelper().database;
 
     final whereClauses = ['t.account_id = ?'];
     final whereArgs = <Object>[accountId.uuid];
 
-    if (endDateInclusive != null) {
-      whereClauses.add('t.booking_date <= ?');
-      whereArgs.add(
-        Jiffy.parseFromDateTime(
-          endDateInclusive,
-        ).format(pattern: isoDateFormat),
-      );
+    if (endExclusive != null) {
+      whereClauses.add('t.booking_date < ?');
+      whereArgs.add(endExclusive.isoDate);
     }
 
     final whereClause = 'WHERE ${whereClauses.join(' AND ')}';

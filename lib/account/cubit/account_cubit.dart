@@ -4,13 +4,13 @@ import 'package:decimal/decimal.dart';
 import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/account/services/balance_calculation_service.dart';
 import 'package:kashr/core/associate_by.dart';
+import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/turnover/model/turnover_change.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:collection/collection.dart';
-import 'package:jiffy/jiffy.dart';
 import 'package:uuid/uuid.dart';
 import '../model/account_repository.dart';
 import '../model/account.dart';
@@ -28,13 +28,7 @@ class AccountCubit extends Cubit<AccountState> {
     this._balanceService,
     this._turnoverRepository,
     this.log,
-  ) : super(
-        AccountState(
-          projectionDate: Jiffy.parseFromDateTime(
-            DateTime.now(),
-          ).endOf(Unit.month).dateTime,
-        ),
-      ) {
+  ) : super(AccountState(projectionPeriod: Period.now(PeriodType.month))) {
     _turnoverSubscription = _turnoverRepository.watchChanges().listen(
       _onTurnoverChanged,
     );
@@ -85,9 +79,7 @@ class AccountCubit extends Cubit<AccountState> {
   }
 
   Future<void> _calcBalances(Iterable<Account> accounts) async {
-    // Calculate end of current month for projected balance
-    final now = DateTime.now();
-    final endOfMonth = Jiffy.parseFromDateTime(now).endOf(Unit.month).dateTime;
+    final projectionPeriod = Period.now(PeriodType.month);
 
     final balances = <UuidValue, Decimal>{};
     final projectedBalances = <UuidValue, Decimal>{};
@@ -97,7 +89,7 @@ class AccountCubit extends Cubit<AccountState> {
 
       final projected = await _balanceService.calculateProjectedBalance(
         account,
-        asOf: endOfMonth,
+        endExclusive: projectionPeriod.endExclusive,
       );
       projectedBalances[account.id] = projected;
     }
@@ -105,7 +97,7 @@ class AccountCubit extends Cubit<AccountState> {
       state.copyWith(
         balances: balances,
         projectedBalances: projectedBalances,
-        projectionDate: endOfMonth,
+        projectionPeriod: projectionPeriod,
       ),
     );
   }
