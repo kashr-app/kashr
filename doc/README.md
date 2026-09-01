@@ -16,3 +16,8 @@ skip a day nor count one twice, and nothing needs a `± 1 day` to line up.
 `endInclusive` is legal where it genuinely reads better — the last day in a week
 label, or the newest booking date a bank download asks for — but it is the
 exception, and the name has to say so.
+
+`DownloadRange` and `DownloadRequest` are the standing example. Both ends really
+are inclusive there: comdirect's `min-bookingDate` / `max-bookingDate` include
+the days they name, and the user picks both edges in a date range picker. So
+they say `endInclusive`, and a reader never has to go and check.
