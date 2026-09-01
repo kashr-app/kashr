@@ -5,6 +5,7 @@ import 'package:decimal/decimal.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/status.dart';
 import 'package:kashr/dashboard/cubit/dashboard_state.dart';
+import 'package:kashr/dashboard/model/period_totals.dart';
 import 'package:kashr/dashboard/model/tag_prediction.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/tag.dart';
@@ -240,71 +241,20 @@ class DashboardCubit extends Cubit<DashboardState> {
             firstUnallocatedTurnovers,
           )).firstOrNull;
 
-      // Calculate total income/expense using tag booking dates + untagged portions
-
-      // 1. Sum from tag turnovers allocated in this period (by tt.booking_date)
-      final totalAbsTTByType = ttData.allocatedInPeriod
-          .groupFoldBy<TurnoverType, Decimal>(
-            (it) => (tagById[it.tagId]?.isTransfer ?? false)
-                ? TurnoverType.transfer
-                : it.amountValue < Decimal.zero
-                ? TurnoverType.expense
-                : TurnoverType.income,
-            (sum, tt) => (sum ?? Decimal.zero) + tt.amountValue.abs(),
-          );
-      // turnovers are counted twice (once per account), so we need to divide the total by 2
-      totalAbsTTByType[TurnoverType.transfer] =
-          ((totalAbsTTByType[TurnoverType.transfer] ?? Decimal.zero) /
-                  Decimal.fromInt(2))
-              .toDecimal(scaleOnInfinitePrecision: 2);
-
-      // 2. Calculate untagged portions of turnovers in this period
-      // Build map of tagged amounts per turnover
-      final ttByTurnoverId = [
-        ...ttData.allocatedInPeriod,
-        ...ttData.allocatedOutsidePeriodButTurnoverInPeriod,
-      ].groupListsBy((it) => it.turnoverId);
-
-      final taggedAmountByTurnover = <UuidValue, Decimal>{};
-      final totalAbsUntaggedBySign = <TurnoverSign, Decimal>{};
-      for (final turnover in turnovers) {
-        final turnoverId = turnover.id;
-        final taggedAmount =
-            ttByTurnoverId[turnoverId]?.fold(
-              Decimal.zero,
-              (sum, it) => sum + it.amountValue,
-            ) ??
-            Decimal.zero;
-        final untaggedAmount = turnover.amountValue - taggedAmount;
-        taggedAmountByTurnover[turnoverId] = taggedAmount;
-        final sign = TurnoverSign.fromDecimal(turnover.amountValue);
-        totalAbsUntaggedBySign[sign] =
-            (totalAbsUntaggedBySign[sign] ?? Decimal.zero) +
-            untaggedAmount.abs();
-      }
-
-      final unallocatedIncome =
-          totalAbsUntaggedBySign[TurnoverSign.income] ?? Decimal.zero;
-      final unallocatedExpenses =
-          totalAbsUntaggedBySign[TurnoverSign.expense] ?? Decimal.zero;
-
-      // Total income/expenses for cashflow = allocated + unallocated
-      // Total = tagged (by tt.booking_date) + untagged (by tv.booking_date)
-      final totalAllIncomeAbs =
-          (totalAbsTTByType[TurnoverType.income] ?? Decimal.zero) +
-          unallocatedIncome;
-      final totalAllExpensesAbs =
-          (totalAbsTTByType[TurnoverType.expense] ?? Decimal.zero) +
-          unallocatedExpenses;
+      final totals = periodTotals(
+        turnovers: turnovers,
+        allocation: ttData,
+        tagById: tagById,
+      );
 
       emit(
         state.copyWith(
           status: Status.success,
-          totalIncome: totalAllIncomeAbs,
-          totalExpenses: totalAllExpensesAbs,
+          totalIncome: totals.totalIncome,
+          totalExpenses: totals.totalExpenses,
           totalTransfers: totalTransfers,
-          unallocatedIncome: unallocatedIncome,
-          unallocatedExpenses: unallocatedExpenses,
+          unallocatedIncome: totals.unallocatedIncome,
+          unallocatedExpenses: totals.unallocatedExpenses,
           incomeTagSummaries: incomeTagSummaries,
           expenseTagSummaries: expenseTagSummaries,
           transferTagSummaries: transferTagSummaries,
@@ -449,5 +399,3 @@ class DashboardCubit extends Cubit<DashboardState> {
     await loadPeriodData(invalidateNonPeriodData: true);
   }
 }
-
-enum TurnoverType { expense, transfer, income }

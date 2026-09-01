@@ -52,3 +52,18 @@ abstract class TagTurnover with _$TagTurnover {
 
   TurnoverSign get sign => TurnoverSign.fromDecimal(amountValue);
 }
+
+/// The tag turnovers touching one period, split by where they were booked.
+/// 
+/// Two DISJOINT sets
+/// - [allocatedInPeriod]: [TagTurnover]s with booking_date in the period
+/// - [allocatedOutsidePeriodButTurnoverInPeriod]: [TagTurnover]s outside
+///   the period, but with their [Turnover] booking_date in the period.
+///   The [Turnover]s untagged remainder still belongs to the period; i.e.
+///   Total in period =
+///     tagged (by TagTurnover.booking_date)
+///     + untagged (by Turnover.booking_date)
+typedef TagTurnoverAllocation = ({
+  List<TagTurnover> allocatedInPeriod,
+  List<TagTurnover> allocatedOutsidePeriodButTurnoverInPeriod,
+});

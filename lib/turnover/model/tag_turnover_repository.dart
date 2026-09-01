@@ -660,20 +660,9 @@ class TagTurnoverRepository {
   }
 
   /// Fetches [TagTurnover]s [period] allocation.
-  ///
-  /// Returns two DISJOINT sets:
-  /// - [allocatedInPeriod]: [TagTurnover]s with tt.booking_date in the period
-  ///   (used for allocated sums)
-  /// - [allocatedOutsidePeriodButTurnoverInPeriod]: [TagTurnover]s where
-  ///   tv.booking_date is in the period but tt.booking_date is OUTSIDE
-  ///   the period (needed to calculate untagged portions IN the period)
-  Future<
-    ({
-      List<TagTurnover> allocatedInPeriod,
-      List<TagTurnover> allocatedOutsidePeriodButTurnoverInPeriod,
-    })
-  >
-  getTagTurnoversPeriodAllocation(Period period) async {
+  Future<TagTurnoverAllocation> getTagTurnoversPeriodAllocation(
+    Period period,
+  ) async {
     final db = await DatabaseHelper().database;
 
     final start = period.startInclusive.isoDate;
