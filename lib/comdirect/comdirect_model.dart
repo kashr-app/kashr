@@ -95,7 +95,11 @@ class Credentials {
     return true;
   }
 
-  Future<bool> delete() async {
+  /// Forgets the stored credentials.
+  ///
+  /// Static like [hasStored] and [load], because which credentials to remove
+  /// is never a question: there is one set per device.
+  static Future<bool> delete() async {
     bool authenticated = await _authenticate();
     if (!authenticated) {
       return false;

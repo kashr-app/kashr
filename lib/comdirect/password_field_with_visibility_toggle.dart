@@ -4,10 +4,14 @@ class PasswordFieldWithVisibilityToggle extends StatefulWidget {
   final String label;
   final TextEditingController controller;
 
+  /// Rejects what the field must not be left as.
+  final FormFieldValidator<String>? validator;
+
   const PasswordFieldWithVisibilityToggle({
     super.key,
     required this.label,
     required this.controller,
+    this.validator,
   });
 
   @override
@@ -24,6 +28,7 @@ class _PasswordFieldWithVisibilityToggleState
     return TextFormField(
       controller: widget.controller,
       obscureText: _obscureText,
+      validator: widget.validator,
       decoration: InputDecoration(
         labelText: widget.label,
         suffixIcon: IconButton(
