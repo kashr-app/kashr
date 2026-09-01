@@ -180,7 +180,7 @@ class AccountCubit extends Cubit<AccountState> {
   /// reconciliation that ran during the same download is not overwritten.
   Future<void> advanceDownloadCursors(
     Iterable<UuidValue> accountIds,
-    DateTime cursorDate,
+    BookingDate cursorDate,
   ) async {
     for (final id in accountIds) {
       final account = state.accountById[id];

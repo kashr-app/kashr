@@ -1,4 +1,5 @@
 import 'package:kashr/account/model/account.dart';
+import 'package:kashr/core/model/booking_date.dart';
 
 /// How far back before the download cursor to re-fetch on every download.
 ///
@@ -19,9 +20,6 @@ const downloadOverlapDays = 14;
 /// Purely a data freshness signal.
 const downloadStaleAfterDays = 3;
 
-/// Strips the time of day, so dates compare as booking dates.
-DateTime dateOnly(DateTime it) => DateTime(it.year, it.month, it.day);
-
 /// The accounts a download can fetch data for.
 Iterable<Account> downloadableAccounts(Iterable<Account> accounts) => accounts
     .where((it) => it.syncSource != null && it.syncSource != SyncSource.manual);
@@ -39,13 +37,12 @@ bool isFirstDownload(Iterable<Account> accounts) =>
 ///
 /// Accounts that were never downloaded count as stale. Without any
 /// downloadable account there is nothing to be behind on.
-bool isDownloadStale(Iterable<Account> accounts, {DateTime? now}) {
+bool isDownloadStale(Iterable<Account> accounts, {BookingDate? today}) {
   final relevant = downloadableAccounts(accounts).toList();
   if (relevant.isEmpty) return false;
 
-  final today = dateOnly(now ?? DateTime.now());
-  final threshold = today.subtract(
-    const Duration(days: downloadStaleAfterDays),
+  final threshold = (today ?? BookingDate.today()).addDays(
+    -downloadStaleAfterDays,
   );
   return relevant.any(
     (it) =>
@@ -58,16 +55,16 @@ bool isDownloadStale(Iterable<Account> accounts, {DateTime? now}) {
 ///
 /// Every account is fetched from its own cursor, so accounts that were added
 /// or downloaded at different times each catch up on exactly what they miss.
-DateTime minBookingDateFor(
+BookingDate minBookingDateFor(
   Account account, {
   required DownloadRequest request,
-  required DateTime? startDateWithoutCursor,
+  required BookingDate? startDateWithoutCursor,
 }) {
   if (request.ignoreCursors) return request.startDate;
 
   final cursor = account.downloadCursorDate;
   if (cursor != null) {
-    return cursor.subtract(const Duration(days: downloadOverlapDays));
+    return cursor.addDays(-downloadOverlapDays);
   }
   return startDateWithoutCursor ?? request.startDate;
 }
@@ -75,8 +72,8 @@ DateTime minBookingDateFor(
 /// The oldest download cursor across [accounts].
 ///
 /// `null` when no account was ever downloaded.
-DateTime? oldestDownloadCursor(Iterable<Account> accounts) {
-  DateTime? oldest;
+BookingDate? oldestDownloadCursor(Iterable<Account> accounts) {
+  BookingDate? oldest;
   for (final account in downloadableAccounts(accounts)) {
     final cursor = account.downloadCursorDate;
     if (cursor == null) continue;
@@ -95,7 +92,7 @@ DownloadRange unionDownloadRange(
 }) {
   final startDateWithoutCursor = oldestDownloadCursor(accounts);
 
-  DateTime? min;
+  BookingDate? min;
   for (final account in downloadableAccounts(accounts)) {
     final accountMin = minBookingDateFor(
       account,
@@ -112,8 +109,8 @@ DownloadRange unionDownloadRange(
 
 /// An inclusive range of booking dates.
 class DownloadRange {
-  final DateTime min;
-  final DateTime max;
+  final BookingDate min;
+  final BookingDate max;
 
   const DownloadRange({required this.min, required this.max});
 }
@@ -125,10 +122,10 @@ class DownloadRequest {
   ///
   /// Accounts with an [Account.downloadCursorDate] start at that cursor minus
   /// [downloadOverlapDays] instead, unless [ignoreCursors] is set.
-  final DateTime startDate;
+  final BookingDate startDate;
 
   /// Newest booking date to fetch, inclusive. Normally today.
-  final DateTime maxBookingDate;
+  final BookingDate maxBookingDate;
 
   /// Fetches every account from [startDate], ignoring the cursors.
   ///
@@ -143,8 +140,8 @@ class DownloadRequest {
 
   /// A run that catches every account up to [today].
   factory DownloadRequest.upTo(
-    DateTime today, {
-    required DateTime startDate,
+    BookingDate today, {
+    required BookingDate startDate,
     bool ignoreCursors = false,
   }) => DownloadRequest.between(
     startDate: startDate,
@@ -157,12 +154,12 @@ class DownloadRequest {
   /// The end may lie in the past, which is the whole point of picking it:
   /// filling a gap in the history does not have to fetch everything since.
   factory DownloadRequest.between({
-    required DateTime startDate,
-    required DateTime endDate,
+    required BookingDate startDate,
+    required BookingDate endDate,
     bool ignoreCursors = false,
   }) => DownloadRequest(
-    startDate: dateOnly(startDate),
-    maxBookingDate: dateOnly(endDate),
+    startDate: startDate,
+    maxBookingDate: endDate,
     ignoreCursors: ignoreCursors,
   );
 }
@@ -186,9 +183,9 @@ enum DownloadDepth {
   ///
   /// For [everything] the bank decides where the data really starts; the
   /// cursor then ends up wherever that is.
-  DateTime startDate(DateTime today) {
+  BookingDate startDate(BookingDate today) {
     final months = this.months;
-    if (months == null) return DateTime(2000, 1, 1);
-    return DateTime(today.year, today.month - months, today.day);
+    if (months == null) return BookingDate(2000, 1, 1);
+    return BookingDate(today.year, today.month - months, today.day);
   }
 }

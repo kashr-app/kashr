@@ -9,7 +9,6 @@ import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/services/turnover_matching_service.dart';
-import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/turnover/services/turnover_service.dart';
@@ -17,8 +16,6 @@ import 'package:meta/meta.dart';
 import 'package:uuid/uuid.dart';
 import 'comdirect_api.dart';
 import 'comdirect_model.dart';
-
-final _apiDateFormat = DateFormat("yyyy-MM-dd");
 
 class ComdirectService implements DataIngestor {
   final ComdirectAPI comdirectAPI;
@@ -193,7 +190,7 @@ class ComdirectService implements DataIngestor {
   _fetchAndUpsertTurnovers(
     Iterable<Account> accounts,
     DownloadRequest request,
-    DateTime? startDateWithoutCursor,
+    BookingDate? startDateWithoutCursor,
     DownloadCancellation cancellation,
   ) async {
     final uuid = Uuid();
@@ -220,8 +217,8 @@ class ComdirectService implements DataIngestor {
         // Fetch transactions for each account
         final transactionsResponse = await comdirectAPI.getTransactions(
           accountId: apiId,
-          minBookingDate: _apiDateFormat.format(minBookingDate),
-          maxBookingDate: _apiDateFormat.format(request.maxBookingDate),
+          minBookingDate: minBookingDate.iso,
+          maxBookingDate: request.maxBookingDate.iso,
           index: index,
           pageSize: 50,
         );

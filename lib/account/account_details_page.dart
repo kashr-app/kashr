@@ -10,6 +10,7 @@ import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/color_utils.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:kashr/app_gate.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/savings/model/savings.dart';
 import 'package:kashr/savings/savings_detail_page.dart';
 import 'package:kashr/savings/services/savings_balance_service.dart';
@@ -271,7 +272,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Last download: ${_formatDate(context, account.downloadCursorDate)}',
+                  'Last download: ${_formatDay(context, account.downloadCursorDate)}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -491,3 +492,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
 /// downloaded.
 String _formatDate(BuildContext context, DateTime? date) =>
     date == null ? 'Never' : context.dateFormatValue.format(date);
+
+/// Formats a booking date that may be absent, e.g. an account that was never
+/// downloaded.
+String _formatDay(BuildContext context, BookingDate? day) =>
+    day == null ? 'Never' : day.format(context.dateFormatValue);

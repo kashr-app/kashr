@@ -5,6 +5,7 @@ import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/comdirect/comdirect_api.dart';
 import 'package:kashr/comdirect/comdirect_model.dart';
 import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:logger/logger.dart';
@@ -80,7 +81,7 @@ class DownloadCubit extends Cubit<DownloadState> {
 
   /// Runs the first download with the depth the user picked.
   Future<void> startWithDepth(DownloadDepth depth) async {
-    final today = DateTime.now();
+    final today = BookingDate.today();
     await _run(DownloadRequest.upTo(today, startDate: depth.startDate(today)));
   }
 
@@ -90,8 +91,8 @@ class DownloadCubit extends Cubit<DownloadState> {
   /// that the requested history is actually fetched, in both directions -
   /// [endDate] may well lie before a cursor.
   Future<void> downloadBetween({
-    required DateTime startDate,
-    required DateTime endDate,
+    required BookingDate startDate,
+    required BookingDate endDate,
   }) async {
     await _run(
       DownloadRequest.between(
@@ -134,7 +135,7 @@ class DownloadCubit extends Cubit<DownloadState> {
       return;
     }
 
-    final today = DateTime.now();
+    final today = BookingDate.today();
     await _run(
       DownloadRequest.upTo(
         today,

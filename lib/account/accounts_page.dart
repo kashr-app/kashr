@@ -5,6 +5,7 @@ import 'package:kashr/account/cubit/account_state.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/account/cubit/account_cubit.dart';
 import 'package:kashr/core/currency.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/app_gate.dart';
 import 'package:kashr/savings/model/savings.dart';
@@ -478,5 +479,5 @@ class _HiddenAccountsHint extends StatelessWidget {
 
 /// Formats a date that may be absent, e.g. an account that was never
 /// downloaded.
-String _formatDate(BuildContext context, DateTime? date) =>
-    date == null ? 'Never' : context.dateFormat.format(date);
+String _formatDate(BuildContext context, BookingDate? date) =>
+    date == null ? 'Never' : date.format(context.dateFormat);

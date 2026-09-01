@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kashr/comdirect/comdirect_login_page.dart';
 import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/ingest/cubit/download_cubit.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
@@ -182,7 +183,7 @@ class _RangeLine extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            '${format.format(range.min)} – ${format.format(range.max)}',
+            '${range.min.format(format)} – ${range.max.format(format)}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -206,17 +207,23 @@ class _RangeLine extends StatelessWidget {
   /// without re-fetching everything since.
   Future<void> _changeRange(BuildContext context) async {
     final cubit = context.read<DownloadCubit>();
-    final today = dateOnly(DateTime.now());
+    final today = BookingDate.today();
     final picked = await showDateRangePicker(
       context: context,
-      initialDateRange: DateTimeRange(start: range.min, end: range.max),
+      initialDateRange: DateTimeRange(
+        start: range.min.atMidnight,
+        end: range.max.atMidnight,
+      ),
       firstDate: DateTime(2000),
-      lastDate: today,
+      lastDate: today.atMidnight,
       helpText: 'Download range',
       saveText: 'Download',
     );
     if (picked == null) return;
-    await cubit.downloadBetween(startDate: picked.start, endDate: picked.end);
+    await cubit.downloadBetween(
+      startDate: BookingDate.on(picked.start),
+      endDate: BookingDate.on(picked.end),
+    );
   }
 }
 

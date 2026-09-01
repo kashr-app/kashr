@@ -1,5 +1,7 @@
 import 'package:decimal/decimal.dart';
+import 'package:kashr/core/booking_date_json_converter.dart';
 import 'package:kashr/core/decimal_json_converter.dart';
+import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/uuid_json_converter.dart';
 import 'package:kashr/core/bool_json_converter.dart';
 import 'package:flutter/material.dart';
@@ -97,7 +99,7 @@ abstract class Account with _$Account {
     /// Only set on downloaded (non-manual) accounts. `null` means the account
     /// has never been downloaded. This is a position in the bank's booking
     /// calendar, not a wall-clock timestamp of the last download.
-    DateTime? downloadCursorDate,
+    @BookingDateNullableJsonConverter() BookingDate? downloadCursorDate,
 
     /// The moment the user last reconciled this balance by hand.
     ///
