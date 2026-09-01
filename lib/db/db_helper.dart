@@ -10,6 +10,7 @@ import 'package:kashr/db/migrations/v17.dart';
 import 'package:kashr/db/migrations/v18.dart';
 import 'package:kashr/db/sqlite_compat.dart';
 import 'package:kashr/logging/services/log_service.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -149,6 +150,20 @@ class DatabaseHelper {
     await db.execute('PRAGMA user_version = $version');
     final log = LogService.instance!.log;
     log.i('Database version set to $version');
+  }
+
+  /// Adopts an already open [db], skipping [_initDb].
+  ///
+  /// Repositories only ever reach a database through this singleton, so this
+  /// is the one place that can point them at an in-memory one without
+  /// weakening the platform guard and documents directory lookup that real
+  /// installs depend on.
+  @visibleForTesting
+  Future<void> adoptForTesting(SqliteDatabase db) async {
+    await _migrate(db);
+    await db.execute('PRAGMA foreign_keys = ON');
+    _database = db;
+    _initCompleter = null;
   }
 
   Future<void> close() async {
