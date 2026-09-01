@@ -6,6 +6,7 @@ import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/model/period.dart';
 import 'package:kashr/core/widgets/sheet_grabber.dart';
 import 'package:kashr/ingest/cubit/download_cubit.dart';
+import 'package:kashr/ingest/download_progress.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/widgets/bank_download_explainer.dart';
 import 'package:kashr/ingest/ingest.dart';
@@ -89,10 +90,9 @@ class _DownloadSheetState extends State<DownloadSheet> {
       canCancel: true,
     ),
     DownloadWaitingForConfirmation() => _ConfirmationView(range: state.range),
-    DownloadRunning() => _BusyView(
-      title: 'Downloading transactions…',
+    DownloadRunning() => _RunningView(
       range: state.range,
-      canCancel: true,
+      progress: state.progress,
     ),
     DownloadStopping() => const _BusyView(title: 'Stopping…'),
     DownloadFinished() => _ResultView(
@@ -290,6 +290,58 @@ class _CancelAction extends StatelessWidget {
         },
         child: const Text('Cancel'),
       ),
+    );
+  }
+}
+
+/// A download that is running, saying what it is working on.
+///
+/// Its own view rather than another [_BusyView] because a run has more to say
+/// than a title: the sentence changes as the download moves from account to
+/// account, and the numbers underneath it are what tell the user the wait is
+/// going somewhere.
+class _RunningView extends StatelessWidget {
+  final DownloadRange range;
+
+  /// What the source last said, or null before it has said anything.
+  final DownloadProgress? progress;
+
+  const _RunningView({required this.range, this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final text = downloadProgressText(progress);
+    final detail = text.detail;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(text.title, style: theme.textTheme.titleMedium),
+            ),
+          ],
+        ),
+        if (detail != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            detail,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        _RangeLine(range: range),
+        const _CancelAction(),
+      ],
     );
   }
 }

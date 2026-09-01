@@ -1,3 +1,4 @@
+import 'package:kashr/ingest/download_progress.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:uuid/uuid.dart';
 
@@ -49,9 +50,15 @@ abstract class DataIngestor {
   ///
   /// Throws [DownloadCancelledException] when [cancellation] was cancelled,
   /// which implementations check only where stopping is safe.
+  ///
+  /// Says what it is doing through [progress], wherever it is about to do
+  /// something slow - naturally the same places it checks [cancellation].
+  /// Reporting is best-effort and never changes the result, so a source that
+  /// reports nothing is a source that only looks slower than it is.
   Future<DataIngestResult> ingest(
     DownloadRequest request,
     DownloadCancellation cancellation,
+    DownloadProgressSink progress,
   );
 }
 

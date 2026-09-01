@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:kashr/account/model/account.dart';
 import 'package:kashr/core/associate_by.dart';
 import 'package:kashr/core/model/booking_date.dart';
+import 'package:kashr/ingest/download_progress.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/turnover/model/turnover.dart';
@@ -36,7 +37,8 @@ class ComdirectService implements DataIngestor {
   Future<DataIngestResult> ingest(
     DownloadRequest request,
     DownloadCancellation cancellation,
-  ) => _fetchAccountsAndTurnovers(request, cancellation);
+    DownloadProgressSink progress,
+  ) => _fetchAccountsAndTurnovers(request, cancellation, progress);
 
   /// Fetches accounts and turnovers from the Comdirect API.
   /// Also automatically updates the balance for existing accounts.
@@ -47,10 +49,15 @@ class ComdirectService implements DataIngestor {
   Future<DataIngestResult> _fetchAccountsAndTurnovers(
     DownloadRequest request,
     DownloadCancellation cancellation,
+    DownloadProgressSink progress,
   ) async {
     try {
+      // Said before the first database read, so the sheet has a sentence to
+      // show without waiting on anything.
+      progress.report(const DownloadProgress.findingAccounts());
+
       final (accounts, realBalanceByAccountId) =
-          await _fetchAccountsAndStoreNew(cancellation);
+          await _fetchAccountsAndStoreNew(cancellation, progress);
 
       // Accounts that have never been downloaded - including the ones just
       // discovered - start where the oldest known account already is, so they
@@ -70,17 +77,19 @@ class ComdirectService implements DataIngestor {
         request,
         startInclusiveWithoutCursor,
         cancellation,
+        progress,
       );
 
       // Assuming the real balance did not change between fetching accounts
       // and fetching the turnovers, we now can reconcile the balance based
       // on the sum of all stored turnovers to match the real balance.
-      await _reconcileBalances(accounts, realBalanceByAccountId);
+      await _reconcileBalances(accounts, realBalanceByAccountId, progress);
 
       final (autoMatchedCount, unmatchedCount) = await _autoMatch(
         newIds: newIds,
         existingIds: existingIds,
         turnoversById: turnoversById,
+        progress: progress,
       );
 
       return DataIngestResult.success(
@@ -113,7 +122,10 @@ class ComdirectService implements DataIngestor {
   Future<
     (List<Account> accounts, Map<UuidValue, Decimal?> realBalanceByAccountId)
   >
-  _fetchAccountsAndStoreNew(DownloadCancellation cancellation) async {
+  _fetchAccountsAndStoreNew(
+    DownloadCancellation cancellation,
+    DownloadProgressSink progress,
+  ) async {
     final uuid = Uuid();
 
     final accounts = <Account>[];
@@ -137,6 +149,13 @@ class ComdirectService implements DataIngestor {
       final accountsPage = await comdirectAPI.getBalances(index: index);
       total = accountsPage.paging.matches;
       index += accountsPage.values.length;
+
+      // Reported after the response, never before: `total` starts at the
+      // sentinel 1, and saying '1 of 1' up front would be a number the run
+      // has not learned yet.
+      progress.report(
+        DownloadProgress.findingAccounts(done: index, total: total),
+      );
 
       // Store API balances for later use
       final apiBalancesByApiId = <String, Decimal>{};
@@ -192,14 +211,21 @@ class ComdirectService implements DataIngestor {
     DownloadRequest request,
     BookingDate? startInclusiveWithoutCursor,
     DownloadCancellation cancellation,
+    DownloadProgressSink progress,
   ) async {
     final uuid = Uuid();
     final turnoversById = <UuidValue, Turnover>{};
-    for (final account in accounts) {
-      final apiId = account.apiId;
-      if (apiId == null) {
-        continue;
-      }
+
+    // Settled up front so that 'account 2 of 3' counts the accounts that are
+    // actually going to be fetched. Skipping them inside the loop instead
+    // would stall the number wherever manual and synced accounts are mixed.
+    final fetchable = [
+      for (final account in accounts)
+        if (account.apiId case final apiId?) (account: account, apiId: apiId),
+    ];
+
+    for (var subject = 0; subject < fetchable.length; subject++) {
+      final (:account, :apiId) = fetchable[subject];
 
       final startInclusive = startInclusiveFor(
         account,
@@ -207,12 +233,36 @@ class ComdirectService implements DataIngestor {
         startInclusiveWithoutCursor: startInclusiveWithoutCursor,
       );
 
+      // Built once per account rather than once per page, so that two
+      // reports of the same window compare equal and the sink can drop the
+      // repeat.
+      final window = DownloadRange(
+        startInclusive: startInclusive,
+        endInclusive: request.endInclusive,
+      );
+      DownloadProgress progressAt(int done, int? total) =>
+          DownloadProgress.fetching(
+            subject: account.name,
+            subjectIndex: subject + 1,
+            subjectCount: fetchable.length,
+            window: window,
+            done: done,
+            total: total,
+          );
+
       var index = 0;
-      var total = 1;
-      while (index < total) {
+      // Null until the bank says, rather than a sentinel of 1: the sheet
+      // shows the total, and a made-up one would be on screen for the whole
+      // first page.
+      int? total;
+      while (total == null || index < total) {
         // Everything fetched so far is still only in memory, so stopping
         // here writes nothing at all.
         cancellation.throwIfCancelled();
+
+        // Reported before the request as well as after it, so the wait for a
+        // page is attributed to the account it belongs to.
+        progress.report(progressAt(index, total));
 
         // Fetch transactions for each account
         final transactionsResponse = await comdirectAPI.getTransactions(
@@ -225,6 +275,10 @@ class ComdirectService implements DataIngestor {
 
         total = transactionsResponse.paging.matches;
         index += transactionsResponse.values.length;
+
+        // Without this the last page of each account never reaches the
+        // screen: the next thing reported is already the next account.
+        progress.report(progressAt(index, total));
 
         // Collect turnovers for this account
         for (final transaction in transactionsResponse.values) {
@@ -256,6 +310,10 @@ class ComdirectService implements DataIngestor {
         }
       }
     }
+
+    // Thousands of rows through the upsert is seconds in which the sheet
+    // would otherwise still be claiming to download.
+    progress.report(DownloadProgress.saving(total: turnoversById.length));
 
     // we upsert in case the data changed or that our data extraction changed
     final (newIds, existingIds) = await turnoverService.upsertTurnovers(
@@ -329,10 +387,14 @@ class ComdirectService implements DataIngestor {
   Future<void> _reconcileBalances(
     List<Account> accounts,
     Map<UuidValue, Decimal?> realBalanceByAccountId,
+    DownloadProgressSink progress,
   ) async {
     for (final account in accounts) {
       final apiBalance = realBalanceByAccountId[account.id];
       if (apiBalance != null) {
+        // Still saving as far as the user is concerned; a phase of its own
+        // would name a step only this app cares about.
+        progress.report(DownloadProgress.saving(subject: account.name));
         log.i('Reconciling balance for account ${account.name} to $apiBalance');
         await accountCubit.syncBalanceFromReal(
           account,
@@ -349,10 +411,15 @@ class ComdirectService implements DataIngestor {
     required final Iterable<UuidValue> newIds,
     required final Iterable<UuidValue> existingIds,
     required final Map<UuidValue, Turnover> turnoversById,
+    required final DownloadProgressSink progress,
   }) async {
     // Auto-match turnovers with pending expenses
     var autoMatchedCount = 0;
     var unmatchedCount = 0;
+
+    // A change of phase, so it is never held back: it is what stops the
+    // sheet saying 'saving' while the batch query below runs.
+    progress.report(const DownloadProgress.matching());
 
     // newIds are always unmatched, for existingIds we need to check if they are unmatched
     final unmatchedTurnoverIds = [
@@ -360,7 +427,17 @@ class ComdirectService implements DataIngestor {
       ...newIds,
     ];
 
+    var handled = 0;
     for (final id in unmatchedTurnoverIds) {
+      // Fires once per turnover, thousands of times on a first download.
+      // The sink is what turns that into a few repaints a second.
+      progress.report(
+        DownloadProgress.matching(
+          done: handled++,
+          total: unmatchedTurnoverIds.length,
+        ),
+      );
+
       final turnover = turnoversById[id];
       if (turnover == null) {
         log.e(

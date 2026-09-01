@@ -119,7 +119,17 @@ class DownloadRunning extends DownloadState {
   @override
   final DownloadRange range;
 
-  const DownloadRunning({required this.request, required this.range});
+  /// What the source last said it was doing, if it said anything.
+  ///
+  /// Null until the first report, and for a source that reports nothing at
+  /// all; the sheet then shows the sentence it always showed.
+  final DownloadProgress? progress;
+
+  const DownloadRunning({
+    required this.request,
+    required this.range,
+    this.progress,
+  });
 }
 
 /// The user asked to stop, and the download is unwinding.

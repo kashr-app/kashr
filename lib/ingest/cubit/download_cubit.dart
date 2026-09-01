@@ -6,6 +6,7 @@ import 'package:kashr/comdirect/comdirect_api.dart';
 import 'package:kashr/comdirect/comdirect_model.dart';
 import 'package:kashr/comdirect/cubit/comdirect_auth_cubit.dart';
 import 'package:kashr/core/model/booking_date.dart';
+import 'package:kashr/ingest/download_progress.dart';
 import 'package:kashr/ingest/download_range.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:logger/logger.dart';
@@ -200,7 +201,23 @@ class DownloadCubit extends Cubit<DownloadState> {
     cancellation.throwIfCancelled();
     _safeEmit(DownloadRunning(request: request, range: range));
 
-    final result = await _ingest(_createIngestor(api), request, cancellation);
+    // One sink per attempt, so that after a re-login the first report reads
+    // as a change of phase rather than a repeat of the abandoned run's last
+    // one, and gets through the sink's coalescing.
+    final progress = DownloadProgressSink((it) {
+      // A stop was already announced. Until the run reaches its next safe
+      // point it is unwinding, not working, and saying otherwise would flip
+      // the sheet back to the download the user just cancelled.
+      if (cancellation.isCancelled) return;
+      _safeEmit(DownloadRunning(request: request, range: range, progress: it));
+    });
+
+    final result = await _ingest(
+      _createIngestor(api),
+      request,
+      cancellation,
+      progress,
+    );
 
     switch (result.status) {
       case ResultStatus.success:
@@ -239,8 +256,9 @@ class DownloadCubit extends Cubit<DownloadState> {
     DataIngestor ingestor,
     DownloadRequest request,
     DownloadCancellation cancellation,
+    DownloadProgressSink progress,
   ) async {
-    final result = await ingestor.ingest(request, cancellation);
+    final result = await ingestor.ingest(request, cancellation, progress);
     if (result.status == ResultStatus.success) {
       await _accountCubit.recordDownload(
         result.downloadedAccountIds,
