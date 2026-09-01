@@ -43,7 +43,6 @@ class TagSuggestionService {
         tv.counter_part as turnover_counterpart,
         tv.purpose as turnover_purpose,
         tv.amount_value as turnover_amount,
-        tv.booking_date as turnover_date,
         tv.api_turnover_type as api_turnover_type,
         tt.amount_value as tag_amount,
         tt.created_at as tag_created_at
@@ -183,7 +182,6 @@ class TagSuggestionService {
 
     // Sort by score and return top N
     suggestions.sort((a, b) => b.score.compareTo(a.score));
-    suggestions.first;
     return suggestions.take(_maxSuggestions).toList();
   }
 
@@ -285,9 +283,13 @@ class TagSuggestionService {
     }
   }
 
-  /// Falls back to frequency-based suggestions when no historical data exists.
+  /// Falls back to the tags this user reaches for most, when nothing
+  /// comparable has been tagged before.
   ///
-  /// Returns the most frequently used tags regardless of similarity.
+  /// Counts allocations rather than the turnovers behind them: joining
+  /// `turnover` would drop every pending tag turnover and leave only rows the
+  /// caller above has already seen, so the fallback could never contribute
+  /// anything the similarity pass did not.
   Future<List<TagSuggestion>> _getFrequencyBasedSuggestions(
     Turnover turnover,
   ) async {
@@ -302,9 +304,8 @@ class TagSuggestionService {
         t.color as tag_color,
         COUNT(*) as usage_count
       FROM tag_turnover tt
-      INNER JOIN tag t ON tt.tagId = t.id
-      INNER JOIN turnover tv ON tt.turnoverId = tv.id
-      WHERE tv.amountValue ${turnover.amountValue >= Decimal.zero ? '>=' : '<'} 0
+      INNER JOIN tag t ON tt.tag_id = t.id
+      WHERE tt.amount_value ${turnover.amountValue >= Decimal.zero ? '>=' : '<'} 0
       GROUP BY t.id, t.name, t.color
       ORDER BY usage_count DESC
       LIMIT ?

@@ -11,6 +11,7 @@ import 'package:kashr/turnover/model/tag_turnover_repository.dart';
 import 'package:kashr/turnover/model/transfer_repository.dart';
 import 'package:kashr/turnover/model/turnover.dart';
 import 'package:kashr/turnover/model/turnover_repository.dart';
+import 'package:kashr/turnover/services/tag_suggestion_service.dart';
 import 'package:kashr/turnover/services/turnover_matching_service.dart';
 import 'package:kashr/turnover/services/turnover_service.dart';
 import 'package:logger/logger.dart';
@@ -52,6 +53,8 @@ class TestApp {
     turnoverRepository,
     tagTurnoverRepository,
   );
+  final suggestionService = TagSuggestionService();
+
   late final matchingService = TurnoverMatchingService(
     tagTurnoverRepository,
     turnoverRepository,
