@@ -3,7 +3,6 @@ import 'package:kashr/core/model/period.dart';
 import 'package:kashr/turnover/model/year_month.dart';
 import 'package:kashr/turnover/model/year_week.dart';
 import 'package:flutter/material.dart';
-import 'package:jiffy/jiffy.dart';
 
 class OnAction {
   final String tooltip;
@@ -265,17 +264,9 @@ class _PeriodPickerDialogState extends State<PeriodPickerDialog> {
     );
   }
 
-  int _getWeeksInYear(int year) {
-    final dec31 = DateTime(year, 12, 31);
-    final jiffy = Jiffy.parseFromDateTime(dec31);
-    final weekday = dec31.weekday;
-
-    if (weekday == DateTime.thursday ||
-        (jiffy.isLeapYear && weekday == DateTime.friday)) {
-      return 53;
-    }
-    return 52;
-  }
+  /// December 28th is in the last week of its year whatever day weeks start
+  /// on, so numbering it answers whether the year has 52 or 53.
+  int _getWeeksInYear(int year) => YearWeek.of(BookingDate(year, 12, 28)).week;
 }
 
 /// Widget for selecting a year with navigation buttons.
