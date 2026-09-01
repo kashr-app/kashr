@@ -138,6 +138,10 @@ class ComdirectService implements DataIngestor {
         .where((it) => it.apiId != null)
         .associateBy((it) => it.apiId);
 
+    // Collected across every page, because the balances of the accounts the
+    // app already knows are only read once the last page has been seen.
+    final apiBalancesByApiId = <String, Decimal>{};
+
     var index = 0;
     var total = 1;
     while (index < total) {
@@ -150,6 +154,10 @@ class ComdirectService implements DataIngestor {
       total = accountsPage.paging.matches;
       index += accountsPage.values.length;
 
+      // A page with nothing on it does not move `index`, so without this the
+      // loop would keep asking the bank for it.
+      if (accountsPage.values.isEmpty) break;
+
       // Reported after the response, never before: `total` starts at the
       // sentinel 1, and saying '1 of 1' up front would be a number the run
       // has not learned yet.
@@ -158,7 +166,6 @@ class ComdirectService implements DataIngestor {
       );
 
       // Store API balances for later use
-      final apiBalancesByApiId = <String, Decimal>{};
       for (final a in accountsPage.values) {
         apiBalancesByApiId[a.accountId] = a.balance.value;
       }
@@ -185,15 +192,15 @@ class ComdirectService implements DataIngestor {
           log.i("New account stored");
         }
       }
+    }
 
-      // Update balances for existing comdirect accounts
-      if (existingAccountsByApiId.isNotEmpty) {
-        for (final account in existingAccountsByApiId.values) {
-          final apiId = account.apiId;
-          realBalanceByAccountId[account.id] = apiBalancesByApiId[apiId];
-          accounts.add(account);
-        }
-      }
+    // After the loop rather than inside it. An account the app already knows
+    // belongs to the run once, however many pages the bank needed to list
+    // them, and its balance is only complete once every page has been seen -
+    // in here it was overwritten with null on every page that left it out.
+    for (final account in existingAccountsByApiId.values) {
+      realBalanceByAccountId[account.id] = apiBalancesByApiId[account.apiId];
+      accounts.add(account);
     }
     log.i('$countNew new accounts stored successfully');
     return (accounts, realBalanceByAccountId);
@@ -275,6 +282,10 @@ class ComdirectService implements DataIngestor {
 
         total = transactionsResponse.paging.matches;
         index += transactionsResponse.values.length;
+
+        // A page with nothing on it does not move `index`, so without this
+        // the loop would keep asking the bank for it.
+        if (transactionsResponse.values.isEmpty) break;
 
         // Without this the last page of each account never reaches the
         // screen: the next thing reported is already the next account.
