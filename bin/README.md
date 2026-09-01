@@ -10,6 +10,22 @@ The aims are:
 
 ### Usage
 
+```bash
+bin/git-pr <changelog:type> [title:"custom title"]
+```
+
+The PR title must start with a conventional commit type that agrees with the
+changelog label. Without `title:` the single commit's subject is used, and a
+branch with more than one commit is rejected — summarize it yourself.
+
+```bash
+bin/git-pr changelog:fix                                # fix: <commit subject>
+bin/git-pr changelog:fix title:"keep totals in sync"    # fix: keep totals in sync
+bin/git-pr changelog:fix title:"fix(sync): keep totals" # kept as is
+bin/git-pr changelog:fix title:"feat: keep totals"      # fails, type mismatch
+bin/git-pr changelog:enhance title:"feat: faster sync"  # any type, enhance is none
+```
+
 ### Requirements
 
 - [GitHub CLI (`gh`)](https://cli.github.com/) installed and authenticated

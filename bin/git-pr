@@ -1,7 +1,33 @@
 #!/bin/bash
-# Create PR with push and required changelog label
+# Create PR with push, a required changelog label and a commit-typed title
 
 set -e
+
+# Conventional commit types accepted as a title prefix.
+CONVENTIONAL_TYPES="build chore ci docs feat fix perf refactor revert style test"
+
+usage() {
+    echo "Usage: bin/git-pr <changelog:type> [title:\"custom title\"]"
+    echo ""
+    echo "Examples:"
+    echo "  bin/git-pr changelog:fix"
+    echo "  bin/git-pr changelog:fix title:\"keep totals in sync\""
+    echo "  bin/git-pr changelog:fix title:\"fix(sync): keep totals in sync\""
+    echo "  bin/git-pr changelog:enhance title:\"feat: faster sync\""
+    echo ""
+    echo "The PR title must start with a conventional commit type:"
+    echo "  $CONVENTIONAL_TYPES"
+    echo "For a changelog type that is one of them the prefix must be that"
+    echo "same type; for the others (breaking, enhance, translation, skip)"
+    echo "any of them is accepted."
+    echo ""
+    echo "Without title: the single commit's subject is used. A branch with"
+    echo "more than one commit requires an explicit title."
+}
+
+is_conventional_type() {
+    [[ " $CONVENTIONAL_TYPES " == *" $1 "* ]]
+}
 
 CURRENT_BRANCH=$(git branch --show-current)
 
@@ -11,24 +37,86 @@ if [ "$CURRENT_BRANCH" = "main" ]; then
     exit 1
 fi
 
-if [ -z "$1" ] || [[ ! "$1" =~ ^changelog: ]]; then
-    echo "Error: changelog label required"
+LABEL=""
+TITLE=""
+
+for arg in "$@"; do
+    case "$arg" in
+        changelog:*) LABEL="$arg" ;;
+        title:*) TITLE="${arg#title:}" ;;
+        *)
+            echo "✗ Error: Unknown argument: $arg"
+            echo ""
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+CHANGELOG_TYPE="${LABEL#changelog:}"
+
+if [ -z "$CHANGELOG_TYPE" ]; then
+    echo "✗ Error: changelog label required"
     echo ""
-    echo "Usage: bin/git-pr <changelog:type>"
-    echo ""
-    echo "Examples:"
-    echo "  bin/git-pr changelog:refactor"
-    echo "  bin/git-pr changelog:fix"
-    echo "  bin/git-pr changelog:feat"
+    usage
     exit 1
 fi
 
-LABEL="$1"
+BASE_REF="origin/main"
+if ! git rev-parse --verify --quiet "$BASE_REF" >/dev/null; then
+    BASE_REF="main"
+fi
+COMMIT_COUNT=$(git rev-list --count "$BASE_REF..HEAD")
+
+if [ "$COMMIT_COUNT" -eq 0 ]; then
+    echo "✗ Error: No commits on '$CURRENT_BRANCH' ahead of $BASE_REF"
+    exit 1
+fi
+
+if [ -z "$TITLE" ]; then
+    if [ "$COMMIT_COUNT" -gt 1 ]; then
+        echo "✗ Error: $COMMIT_COUNT commits, so no title can be derived"
+        echo "  Summarize them with title:\"...\", the commits are:"
+        git log --reverse --format='    %s' "$BASE_REF..HEAD"
+        exit 1
+    fi
+    TITLE=$(git log -1 --format=%s)
+fi
+
+# A leading "type:", "type(scope):" or "type!:" is the title's commit type.
+TYPE_PREFIX_PATTERN='^([a-zA-Z]+)(\([^)]*\))?!?:'
+if [[ "$TITLE" =~ $TYPE_PREFIX_PATTERN ]]; then
+    PREFIX_TYPE="${BASH_REMATCH[1],,}"
+else
+    PREFIX_TYPE=""
+fi
+
+if is_conventional_type "$CHANGELOG_TYPE"; then
+    if [ -z "$PREFIX_TYPE" ]; then
+        TITLE="$CHANGELOG_TYPE: $TITLE"
+    elif [ "$PREFIX_TYPE" != "$CHANGELOG_TYPE" ]; then
+        echo "✗ Error: changelog type does not match the title prefix"
+        echo "  changelog:$CHANGELOG_TYPE vs title \"$TITLE\""
+        echo "  Use a '$CHANGELOG_TYPE:' title or the matching label."
+        exit 1
+    fi
+elif [ -z "$PREFIX_TYPE" ]; then
+    echo "✗ Error: 'changelog:$CHANGELOG_TYPE' is not a commit type, so the"
+    echo "  title must bring its own: \"$TITLE\""
+    echo "  Prefix it with one of: $CONVENTIONAL_TYPES"
+    exit 1
+elif ! is_conventional_type "$PREFIX_TYPE"; then
+    echo "✗ Error: '$PREFIX_TYPE:' is not a conventional commit type"
+    echo "  Use one of: $CONVENTIONAL_TYPES"
+    exit 1
+fi
 
 echo "→ Pushing branch to origin..."
 git push -u origin HEAD
 
-echo "→ Creating PR with label: $LABEL"
-gh pr create -f -l "$LABEL"
+echo "→ Creating PR"
+echo "  title: $TITLE"
+echo "  label: $LABEL"
+gh pr create -f -t "$TITLE" -l "$LABEL"
 
 echo "✓ Done! PR created."
