@@ -6,6 +6,7 @@ import 'package:kashr/core/model/booking_date.dart';
 import 'package:kashr/core/widgets/sheet_grabber.dart';
 import 'package:kashr/ingest/cubit/download_cubit.dart';
 import 'package:kashr/ingest/download_range.dart';
+import 'package:kashr/ingest/widgets/bank_download_explainer.dart';
 import 'package:kashr/ingest/ingest.dart';
 import 'package:kashr/settings/extensions.dart';
 
@@ -68,6 +69,7 @@ class _DownloadSheetState extends State<DownloadSheet> {
     DownloadIdle() ||
     DownloadStarting() ||
     DownloadNeedsBank() => const _BusyView(title: 'Getting ready…'),
+    DownloadExplainingBank() => const _ExplainBankView(),
     DownloadNoBankConnected() => const _NoBankView(),
     DownloadChoosingDepth() => const _DepthView(),
     DownloadConnecting() => _BusyView(
@@ -418,6 +420,41 @@ class _Actions extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         FilledButton(onPressed: onPrimary, child: Text(primaryLabel)),
+      ],
+    );
+  }
+}
+
+/// What a bank download does, before anything asks for a password.
+///
+/// Scrollable because it is the one place in this sheet with more to say than
+/// fits a phone in landscape, and the way out has to stay reachable.
+class _ExplainBankView extends StatelessWidget {
+  const _ExplainBankView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _Title(
+          icon: Icons.account_balance_outlined,
+          text: 'Downloading from your bank',
+        ),
+        const SizedBox(height: 16),
+        // The sheet's column is min-sized, so this needs a bound of its own
+        // before it can scroll.
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: const SingleChildScrollView(child: BankDownloadExplainer()),
+        ),
+        _Actions(
+          primaryLabel: 'Connect comdirect',
+          onPrimary: () => context.read<DownloadCubit>().connectBank(),
+        ),
       ],
     );
   }

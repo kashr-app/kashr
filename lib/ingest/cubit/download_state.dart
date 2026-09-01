@@ -30,6 +30,7 @@ sealed class DownloadState {
     DownloadWaitingForConfirmation() ||
     DownloadRunning() ||
     DownloadStopping() => DownloadActivity.working,
+    DownloadExplainingBank() ||
     DownloadNeedsBank() ||
     DownloadChoosingDepth() => DownloadActivity.waitingForUser,
     DownloadIdle() ||
@@ -49,6 +50,14 @@ class DownloadIdle extends DownloadState {
 /// Deciding what to do, before anything is shown.
 class DownloadStarting extends DownloadState {
   const DownloadStarting();
+}
+
+/// No bank is connected yet, and the user has not been told what one does.
+///
+/// Comes before [DownloadNeedsBank] rather than instead of it: nobody should
+/// be asked for bank credentials by a screen they did not choose to open.
+class DownloadExplainingBank extends DownloadState {
+  const DownloadExplainingBank();
 }
 
 /// No bank is connected yet, so the connect flow takes over.

@@ -1,5 +1,6 @@
 import 'package:kashr/comdirect/comdirect_login_page.dart';
 import 'package:kashr/comdirect/comdirect_model.dart';
+import 'package:kashr/ingest/widgets/bank_download_explainer.dart';
 import 'package:kashr/app_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -113,20 +114,23 @@ class _BanksPageState extends State<BanksPage> {
   }
 }
 
-/// Explains that bank data goes straight to this device.
+/// Explains what a bank download does, for whoever wants to read it.
+///
+/// Collapsed, because the answer is long and most visits here are to connect
+/// a bank rather than to be convinced. The same words the download sheet
+/// shows before it asks for anything.
 class _PrivacyNote extends StatelessWidget {
   const _PrivacyNote();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Text(
-      'Kashr downloads your turnovers from your bank straight to this '
-      'device. No third party in between, and nothing is shared. Kashr is '
-      'open source, so you can check for yourself.',
-      style: theme.textTheme.bodyMedium?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
+    return const Card(
+      child: ExpansionTile(
+        leading: Icon(Icons.shield_outlined),
+        title: Text('How bank download works'),
+        subtitle: Text('And what happens to your data'),
+        childrenPadding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+        children: [BankDownloadExplainer()],
       ),
     );
   }

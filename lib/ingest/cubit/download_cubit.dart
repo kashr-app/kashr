@@ -59,12 +59,16 @@ class DownloadCubit extends Cubit<DownloadState> {
   Future<void> start() async {
     _safeEmit(const DownloadStarting());
     if (!await Credentials.hasStored()) {
-      log.i('No bank connected yet, offering the connect flow.');
-      _safeEmit(const DownloadNeedsBank());
+      log.i('No bank connected yet, explaining what one does.');
+      _safeEmit(const DownloadExplainingBank());
       return;
     }
     await _startConnected();
   }
+
+  /// Sends the user on to the connect flow, once they have read what a bank
+  /// download does and said yes to it.
+  void connectBank() => _safeEmit(const DownloadNeedsBank());
 
   /// Picks the download back up after the connect flow.
   ///
