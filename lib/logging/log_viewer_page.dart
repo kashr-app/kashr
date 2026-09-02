@@ -55,7 +55,7 @@ class LogViewerPage extends StatelessWidget {
             if (state.isLoading) {
               return const Center(child: CircularProgressIndicator());
             }
-        
+
             if (state.error != null) {
               return Center(
                 child: Column(
@@ -74,14 +74,15 @@ class LogViewerPage extends StatelessWidget {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => context.read<LogViewerCubit>().loadLogs(),
+                      onPressed: () =>
+                          context.read<LogViewerCubit>().loadLogs(),
                       child: const Text('Retry'),
                     ),
                   ],
                 ),
               );
             }
-        
+
             if (state.logs.isEmpty) {
               return const Center(
                 child: Column(
@@ -98,7 +99,7 @@ class LogViewerPage extends StatelessWidget {
                 ),
               );
             }
-        
+
             return RefreshIndicator(
               onRefresh: () => context.read<LogViewerCubit>().loadLogs(),
               child: ListView.builder(

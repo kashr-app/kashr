@@ -43,8 +43,9 @@ class DeleteSavingsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasGoal = savings.goalValue != null;
-    final goalCurrency =
-        savings.goalUnit != null ? Currency.currencyFrom(savings.goalUnit!) : null;
+    final goalCurrency = savings.goalUnit != null
+        ? Currency.currencyFrom(savings.goalUnit!)
+        : null;
 
     return AlertDialog(
       icon: Icon(
@@ -58,10 +59,7 @@ class DeleteSavingsDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _InfoRow(
-              label: 'Tag',
-              value: tag.name,
-            ),
+            _InfoRow(label: 'Tag', value: tag.name),
             const SizedBox(height: 8),
             _InfoRow(
               label: 'Current Balance',
@@ -71,7 +69,8 @@ class DeleteSavingsDialog extends StatelessWidget {
               const SizedBox(height: 8),
               _InfoRow(
                 label: 'Goal',
-                value: goalCurrency?.format(savings.goalValue!) ??
+                value:
+                    goalCurrency?.format(savings.goalValue!) ??
                     savings.goalValue!.toString(),
               ),
             ],
@@ -94,12 +93,14 @@ class DeleteSavingsDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   _BulletPoint(
-                    text: 'Return all virtual bookings to the account balances where they were allocated from',
+                    text:
+                        'Return all virtual bookings to the account balances where they were allocated from',
                     color: theme.colorScheme.onErrorContainer,
                   ),
                   const SizedBox(height: 4),
                   _BulletPoint(
-                    text: 'Keep all tag turnovers, but they will no longer count toward savings',
+                    text:
+                        'Keep all tag turnovers, but they will no longer count toward savings',
                     color: theme.colorScheme.onErrorContainer,
                   ),
                   const SizedBox(height: 4),
@@ -135,10 +136,7 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoRow({
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -173,10 +171,7 @@ class _BulletPoint extends StatelessWidget {
   final String text;
   final Color color;
 
-  const _BulletPoint({
-    required this.text,
-    required this.color,
-  });
+  const _BulletPoint({required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -185,21 +180,11 @@ class _BulletPoint extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 6),
-          child: Icon(
-            Icons.circle,
-            size: 6,
-            color: color,
-          ),
+          child: Icon(Icons.circle, size: 6, color: color),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontSize: 13,
-            ),
-          ),
+          child: Text(text, style: TextStyle(color: color, fontSize: 13)),
         ),
       ],
     );

@@ -18,9 +18,9 @@ class OnboardingCoreConcepts extends StatelessWidget {
           const SizedBox(height: 32),
           Text(
             'Track with Tags',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -42,7 +42,8 @@ class OnboardingCoreConcepts extends StatelessWidget {
             context,
             icon: Icons.auto_awesome,
             title: 'Smart suggestions',
-            description: 'The app learns and proposes tags based on your '
+            description:
+                'The app learns and proposes tags based on your '
                 'history.',
           ),
           const SizedBox(height: 16),
@@ -50,7 +51,8 @@ class OnboardingCoreConcepts extends StatelessWidget {
             context,
             icon: Icons.call_split,
             title: 'Split transactions',
-            description: 'Tag parts of a transaction differently to track '
+            description:
+                'Tag parts of a transaction differently to track '
                 'multiple things.',
           ),
         ],
@@ -67,10 +69,7 @@ class OnboardingCoreConcepts extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        Icon(icon, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -78,15 +77,12 @@ class OnboardingCoreConcepts extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
-              Text(
-                description,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              Text(description, style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
         ),

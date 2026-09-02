@@ -52,6 +52,5 @@ abstract class TagSuggestion with _$TagSuggestion {
       _$TagSuggestionFromJson(json);
 
   /// Returns the confidence level based on the score.
-  SuggestionConfidence get confidence =>
-      SuggestionConfidence.fromScore(score);
+  SuggestionConfidence get confidence => SuggestionConfidence.fromScore(score);
 }

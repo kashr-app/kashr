@@ -9,11 +9,7 @@
 /// //  2: {'id': 2}
 /// // }
 extension AssociateBy<T> on Iterable<T> {
-  Map<K, T> associateBy<K, V>(
-    K Function(T it) key,
-  ) {
-    return {
-      for (var it in this) key(it): it,
-    };
+  Map<K, T> associateBy<K, V>(K Function(T it) key) {
+    return {for (var it in this) key(it): it};
   }
 }

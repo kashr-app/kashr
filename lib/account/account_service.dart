@@ -8,10 +8,12 @@ class AccountService {
   AccountService(this.accountRepository);
 
   // Async function to get account IDs by API IDs
-  Future<Map<String, UuidValue>> getAccountIdByAccountApiId(List<String> apiIds) async {
+  Future<Map<String, UuidValue>> getAccountIdByAccountApiId(
+    List<String> apiIds,
+  ) async {
     final accounts = await accountRepository.findAccountIdAndApiIdIn(apiIds);
     return Map<String, UuidValue>.fromEntries(
-      accounts.map((acc) => MapEntry(acc.apiId, acc.id))
+      accounts.map((acc) => MapEntry(acc.apiId, acc.id)),
     );
   }
 

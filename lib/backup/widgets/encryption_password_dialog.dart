@@ -5,10 +5,7 @@ import 'package:flutter/material.dart';
 class EncryptionPasswordDialog extends StatefulWidget {
   final bool isRestore;
 
-  const EncryptionPasswordDialog({
-    super.key,
-    required this.isRestore,
-  });
+  const EncryptionPasswordDialog({super.key, required this.isRestore});
 
   /// Show the password dialog
   /// Returns the password or null if cancelled
@@ -132,10 +129,7 @@ class _EncryptionPasswordDialogState extends State<EncryptionPasswordDialog> {
 
                     return Row(
                       children: [
-                        Text(
-                          'Strength: ',
-                          style: theme.textTheme.bodySmall,
-                        ),
+                        Text('Strength: ', style: theme.textTheme.bodySmall),
                         Text(
                           strength,
                           style: theme.textTheme.bodySmall?.copyWith(

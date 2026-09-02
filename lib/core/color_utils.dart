@@ -14,8 +14,9 @@ class ColorUtils {
       final hexString = colorString.replaceFirst('#', '');
       final hexValue = int.parse(hexString, radix: 16);
       // Add alpha channel if not present (assumes RGB format)
-      final colorValue =
-          hexString.length == 6 ? 0xFF000000 + hexValue : hexValue;
+      final colorValue = hexString.length == 6
+          ? 0xFF000000 + hexValue
+          : hexValue;
       return Color(colorValue);
     } catch (e) {
       return null;

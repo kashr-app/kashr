@@ -17,19 +17,17 @@ class ThemeBuilder {
   ThemeData lightMode() {
     final primary = const Color(0xFF28CA97);
     final bg = Color(0xFFE5E5E5);
-    
-    final t =  ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        colorSchemeSeed: primary,
-      );
+
+    final t = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorSchemeSeed: primary,
+    );
 
     return buildTheme(
       t.copyWith(
         scaffoldBackgroundColor: bg,
-        colorScheme: t.colorScheme.copyWith(
-          surface: bg,
-        ),
+        colorScheme: t.colorScheme.copyWith(surface: bg),
       ),
     );
   }
@@ -37,20 +35,17 @@ class ThemeBuilder {
   ThemeData darkMode() {
     final primary = const Color(0xFF28CA97);
     final bg = Color(0xFF333333);
-    
+
     final t = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorSchemeSeed: primary,
     );
 
-
     return buildTheme(
       t.copyWith(
         scaffoldBackgroundColor: bg,
-        colorScheme: t.colorScheme.copyWith(
-          surface: bg,
-        ),
+        colorScheme: t.colorScheme.copyWith(surface: bg),
       ),
     );
   }
@@ -103,7 +98,7 @@ class CustomColors extends ThemeExtension<CustomColors> {
           warning: Colors.orange,
           onWarning: colorScheme.onInverseSurface,
           info: Colors.blue[500]!,
-          onInfo:  colorScheme.onInverseSurface,
+          onInfo: colorScheme.onInverseSurface,
         );
     }
   }

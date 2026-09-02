@@ -13,11 +13,7 @@ class StatusMessage extends StatelessWidget {
   final TurnoverTagsState state;
   final Turnover turnover;
 
-  const StatusMessage({
-    required this.state,
-    required this.turnover,
-    super.key,
-  });
+  const StatusMessage({required this.state, required this.turnover, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -35,11 +31,7 @@ class StatusMessage extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.check_circle,
-            color: theme.colorScheme.primary,
-            size: 20,
-          ),
+          Icon(Icons.check_circle, color: theme.colorScheme.primary, size: 20),
           const SizedBox(width: 8),
           Text(
             'Perfectly allocated!',
@@ -56,18 +48,12 @@ class StatusMessage extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            color: theme.colorScheme.error,
-            size: 20,
-          ),
+          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 20),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               'Exceeds by ${currency.format(difference, decimalDigits: 2)}',
-              style: TextStyle(
-                color: theme.colorScheme.error,
-              ),
+              style: TextStyle(color: theme.colorScheme.error),
             ),
           ),
         ],
@@ -86,9 +72,7 @@ class StatusMessage extends StatelessWidget {
         Flexible(
           child: Text(
             'Remaining: ${currency.format(difference, decimalDigits: 2)}',
-            style: TextStyle(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
           ),
         ),
       ],

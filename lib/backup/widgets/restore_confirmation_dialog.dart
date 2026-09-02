@@ -6,16 +6,10 @@ import 'package:intl/intl.dart';
 class RestoreConfirmationDialog extends StatefulWidget {
   final BackupMetadata backup;
 
-  const RestoreConfirmationDialog({
-    required this.backup,
-    super.key,
-  });
+  const RestoreConfirmationDialog({required this.backup, super.key});
 
   /// Show the dialog and return true if user confirms
-  static Future<bool> show(
-    BuildContext context,
-    BackupMetadata backup,
-  ) async {
+  static Future<bool> show(BuildContext context, BackupMetadata backup) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => RestoreConfirmationDialog(backup: backup),
@@ -28,8 +22,7 @@ class RestoreConfirmationDialog extends StatefulWidget {
       _RestoreConfirmationDialogState();
 }
 
-class _RestoreConfirmationDialogState
-    extends State<RestoreConfirmationDialog> {
+class _RestoreConfirmationDialogState extends State<RestoreConfirmationDialog> {
   bool _understood = false;
 
   @override
@@ -109,9 +102,7 @@ class _RestoreConfirmationDialogState
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _understood
-              ? () => Navigator.of(context).pop(true)
-              : null,
+          onPressed: _understood ? () => Navigator.of(context).pop(true) : null,
           child: const Text('Restore'),
         ),
       ],

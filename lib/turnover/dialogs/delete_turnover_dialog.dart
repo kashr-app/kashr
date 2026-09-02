@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum DeleteTagTurnoversOption {
-  delete,
-  makePending,
-}
+enum DeleteTagTurnoversOption { delete, makePending }
 
 class DeleteTurnoverDialog extends StatefulWidget {
   const DeleteTurnoverDialog({super.key});
@@ -36,9 +33,7 @@ class _DeleteTurnoverDialogState extends State<DeleteTurnoverDialog> {
             style: TextStyle(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'What should happen to the associated tag assignments?',
-          ),
+          const Text('What should happen to the associated tag assignments?'),
           const SizedBox(height: 12),
           RadioGroup<DeleteTagTurnoversOption>(
             groupValue: _selectedOption,

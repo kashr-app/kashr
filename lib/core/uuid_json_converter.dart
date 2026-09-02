@@ -3,7 +3,7 @@ import 'package:uuid/uuid_value.dart';
 
 class UUIDNullableJsonConverter extends JsonConverter<UuidValue?, String?> {
   const UUIDNullableJsonConverter();
-  
+
   @override
   UuidValue? fromJson(String? json) {
     if (json == null) {
@@ -21,7 +21,6 @@ class UUIDNullableJsonConverter extends JsonConverter<UuidValue?, String?> {
   }
 }
 
-
 class UUIDJsonConverter extends JsonConverter<UuidValue, String> {
   const UUIDJsonConverter();
 
@@ -36,7 +35,8 @@ class UUIDJsonConverter extends JsonConverter<UuidValue, String> {
   }
 }
 
-class UUIDListJsonConverter extends JsonConverter<List<UuidValue>, List<dynamic>> {
+class UUIDListJsonConverter
+    extends JsonConverter<List<UuidValue>, List<dynamic>> {
   const UUIDListJsonConverter();
 
   @override
@@ -50,7 +50,8 @@ class UUIDListJsonConverter extends JsonConverter<List<UuidValue>, List<dynamic>
   }
 }
 
-class UUIDListNullableJsonConverter extends JsonConverter<List<UuidValue>?, List<dynamic>?> {
+class UUIDListNullableJsonConverter
+    extends JsonConverter<List<UuidValue>?, List<dynamic>?> {
   const UUIDListNullableJsonConverter();
 
   @override

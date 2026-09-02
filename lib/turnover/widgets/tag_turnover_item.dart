@@ -143,7 +143,9 @@ class TagTurnoverItem extends StatelessWidget {
           case TagTurnoverPopUpMenu.delete:
             context.read<TurnoverTagsCubit>().deleteTagTurnover(tagTurnover.id);
           case TagTurnoverPopUpMenu.unallocate:
-            context.read<TurnoverTagsCubit>().unallocateTagTurnover(tagTurnover);
+            context.read<TurnoverTagsCubit>().unallocateTagTurnover(
+              tagTurnover,
+            );
         }
       },
       itemBuilder: (BuildContext context) => [

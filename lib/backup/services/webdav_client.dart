@@ -10,7 +10,7 @@ class WebDavClient {
   final String baseUrl;
   final String username;
   final String password;
-  final  Logger log;
+  final Logger log;
 
   late final String _authHeader;
 

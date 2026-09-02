@@ -16,11 +16,7 @@ class AmazonOrderActionResult {
 }
 
 /// Actions that can be taken on an Amazon order ID.
-enum AmazonOrderAction {
-  openOnDetectedTld,
-  chooseOtherTld,
-  copyOrderId,
-}
+enum AmazonOrderAction { openOnDetectedTld, chooseOtherTld, copyOrderId }
 
 /// Shows a dialog to select an action for an Amazon order ID.
 ///
@@ -32,10 +28,8 @@ Future<AmazonOrderActionResult?> showAmazonOrderActionDialog({
 }) {
   return showDialog<AmazonOrderActionResult>(
     context: context,
-    builder: (context) => _AmazonOrderActionDialog(
-      orderId: orderId,
-      detectedTld: detectedTld,
-    ),
+    builder: (context) =>
+        _AmazonOrderActionDialog(orderId: orderId, detectedTld: detectedTld),
   );
 }
 
@@ -112,10 +106,7 @@ class _AmazonOrderActionDialogState extends State<_AmazonOrderActionDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Order ID: ${widget.orderId}',
-            style: theme.textTheme.bodySmall,
-          ),
+          Text('Order ID: ${widget.orderId}', style: theme.textTheme.bodySmall),
           const SizedBox(height: 16),
           ListTile(
             contentPadding: EdgeInsets.zero,

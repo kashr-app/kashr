@@ -2,10 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:kashr/core/currency.dart';
 import 'package:flutter/material.dart';
 
-enum AmountExceedingAction {
-  scaleDown,
-  cancel,
-}
+enum AmountExceedingAction { scaleDown, cancel }
 
 class AmountExceedingConfirmationDialog extends StatelessWidget {
   final Decimal totalAmount;
@@ -47,10 +44,7 @@ class AmountExceedingConfirmationDialog extends StatelessWidget {
     return AlertDialog(
       title: Row(
         children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            color: theme.colorScheme.error,
-          ),
+          Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
           const SizedBox(width: 8),
           const Expanded(child: Text('Amount Exceeded')),
         ],

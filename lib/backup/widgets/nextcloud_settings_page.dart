@@ -19,9 +19,7 @@ class _NextcloudSettingsPageState extends State<NextcloudSettingsPage> {
   final _urlController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _backupPathController = TextEditingController(
-    text: '/Backups/Kashr/',
-  );
+  final _backupPathController = TextEditingController(text: '/Backups/Kashr/');
 
   bool _isLoading = false;
   bool _obscurePassword = true;

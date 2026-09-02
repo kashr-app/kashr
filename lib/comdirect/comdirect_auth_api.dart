@@ -22,9 +22,7 @@ abstract class ComdirectAuthAPI {
 
   @POST("/oauth/token")
   @FormUrlEncoded()
-  Future<TokenDTO> refreshToken(
-    @Body() RefreshTokenReqDTO refreshTokenReqDTO,
-  );
+  Future<TokenDTO> refreshToken(@Body() RefreshTokenReqDTO refreshTokenReqDTO);
 
   @DELETE("/oauth/revoke")
   @FormUrlEncoded()

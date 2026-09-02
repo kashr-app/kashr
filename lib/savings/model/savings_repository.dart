@@ -54,11 +54,7 @@ class SavingsRepository {
 
   Future<int> delete(UuidValue id) async {
     final db = await DatabaseHelper().database;
-    return await db.delete(
-      'savings',
-      where: 'id = ?',
-      whereArgs: [id.uuid],
-    );
+    return await db.delete('savings', where: 'id = ?', whereArgs: [id.uuid]);
   }
 
   /// Updates the tag_id reference for a savings entry.

@@ -23,7 +23,10 @@ class _TagTurnoversSortDialogState extends State<TagTurnoversSortDialog> {
   }
 
   void _applySort() {
-    final sort = TagTurnoverSort(orderBy: _sortField, direction: _sortDirection);
+    final sort = TagTurnoverSort(
+      orderBy: _sortField,
+      direction: _sortDirection,
+    );
     Navigator.of(context).pop(sort);
   }
 

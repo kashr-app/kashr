@@ -157,7 +157,10 @@ int _handleUpdate(sqlite3.Database db, UpdateCommand cmd) {
   final setClause = columns.map((col) => '$col = ?').join(', ');
   final sql =
       'UPDATE ${cmd.table} SET $setClause${cmd.where != null ? ' WHERE ${cmd.where}' : ''}';
-  final args = [...cmd.values.values, if (cmd.whereArgs != null) ...cmd.whereArgs!];
+  final args = [
+    ...cmd.values.values,
+    if (cmd.whereArgs != null) ...cmd.whereArgs!,
+  ];
   db.execute(sql, args);
   return db.updatedRows;
 }

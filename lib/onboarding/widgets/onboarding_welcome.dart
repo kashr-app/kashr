@@ -75,10 +75,7 @@ class _OnboardingWelcomeState extends State<OnboardingWelcome>
     final colorScheme = Theme.of(context).colorScheme;
 
     return Stack(
-      children: [
-        const FloatingBubbles(),
-        _buildContent(context, colorScheme),
-      ],
+      children: [const FloatingBubbles(), _buildContent(context, colorScheme)],
     );
   }
 

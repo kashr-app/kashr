@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 
 /// A widget for displaying a note.
 class NoteDisplay extends StatelessWidget {
-  const NoteDisplay({
-    super.key,
-    required this.note,
-  });
+  const NoteDisplay({super.key, required this.note});
 
   final String? note;
 
@@ -23,10 +20,7 @@ class NoteDisplay extends StatelessWidget {
           const Icon(Icons.note, size: 16),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              note!,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            child: Text(note!, style: Theme.of(context).textTheme.bodySmall),
           ),
         ],
       ),
