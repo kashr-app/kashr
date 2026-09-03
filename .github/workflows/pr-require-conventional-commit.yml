@@ -26,6 +26,7 @@ jobs:
             refactor
             perf
             chore
+            style
             revert
           requireScope: false
           add_label: 'false'
