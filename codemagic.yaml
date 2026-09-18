@@ -1,0 +1,32 @@
+workflows:
+  ios-unsigned:
+    name: iOS unsigned IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      # Uses the Flutter version pinned in .fvmrc.
+      flutter: fvm
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'v*'
+          include: true
+    scripts:
+      - name: Get dependencies
+        script: flutter pub get
+      - name: Run code generation
+        script: dart run build_runner build --delete-conflicting-outputs
+      - name: Run unit tests
+        script: flutter test --machine > test-results.json
+        test_report: test-results.json
+      - name: Build unsigned app
+        script: flutter build ios --release --no-codesign
+      - name: Package IPA
+        script: |
+          cd build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -qr "kashr-${CM_TAG:-dev}-unsigned.ipa" Payload
+    artifacts:
+      - build/ios/iphoneos/*.ipa
